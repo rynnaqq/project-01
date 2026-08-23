@@ -2,79 +2,208 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   PRISM VITRINE — glassmorphism as light trapped behind smoked glass.
+   Aurora fields drift behind frosted panes; every surface carries a
+   chromatic-dispersion hairline edge and catches specular sweeps on hover.
+   ========================================================================== */
+
 :root {
   color-scheme: dark;
+  --spectrum-cyan: #43d9ff;
+  --spectrum-mint: #41f2b8;
+  --spectrum-gold: #ffc857;
+  --spectrum-rose: #ff4d88;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #0f0f23;
-  background-image:
-    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(124, 58, 237, 0.18), transparent),
-    radial-gradient(ellipse 50% 35% at 90% 110%, rgba(244, 63, 94, 0.08), transparent);
-  color: #e2e8f0;
+  background-color: #06080f;
+  color: #e6edf7;
   font-family: 'Chakra Petch', system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
+/* Drifting aurora — the light source living behind all glass surfaces. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -22%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 16% 20%, rgba(67, 217, 255, 0.14), transparent 70%),
+    radial-gradient(38% 34% at 84% 10%, rgba(65, 242, 184, 0.1), transparent 70%),
+    radial-gradient(46% 42% at 80% 84%, rgba(255, 77, 136, 0.12), transparent 70%),
+    radial-gradient(32% 30% at 6% 90%, rgba(255, 200, 87, 0.07), transparent 70%);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to { transform: translate3d(2%, 2%, 0) scale(1.07); }
+}
+
+/* Fine film grain over the whole scene for a physical, non-digital finish. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 ::selection {
-  background: rgba(124, 58, 237, 0.55);
+  background: rgba(67, 217, 255, 0.35);
   color: #fff;
 }
 
-/* Slim neon scrollbar (WebKit). */
+/* Glass-edged scrollbar. */
 ::-webkit-scrollbar {
   width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f0f23;
+  background: #06080f;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27273b;
+  background: rgba(148, 180, 230, 0.18);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4c1d95;
+  background: rgba(67, 217, 255, 0.4);
 }
 
 /* Keyboard users always get a clearly visible focus ring (P6.3). */
 :focus-visible {
-  outline: 2px solid #22d3ee;
+  outline: 2px solid var(--spectrum-mint);
   outline-offset: 2px;
 }
 
-@layer utilities {
-  /* Neon text glow for display headlines. */
-  .text-glow {
-    text-shadow:
-      0 0 18px rgba(167, 139, 250, 0.6),
-      0 0 48px rgba(124, 58, 237, 0.35);
-  }
-  .text-glow-neon {
-    text-shadow: 0 0 14px rgba(34, 211, 238, 0.7);
+@layer components {
+  /*
+   * The glass family. Each surface is two painted layers:
+   *   padding-box → smoked translucent fill,
+   *   border-box  → prismatic dispersion hairline (cyan → mint → rose).
+   * Plus an inner top highlight so light reads as coming from above.
+   */
+  .glass,
+  .glass-deep,
+  .glass-static,
+  .glass-chip {
+    position: relative;
+    border: 1px solid transparent;
+    background:
+      var(--glass-fill)
+      padding-box,
+      linear-gradient(
+        135deg,
+        rgba(67, 217, 255, 0.5),
+        rgba(255, 255, 255, 0.09) 30%,
+        rgba(65, 242, 184, 0.18) 55%,
+        rgba(255, 77, 136, 0.38)
+      )
+      border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(4, 6, 12, 0.4),
+      0 24px 48px -24px rgba(2, 6, 16, 0.9);
   }
 
-  /* CRT scanline overlay. Parent must be relative + overflow-hidden. */
-  .scanlines::after {
+  .glass {
+    --glass-fill: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03) 45%, rgba(67, 217, 255, 0.05));
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+  }
+
+  /* Heavier panes: navigation slabs, modals, hero cases. */
+  .glass-deep {
+    --glass-fill: linear-gradient(170deg, rgba(13, 19, 34, 0.72), rgba(9, 13, 24, 0.55));
+    backdrop-filter: blur(26px) saturate(160%);
+    -webkit-backdrop-filter: blur(26px) saturate(160%);
+  }
+
+  /* Glass without refraction — for panels sitting directly on the backdrop. */
+  .glass-static {
+    --glass-fill: linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02) 50%, rgba(67, 217, 255, 0.04));
+  }
+
+  /* Small elements: chips, inputs, rows, badges. Lighter touch. */
+  .glass-chip {
+    --glass-fill: linear-gradient(170deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(4, 6, 12, 0.3),
+      0 10px 28px -18px rgba(2, 6, 16, 0.85);
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+  }
+
+  /* Specular sweep — a streak of light gliding across the pane on hover. */
+  .sheen {
+    overflow: hidden;
+  }
+  .sheen::after {
     content: '';
     position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      to bottom,
-      transparent 0px,
-      transparent 2px,
-      rgba(5, 5, 16, 0.22) 3px,
-      transparent 4px
+    inset: -30%;
+    background: linear-gradient(
+      115deg,
+      transparent 42%,
+      rgba(255, 255, 255, 0.15) 50%,
+      transparent 58%
     );
+    transform: translateX(-75%);
+    transition: transform 0.9s cubic-bezier(0.22, 0.61, 0.36, 1);
+    pointer-events: none;
+  }
+  .sheen:hover::after,
+  .sheen:focus-within::after {
+    transform: translateX(75%);
   }
 
-  /* Faint synthwave grid backdrop. */
-  .retro-grid {
-    background-image:
-      linear-gradient(rgba(167, 139, 250, 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(167, 139, 250, 0.08) 1px, transparent 1px);
-    background-size: 44px 44px;
+  /* Frosted form field with a cyan focus bloom. */
+  .field {
+    border-radius: 0.75rem;
+    border: 1px solid rgba(148, 180, 230, 0.18);
+    background: rgba(8, 12, 22, 0.62);
+    box-shadow: inset 0 1px 3px rgba(2, 6, 16, 0.6);
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .field:focus {
+    outline: none;
+    border-color: rgba(67, 217, 255, 0.6);
+    box-shadow:
+      inset 0 1px 3px rgba(2, 6, 16, 0.6),
+      0 0 0 3px rgba(67, 217, 255, 0.14);
+  }
+  .field::placeholder {
+    color: #5b6b88;
+  }
+}
+
+@layer utilities {
+  /* Spectrum gradient text — the full prism run. */
+  .text-spectrum {
+    background-image: linear-gradient(
+      100deg,
+      var(--spectrum-cyan),
+      var(--spectrum-mint) 34%,
+      var(--spectrum-gold) 62%,
+      var(--spectrum-rose)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Phosphor dot-matrix texture — CRT dots instead of grid lines. */
+  .dot-matrix {
+    background-image: radial-gradient(rgba(148, 197, 255, 0.11) 1px, transparent 1.4px);
+    background-size: 26px 26px;
   }
 }
 

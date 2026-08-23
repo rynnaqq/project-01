@@ -6,65 +6,69 @@ import { GAMES } from '../lib/games';
 import { ArrowRightIcon, GameIcon, TrophyIcon, UsersIcon, ZapIcon } from '../components/icons';
 import { gameTileGradient } from '../lib/gameArt';
 
-/** Landing page with an animated synthwave hero (P3.1). */
+/** Landing page: a glass vitrine with the prism spectrum playing behind it. */
 export default function HomePage() {
   const { session } = useAuth();
 
   return (
     <div className="flex flex-col gap-16">
-      {/* Hero */}
-      <section className="scanlines relative overflow-hidden rounded-3xl border border-arcade-line/50 bg-arcade-panel/30">
-        <div aria-hidden className="retro-grid absolute inset-0 opacity-70" />
+      {/* Hero — the display case */}
+      <section className="glass-static sheen relative overflow-hidden rounded-[2rem]">
+        <div aria-hidden className="dot-matrix absolute inset-0 opacity-60" />
         <div
           aria-hidden
-          className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-arcade-primary/30 blur-3xl"
+          className="pointer-events-none absolute -left-28 -top-28 h-80 w-80 rounded-full bg-arcade-neon/20 blur-3xl"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-32 right-0 h-80 w-80 rounded-full bg-arcade-accent/20 blur-3xl"
+          className="pointer-events-none absolute -bottom-36 right-[-4rem] h-96 w-96 rounded-full bg-arcade-accent/15 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-24 top-1/3 h-72 w-72 rounded-full bg-arcade-primary/10 blur-3xl"
         />
         <div className="pointer-events-none absolute inset-0">
           <ParticleGrid />
         </div>
-        <div className="relative flex flex-col items-center gap-6 px-6 py-20 text-center sm:py-24">
-          <p className="inline-flex items-center gap-2 rounded-full border border-arcade-neon/30 bg-arcade-neon/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-arcade-neon">
+        <div className="relative flex flex-col items-center gap-6 px-6 py-20 text-center sm:py-28">
+          <p className="glass-chip inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-arcade-neon">
             <ZapIcon size={13} />
             Real-time multiplayer
           </p>
-          <h1 className="max-w-3xl font-display text-4xl uppercase leading-tight tracking-wide sm:text-6xl">
-            <span className="text-glow bg-gradient-to-r from-arcade-soft via-arcade-neon to-arcade-accent bg-clip-text text-transparent">
-              Interactive Arcade Hub
-            </span>
+          <h1 className="text-spectrum max-w-3xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+            Interactive Arcade Hub
           </h1>
-          <p className="max-w-xl text-gray-300">
-            Real-time multiplayer mini-games with smooth animations. Create a room, invite friends,
+          <p className="max-w-xl text-slate-300">
+            Real-time multiplayer mini-games behind frosted glass. Create a room, invite friends,
             and battle for the top of the leaderboard.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link
               to={session ? '/lobby' : '/auth'}
-              className="rounded-lg bg-arcade-accent px-7 py-3 font-semibold text-white shadow-glow-rose transition-all hover:scale-[1.03] hover:brightness-110"
+              className="rounded-full bg-arcade-primary px-7 py-3 font-bold text-arcade-ink shadow-underglow-mint transition-all hover:scale-[1.03] hover:brightness-110"
             >
               {session ? 'Enter the lobby' : 'Get started'}
             </Link>
             <Link
               to="/games"
-              className="rounded-lg border border-white/15 px-7 py-3 font-semibold text-gray-200 transition-colors hover:border-arcade-neon/40 hover:bg-white/5 hover:text-white"
+              className="glass-chip rounded-full px-7 py-3 font-semibold text-slate-200 transition-colors hover:text-white"
             >
               Browse games
             </Link>
           </div>
-          <dl className="mt-4 grid w-full max-w-md grid-cols-3 divide-x divide-white/10 rounded-xl border border-white/10 bg-arcade-bg/60 py-3 backdrop-blur">
+          <dl className="glass-chip mt-4 grid w-full max-w-md grid-cols-3 divide-x divide-white/10 rounded-2xl py-3">
             {[
               { term: 'Games', value: '3' },
               { term: 'Modes', value: 'Solo · 1v1 · Party' },
               { term: 'Scores', value: 'Live' },
             ].map((stat) => (
               <div key={stat.term} className="flex flex-col px-2">
-                <dt className="order-2 text-[11px] uppercase tracking-widest text-gray-500">
+                <dt className="order-2 text-[11px] uppercase tracking-widest text-slate-500">
                   {stat.term}
                 </dt>
-                <dd className="order-1 font-display text-sm text-arcade-neon">{stat.value}</dd>
+                <dd className="order-1 font-display text-xs text-arcade-gold sm:text-sm">
+                  {stat.value}
+                </dd>
               </div>
             ))}
           </dl>
@@ -75,8 +79,10 @@ export default function HomePage() {
       <section className="flex flex-col gap-5">
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="font-display text-2xl uppercase tracking-wide">Pick your battle</h2>
-            <p className="mt-1 text-sm text-gray-400">Three arenas, one leaderboard.</p>
+            <h2 className="font-display text-xl uppercase tracking-tight sm:text-2xl">
+              Pick your battle
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">Three arenas, one leaderboard.</p>
           </div>
           <Link
             to="/games"
@@ -89,19 +95,19 @@ export default function HomePage() {
         <div className="grid gap-4 sm:grid-cols-3">
           {GAMES.map((game) => (
             <TiltCard key={game.key} className="rounded-2xl">
-              <article className="flex h-full flex-col rounded-2xl border border-white/10 bg-arcade-panel p-6 transition-colors hover:border-arcade-line/70">
+              <article className="glass sheen flex h-full flex-col rounded-2xl p-6 transition-transform duration-200 hover:-translate-y-1">
                 <span
                   className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${gameTileGradient(
                     game.key,
-                  )} text-white shadow-glow-sm`}
+                  )} text-white shadow-glass-sm`}
                 >
                   <GameIcon gameKey={game.key} size={24} />
                 </span>
-                <h3 className="mt-4 font-display text-lg tracking-wide">{game.title}</h3>
-                <p className="mt-1 flex-1 text-sm text-gray-400">{game.tagline}</p>
+                <h3 className="mt-4 font-display text-base tracking-tight">{game.title}</h3>
+                <p className="mt-1 flex-1 text-sm text-slate-400">{game.tagline}</p>
                 <Link
                   to={`/lobby?game=${game.key}`}
-                  className="group mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-arcade-neon transition-colors hover:text-white"
+                  className="group mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-arcade-primary transition-colors hover:text-white"
                 >
                   Play now
                   <ArrowRightIcon size={15} className="transition-transform group-hover:translate-x-1" />
@@ -114,7 +120,7 @@ export default function HomePage() {
 
       {/* How it works */}
       <section className="flex flex-col gap-5">
-        <h2 className="font-display text-2xl uppercase tracking-wide">How it works</h2>
+        <h2 className="font-display text-xl uppercase tracking-tight sm:text-2xl">How it works</h2>
         <ol className="grid gap-4 sm:grid-cols-3">
           {[
             {
@@ -133,35 +139,34 @@ export default function HomePage() {
               desc: 'Scores stream to a shared scoreboard; history is saved per room.',
             },
           ].map((item) => (
-            <li
-              key={item.step}
-              className="rounded-2xl border border-white/10 bg-arcade-panel/60 p-6"
-            >
-              <span className="font-display text-3xl text-arcade-primary/80">{item.step}</span>
+            <li key={item.step} className="glass-chip rounded-2xl p-6">
+              <span className="font-display text-2xl text-transparent [background:linear-gradient(120deg,var(--spectrum-cyan),var(--spectrum-rose))] [-webkit-background-clip:text] [background-clip:text]">
+                {item.step}
+              </span>
               <h3 className="mt-3 font-semibold">{item.title}</h3>
-              <p className="mt-1 text-sm text-gray-400">{item.desc}</p>
+              <p className="mt-1 text-sm text-slate-400">{item.desc}</p>
             </li>
           ))}
         </ol>
       </section>
 
       {/* CTA band */}
-      <section className="relative overflow-hidden rounded-3xl border border-arcade-line/50 bg-gradient-to-br from-arcade-primary/25 via-arcade-panel to-arcade-accent/20 p-10 text-center">
+      <section className="glass-static relative overflow-hidden rounded-[2rem] p-10 text-center">
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 h-40 w-[120%] -translate-x-1/2 rounded-full bg-arcade-primary/30 blur-3xl"
+          className="pointer-events-none absolute left-1/2 top-0 h-44 w-[120%] -translate-x-1/2 rounded-full bg-gradient-to-r from-arcade-neon/25 via-arcade-primary/20 to-arcade-accent/25 blur-3xl"
         />
         <div className="relative flex flex-col items-center gap-5">
-          <TrophyIcon size={36} className="animate-pulse-glow text-arcade-neon" />
-          <h2 className="font-display text-2xl uppercase tracking-wide sm:text-3xl">
+          <TrophyIcon size={36} className="animate-pulse-glow text-arcade-gold drop-shadow-[0_0_18px_rgba(255,200,87,0.45)]" />
+          <h2 className="font-display text-xl uppercase tracking-tight sm:text-2xl">
             Ready for the leaderboard?
           </h2>
-          <p className="max-w-md text-gray-300">
+          <p className="max-w-md text-slate-300">
             Spin up a room in seconds — no installs, just a link and a code.
           </p>
           <Link
             to={session ? '/lobby' : '/auth'}
-            className="flex items-center gap-2 rounded-lg bg-arcade-accent px-7 py-3 font-semibold text-white shadow-glow-rose transition-all hover:scale-[1.03] hover:brightness-110"
+            className="flex items-center gap-2 rounded-full bg-arcade-primary px-7 py-3 font-bold text-arcade-ink shadow-underglow-mint transition-all hover:scale-[1.03] hover:brightness-110"
           >
             <UsersIcon size={17} />
             {session ? 'Enter the lobby' : 'Create free account'}

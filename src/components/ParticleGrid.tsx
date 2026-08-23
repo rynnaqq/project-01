@@ -27,6 +27,8 @@ export default function ParticleGrid({ className }: { className?: string }) {
     let rafId = 0;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const LINK_DISTANCE = 120;
+    // Prism spectrum — each mote carries its own band of light.
+    const SPECTRUM = ['67, 217, 255', '65, 242, 184', '255, 77, 136', '255, 200, 87'];
 
     function resize() {
       const parent = canvas!.parentElement;
@@ -50,10 +52,11 @@ export default function ParticleGrid({ className }: { className?: string }) {
     function draw() {
       ctx!.clearRect(0, 0, width, height);
 
-      for (const p of particles) {
+      for (let i = 0; i < particles.length; i += 1) {
+        const p = particles[i];
         ctx!.beginPath();
         ctx!.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
-        ctx!.fillStyle = 'rgba(34, 211, 238, 0.8)';
+        ctx!.fillStyle = `rgba(${SPECTRUM[i % SPECTRUM.length]}, 0.85)`;
         ctx!.fill();
       }
 
@@ -68,7 +71,7 @@ export default function ParticleGrid({ className }: { className?: string }) {
             ctx!.beginPath();
             ctx!.moveTo(a.x, a.y);
             ctx!.lineTo(b.x, b.y);
-            ctx!.strokeStyle = `rgba(124, 58, 237, ${0.25 * (1 - dist / LINK_DISTANCE)})`;
+            ctx!.strokeStyle = `rgba(125, 170, 235, ${0.22 * (1 - dist / LINK_DISTANCE)})`;
             ctx!.lineWidth = 1;
             ctx!.stroke();
           }

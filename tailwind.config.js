@@ -5,25 +5,31 @@ export default {
     extend: {
       colors: {
         arcade: {
-          bg: '#0f0f23',
-          panel: '#1e1c35',
-          muted: '#27273b',
-          line: '#4c1d95',
-          primary: '#7c3aed',
-          soft: '#a78bfa',
-          accent: '#f43f5e',
-          neon: '#22d3ee',
+          bg: '#06080f',
+          panel: '#0b1220',
+          muted: '#141d31',
+          line: '#233250',
+          // Spectrum semantics: mint = action, cyan = info, gold = achievement,
+          // rose = energy/alerts.
+          primary: '#41f2b8',
+          soft: '#a7f5dc',
+          neon: '#43d9ff',
+          accent: '#ff4d88',
+          gold: '#ffc857',
+          ink: '#04241a',
         },
       },
       fontFamily: {
-        display: ['"Russo One"', 'system-ui', 'sans-serif'],
+        display: ['"Unbounded"', 'system-ui', 'sans-serif'],
         body: ['"Chakra Petch"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        'glow-sm': '0 0 14px rgba(124, 58, 237, 0.35)',
-        glow: '0 0 28px rgba(124, 58, 237, 0.45)',
-        'glow-cyan': '0 0 20px rgba(34, 211, 238, 0.35)',
-        'glow-rose': '0 0 26px rgba(244, 63, 94, 0.4)',
+        glass: '0 24px 48px -24px rgba(2, 6, 16, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.14)',
+        'glass-sm': '0 12px 32px -20px rgba(2, 6, 16, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+        'underglow-mint': '0 14px 34px -14px rgba(65, 242, 184, 0.55)',
+        'underglow-cyan': '0 14px 34px -14px rgba(67, 217, 255, 0.45)',
+        'underglow-rose': '0 14px 34px -14px rgba(255, 77, 136, 0.5)',
+        'underglow-gold': '0 14px 34px -14px rgba(255, 200, 87, 0.45)',
       },
       keyframes: {
         float: {

@@ -118,19 +118,19 @@ export default function RoomPage() {
     reportError(settingsError);
   }
 
-  if (loading) return <p className="text-gray-400">Loading room…</p>;
+  if (loading) return <p className="text-slate-400">Loading room…</p>;
 
   if (error) {
     return (
       <section>
-        <h1 className="text-2xl font-bold">Room</h1>
-        <p role="alert" className="mt-3 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">
+        <h1 className="font-display text-xl uppercase tracking-tight">Room</h1>
+        <p role="alert" className="mt-3 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {friendlyMessage(error)}
         </p>
         <button
           type="button"
           onClick={() => navigate('/lobby')}
-          className="mt-4 rounded-md border border-white/10 px-4 py-2 text-sm hover:bg-white/5"
+          className="glass-chip mt-4 rounded-xl px-4 py-2 text-sm text-slate-200 hover:text-white"
         >
           Back to lobby
         </button>
@@ -138,7 +138,7 @@ export default function RoomPage() {
     );
   }
 
-  if (!room) return <p className="text-gray-400">Room not found.</p>;
+  if (!room) return <p className="text-slate-400">Room not found.</p>;
 
   const isHost = userId === room.host_id;
   const me = roster.find((r) => r.player_id === userId);
@@ -146,24 +146,24 @@ export default function RoomPage() {
 
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex items-center justify-between">
+      <header className="glass-chip flex flex-wrap items-center justify-between gap-4 rounded-2xl px-5 py-4">
         <div>
-          <h1 className="text-2xl font-bold">Room</h1>
-          <p className="mt-1 flex items-center gap-2 text-sm text-gray-400">
+          <h1 className="font-display text-lg uppercase tracking-tight">Room</h1>
+          <p className="mt-1 flex items-center gap-2 text-sm text-slate-400">
             Share this code:
-            <span className="rounded-md border border-arcade-neon/30 bg-arcade-neon/10 px-2 py-0.5 font-mono text-xl tracking-widest text-arcade-neon">
+            <span className="glass-chip rounded-lg px-2.5 py-0.5 font-mono text-xl tracking-[0.3em] text-arcade-neon">
               {room.code}
             </span>
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-arcade-panel px-3 py-1 text-xs capitalize text-gray-300">
+          <span className="glass-chip rounded-full px-3 py-1 text-xs capitalize text-slate-300">
             {room.status}
           </span>
           <button
             type="button"
             onClick={handleLeave}
-            className="rounded-md border border-white/10 px-4 py-2 text-sm hover:bg-white/5"
+            className="glass-chip rounded-full px-4 py-2 text-sm text-slate-200 transition-colors hover:text-white"
           >
             Leave
           </button>
@@ -173,7 +173,7 @@ export default function RoomPage() {
 
       {room.status === 'playing' && lifecycle.plan && (
         <div className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">
+          <h2 className="font-display text-base tracking-tight">
             {getGame(gameKey ?? '')?.title ?? 'Lifecycle demo'}
           </h2>
           <GameStage
@@ -213,7 +213,7 @@ export default function RoomPage() {
             <button
               type="button"
               onClick={handleEnd}
-              className="self-end rounded-md border border-white/10 px-4 py-2 text-sm hover:bg-white/5"
+              className="glass-chip self-end rounded-xl px-4 py-2 text-sm text-slate-200 hover:text-white"
             >
               Finish & back to lobby
             </button>
@@ -223,34 +223,36 @@ export default function RoomPage() {
 
       {history.length > 0 && room.status !== 'playing' && (
         <div>
-          <h2 className="mb-2 text-lg font-semibold">Recent matches</h2>
+          <h2 className="mb-2 font-display text-sm uppercase tracking-[0.2em] text-slate-400">
+            Recent matches
+          </h2>
           <ul className="flex flex-col gap-1.5">
             {history.map((match) => {
               const iWon = userId != null && match.winner_id === userId;
               return (
                 <li
                   key={match.id}
-                  className="flex items-center gap-3 rounded-md border border-white/10 bg-arcade-panel px-3 py-1.5 text-sm"
+                  className="glass-chip flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm"
                 >
                   <GameIcon
                     gameKey={match.game_key}
                     size={18}
                     className="shrink-0 text-arcade-neon"
                   />
-                  <span className="flex-1 text-gray-300">
+                  <span className="flex-1 text-slate-300">
                     {getGame(match.game_key)?.title ?? match.game_key}
                     {match.ended_at == null && (
-                      <span className="ml-2 text-xs text-gray-500">in progress</span>
+                      <span className="ml-2 text-xs text-slate-500">in progress</span>
                     )}
                   </span>
                   {iWon ? (
-                    <span className="text-xs font-medium text-arcade-neon">you won</span>
+                    <span className="text-xs font-medium text-arcade-gold">you won</span>
                   ) : match.winner_id != null ? (
-                    <span className="text-xs text-gray-400">decided</span>
+                    <span className="text-xs text-slate-400">decided</span>
                   ) : (
-                    <span className="text-xs text-gray-500">draw / unfinished</span>
+                    <span className="text-xs text-slate-500">draw / unfinished</span>
                   )}
-                  <time className="font-mono text-xs tabular-nums text-gray-500">
+                  <time className="font-mono text-xs tabular-nums text-slate-500">
                     {new Date(match.started_at).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -265,16 +267,16 @@ export default function RoomPage() {
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
+          <h2 className="font-display text-sm uppercase tracking-[0.2em] text-slate-400">
             Players ({roster.length}/{room.max_players})
           </h2>
           <button
             type="button"
             onClick={() => void toggleReady()}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
+            className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-bold transition-all ${
               me?.is_ready
-                ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
-                : 'bg-arcade-accent text-white hover:bg-arcade-accent/80'
+                ? 'bg-arcade-primary/15 text-arcade-primary ring-1 ring-inset ring-arcade-primary/40 shadow-glass-sm'
+                : 'bg-arcade-primary text-arcade-ink shadow-underglow-mint hover:brightness-110'
             }`}
           >
             {me?.is_ready ? 'Ready ✓' : 'Mark ready'}
@@ -289,7 +291,7 @@ export default function RoomPage() {
             return (
               <li
                 key={entry.player_id}
-                className="flex items-center gap-3 rounded-lg border border-white/10 bg-arcade-panel px-4 py-2"
+                className="glass-chip flex items-center gap-3 rounded-xl px-4 py-2.5"
               >
                 <span className="text-2xl" aria-hidden>
                   {avatar.emoji}
@@ -297,29 +299,29 @@ export default function RoomPage() {
                 <span className="flex-1 font-medium">
                   {entry.profile?.username ?? 'player'}
                   {isEntryHost && (
-                    <span className="ml-2 rounded bg-arcade-accent/20 px-1.5 py-0.5 text-xs text-arcade-neon">
+                    <span className="ml-2 rounded-full bg-arcade-neon/15 px-2 py-0.5 text-xs text-arcade-neon">
                       host
                     </span>
                   )}
                   {entry.player_id === userId && (
-                    <span className="ml-1 text-xs text-gray-500">(you)</span>
+                    <span className="ml-1 text-xs text-slate-500">(you)</span>
                   )}
                 </span>
                 <span
                   className={`inline-block h-2.5 w-2.5 rounded-full ${
-                    connected ? 'bg-green-400' : 'bg-gray-600'
+                    connected ? 'bg-arcade-primary shadow-[0_0_8px_rgba(65,242,184,0.7)]' : 'bg-slate-600'
                   }`}
                   title={connected ? 'Connected' : 'Offline'}
                   aria-label={connected ? 'Connected' : 'Offline'}
                 />
-                <span className={`text-xs ${entry.is_ready ? 'text-green-400' : 'text-gray-500'}`}>
+                <span className={`text-xs ${entry.is_ready ? 'text-arcade-primary' : 'text-slate-500'}`}>
                   {entry.is_ready ? 'ready' : 'waiting'}
                 </span>
                 {isHost && !isEntryHost && (
                   <button
                     type="button"
                     onClick={() => void handleKick(entry.player_id)}
-                    className="rounded border border-red-500/30 px-2 py-0.5 text-xs text-red-400 hover:bg-red-500/10"
+                    className="rounded-lg border border-red-400/30 px-2 py-0.5 text-xs text-red-300 transition-colors hover:bg-red-500/10"
                   >
                     Kick
                   </button>
@@ -331,15 +333,17 @@ export default function RoomPage() {
       </div>
 
       {isHost && (
-        <div className="rounded-lg border border-white/10 bg-arcade-panel p-4">
-          <h3 className="text-sm font-semibold text-gray-300">Host controls</h3>
+        <div className="glass rounded-2xl p-5">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">
+            Host controls
+          </h3>
           <div className="mt-3 flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 text-sm">
-              <span className="text-gray-400">Max players</span>
+              <span className="text-slate-400">Max players</span>
               <select
                 value={room.max_players}
                 onChange={(e) => void handleCapacity(Number(e.target.value))}
-                className="rounded-md border border-white/10 bg-arcade-bg px-2 py-1"
+                className="field cursor-pointer px-2 py-1.5 text-white [&>option]:bg-arcade-panel"
               >
                 {[2, 4, 6, 8, 12, 16].map((n) => (
                   <option key={n} value={n}>
@@ -352,7 +356,7 @@ export default function RoomPage() {
               type="button"
               onClick={handleStart}
               disabled={!everyoneReady || room.status === 'playing'}
-              className="rounded-md bg-arcade-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-arcade-accent/80 disabled:opacity-50"
+              className="cursor-pointer rounded-xl bg-arcade-primary px-4 py-2 text-sm font-bold text-arcade-ink shadow-underglow-mint transition-all hover:brightness-110 disabled:opacity-50 disabled:shadow-none"
               title={everyoneReady ? 'Start the game' : 'All players must be ready (min 2)'}
             >
               Start game

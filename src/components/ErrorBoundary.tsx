@@ -38,7 +38,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
         <button
           type="button"
           onClick={this.handleReload}
-          className="mt-6 rounded-md bg-arcade-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-arcade-accent/80"
+          className="mt-6 rounded-xl bg-arcade-primary px-4 py-2 text-sm font-bold text-arcade-ink transition hover:brightness-110"
         >
           Reload
         </button>
