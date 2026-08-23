@@ -1,0 +1,13 @@
+{
+  // Cloudflare Workers static-assets deployment (build system runs `npx wrangler deploy`).
+  // Assets-only Worker: no server code, dist/ is served directly.
+  // not_found_handling=SPA -> unknown paths return index.html (deep links like
+  // /room/:code survive hard refresh). public/_redirects & _headers stay effective.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "project-01",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
