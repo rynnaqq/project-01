@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
 import { useToast } from '../context/ToastProvider';
@@ -15,6 +15,7 @@ import {
   type Match,
 } from '../lib/matches';
 import { computeWinner } from '../lib/scoreHelpers';
+import { shouldAwardWalkover } from '../lib/walkover';
 import { getAvatar } from '../lib/avatars';
 import { friendlyMessage } from '../lib/errors';
 import { getGame } from '../lib/games';
@@ -46,6 +47,52 @@ export default function RoomPage() {
     },
     [push],
   );
+
+  // Walkover (last player standing): while a match is live, watch the roster.
+  // If a match that ever had two or more members drops to exactly one, that
+  // survivor wins by default. The flag resets whenever the room leaves
+  // 'playing', so solo rooms (roster of one from match start) never qualify.
+  const sawMultiplayerRef = useRef(false);
+  useEffect(() => {
+    if (room?.status !== 'playing') {
+      sawMultiplayerRef.current = false;
+      return;
+    }
+    if (roster.length >= 2) sawMultiplayerRef.current = true;
+  }, [room?.status, roster.length]);
+
+  // Fire once per match: finalize it with the survivor as winner, announce,
+  // then clear the plan so the room returns to the lobby. The leaver's own
+  // host migration (migration 0004) promotes the survivor when needed, which
+  // keeps both writes permitted under RLS.
+  const walkoverDoneRef = useRef(new Set<string>());
+  const endMatch = lifecycle.endMatch;
+  useEffect(() => {
+    if (!room || !userId || !matchId) return;
+    if (walkoverDoneRef.current.has(matchId)) return;
+
+    const last = roster.length === 1 ? roster[0] : null;
+    const isWalkover = shouldAwardWalkover({
+      roomStatus: room.status,
+      matchId,
+      rosterSize: roster.length,
+      sawMultiplayer: sawMultiplayerRef.current,
+    });
+    // Only the remaining member acts; everyone else has already left.
+    if (!isWalkover || !last || last.player_id !== userId) return;
+
+    walkoverDoneRef.current.add(matchId);
+    void (async () => {
+      const { error: finalizeError } = await finalizeMatch(matchId, userId);
+      reportError(finalizeError);
+      push(
+        `${getAvatar(last.profile?.avatar).emoji} Everyone else left. You win the match!`,
+        'success',
+      );
+      const { error: endError } = await endMatch();
+      reportError(endError);
+    })();
+  }, [room, roster, userId, matchId, endMatch, push, reportError]);
 
   const gameKey = lifecycle.plan?.gameKey ?? room?.selected_game ?? null;
   const GameComponent = useMemo(() => getGameComponent(lifecycle.plan?.gameKey), [lifecycle.plan?.gameKey]);
