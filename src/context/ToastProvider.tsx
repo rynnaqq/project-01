@@ -70,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             data-testid={`toast-${toast.kind}`}
-            className={`slab pointer-events-auto flex w-full max-w-sm items-start gap-3 px-4 py-3 text-sm font-semibold shadow-pop ${
+            className={`slab toast-in pointer-events-auto flex w-full max-w-sm items-start gap-3 px-4 py-3 text-sm font-semibold shadow-pop ${
               toast.kind === 'error'
                 ? 'border-l-8 border-l-[#c2402f] bg-[#ffe3df] text-[#7c2d24]'
                 : toast.kind === 'success'

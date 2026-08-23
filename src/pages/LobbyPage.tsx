@@ -12,6 +12,7 @@ import {
   ZapIcon,
 } from '../components/icons';
 import { gameTileGradient } from '../lib/gameArt';
+import { Reveal } from '../components/motion';
 
 /** Lobby: create a new room or join an existing one by code. */
 export default function LobbyPage() {
@@ -88,6 +89,7 @@ export default function LobbyPage() {
       )}
 
       <div className="grid gap-7 sm:grid-cols-2 lg:gap-8">
+        <Reveal index={0} className="h-full">
         <div className="slab relative -rotate-1 overflow-hidden p-6 pt-7 shadow-pop transition-transform hover:rotate-0">
           <span className="sticker absolute right-4 top-3 bg-arcade-pop px-2.5 py-0.5 text-[11px] text-arcade-ink">
             Host
@@ -103,14 +105,16 @@ export default function LobbyPage() {
             type="button"
             onClick={handleCreate}
             disabled={busy !== null}
-            className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2.5 font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+            className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2.5 font-bold text-arcade-ink lift shadow-pop-sm transition-colors hover:bg-[#ff8ad8] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <PlayIcon size={16} aria-hidden />
             {busy === 'create' ? 'Creating…' : 'Create room'}
           </button>
         </div>
+        </Reveal>
 
-        <div className="slab relative rotate-1 overflow-hidden p-6 pt-7 shadow-pop transition-transform hover:rotate-0">
+        <Reveal index={1} className="h-full">
+        <div className="slab relative rotate-1 h-full overflow-hidden p-6 pt-7 shadow-pop transition-transform duration-300 ease-expo hover:rotate-0">
           <span className="sticker absolute right-4 top-3 bg-arcade-sea px-2.5 py-0.5 text-[11px] text-arcade-ink">
             Guest
           </span>
@@ -133,12 +137,13 @@ export default function LobbyPage() {
             <button
               type="submit"
               disabled={busy !== null || code.length !== 6}
-              className="shrink-0 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-5 font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:bg-arcade-sun hover:shadow-pop disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+              className="shrink-0 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-5 font-bold text-arcade-ink lift shadow-pop-sm transition-colors hover:bg-arcade-sun disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy === 'join' ? 'Joining…' : 'Join'}
             </button>
           </form>
         </div>
+        </Reveal>
       </div>
     </section>
   );

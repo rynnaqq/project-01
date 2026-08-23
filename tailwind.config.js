@@ -48,6 +48,12 @@ export default {
         'spin-slow': {
           to: { transform: 'rotate(360deg)' },
         },
+        // Countdown numeral: a quick elastic pop on every new second.
+        tick: {
+          '0%': { transform: 'scale(1)' },
+          '35%': { transform: 'scale(1.16) rotate(2deg)' },
+          '100%': { transform: 'scale(1)' },
+        },
       },
       animation: {
         bob: 'bob 4s ease-in-out infinite',
@@ -55,6 +61,7 @@ export default {
         rise: 'rise 0.5s ease-out both',
         marquee: 'marquee 20s linear infinite',
         'spin-slow': 'spin-slow 14s linear infinite',
+        tick: 'tick 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
     },
   },

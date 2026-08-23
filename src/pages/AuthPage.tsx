@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthProvider';
 import { validatePassword, validateUsername } from '../lib/authHelpers';
 import { friendlyMessage } from '../lib/errors';
 import { PlusMark, Sparkle, Squiggle } from '../components/decor';
+import { Magnetic, Reveal } from '../components/motion';
 import { GamepadIcon, UserIcon, ZapIcon } from '../components/icons';
 
 type Mode = 'login' | 'register';
@@ -45,11 +46,12 @@ export default function AuthPage() {
       <Sparkle className="pointer-events-none absolute -left-10 top-0 h-9 w-9 animate-spin-slow text-arcade-accent" />
       <Squiggle className="pointer-events-none absolute -right-12 bottom-16 hidden h-7 w-24 text-arcade-peri sm:block" />
       <PlusMark className="pointer-events-none absolute -top-4 right-2 h-6 w-6 rotate-12 text-arcade-neon" />
-      <div className="slab relative rotate-[-1deg] p-8 shadow-pop-lg">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="flex h-14 w-14 -rotate-6 items-center justify-center rounded-2xl border-[3px] border-arcade-ink bg-arcade-pop text-arcade-ink shadow-pop">
-            <GamepadIcon size={26} aria-hidden />
-          </span>
+      <Reveal index={0}>
+        <div className="slab relative rotate-[-1deg] p-8 shadow-pop-lg">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <span className="flex h-14 w-14 -rotate-6 items-center justify-center rounded-2xl border-[3px] border-arcade-ink bg-arcade-pop text-arcade-ink shadow-pop transition-transform duration-300 ease-spring hover:rotate-6 hover:scale-110">
+              <GamepadIcon size={26} aria-hidden />
+            </span>
           <h1 className="font-display text-base uppercase tracking-wide">
             {mode === 'login' ? 'Welcome back' : 'Join the arcade'}
           </h1>
@@ -79,7 +81,7 @@ export default function AuthPage() {
                 setMode(value);
                 setError(null);
               }}
-              className={`cursor-pointer rounded-full py-1.5 text-sm font-bold transition-all ${
+              className={`cursor-pointer rounded-full py-1.5 text-sm font-bold transition-colors ${
                 mode === value
                   ? 'bg-arcade-sun text-arcade-ink shadow-pop-sm'
                   : 'text-stone-500 hover:text-arcade-ink'
@@ -129,22 +131,25 @@ export default function AuthPage() {
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="mt-1 flex cursor-pointer items-center justify-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2.5 font-bold text-arcade-ink shadow-pop transition-all hover:-translate-y-0.5 hover:shadow-pop-lg disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
-          >
-            {!busy && <UserIcon size={16} aria-hidden />}
-            {busy ? (
-              <span aria-live="polite">Please wait…</span>
-            ) : mode === 'login' ? (
-              'Log in'
-            ) : (
-              'Sign up'
-            )}
-          </button>
+          <Magnetic max={5}>
+            <button
+              type="submit"
+              disabled={busy}
+              className="lift mt-1 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2.5 font-bold text-arcade-ink shadow-pop transition-colors hover:bg-[#ff8ad8] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {!busy && <UserIcon size={16} aria-hidden />}
+              {busy ? (
+                <span aria-live="polite">Please wait…</span>
+              ) : mode === 'login' ? (
+                'Log in'
+              ) : (
+                'Sign up'
+              )}
+            </button>
+          </Magnetic>
         </form>
-      </div>
+        </div>
+      </Reveal>
     </section>
   );
 }

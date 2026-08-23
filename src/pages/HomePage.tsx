@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import ParticleGrid from '../components/ParticleGrid';
 import { DotCluster, HalfRing, PlusMark, Sparkle, Squiggle, TriShape, ZigzagBand } from '../components/decor';
+import { Magnetic, Reveal, Spotlight } from '../components/motion';
 import { useAuth } from '../context/AuthProvider';
 import { GAMES } from '../lib/games';
 import { ArrowRightIcon, GameIcon, TrophyIcon, UsersIcon } from '../components/icons';
@@ -27,53 +28,63 @@ export default function HomePage() {
         <PlusMark className="pointer-events-none absolute right-6 -bottom-4 h-6 w-6 rotate-12 text-arcade-neon" />
 
         <div className="relative flex flex-col items-start gap-6 pt-4">
-          <h1 className="font-display text-4xl uppercase leading-[1.08] tracking-wide sm:text-5xl lg:text-6xl">
-            Interactive{' '}
-            <span className="text-arcade-accent">Arcade</span>{' '}
-            <span className="text-arcade-neon">Hub</span>
-          </h1>
-          <p className="max-w-md text-lg font-medium text-stone-600">
-            Quick mini-games against your friends. Make a room, send them the code, and fight for
-            the top score.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              to={session ? '/lobby' : '/auth'}
-              className="rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-7 py-3 font-bold text-arcade-ink shadow-pop transition-all hover:-translate-y-0.5 hover:shadow-pop-lg active:translate-y-0 active:shadow-pop-sm"
-            >
-              {session ? 'Enter the lobby' : 'Get started'}
-            </Link>
+          <Reveal index={0} className="w-full">
+            <h1 className="font-display text-4xl uppercase leading-[1.08] tracking-wide sm:text-5xl lg:text-6xl">
+              Interactive{' '}
+              <span className="text-arcade-accent">Arcade</span>{' '}
+              <span className="text-arcade-neon">Hub</span>
+            </h1>
+          </Reveal>
+          <Reveal index={1}>
+            <p className="max-w-md text-lg font-medium text-stone-600">
+              Quick mini-games against your friends. Make a room, send them the code, and fight for
+              the top score.
+            </p>
+          </Reveal>
+          <Reveal index={2}>
+            <div className="flex flex-wrap gap-4">
+            <Magnetic>
+              <Link
+                to={session ? '/lobby' : '/auth'}
+                className="lift block rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-7 py-3 font-bold text-arcade-ink shadow-pop transition-colors hover:bg-[#ff8ad8]"
+              >
+                {session ? 'Enter the lobby' : 'Get started'}
+              </Link>
+            </Magnetic>
             <Link
               to="/games"
-              className="rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-7 py-3 font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:bg-arcade-sun hover:shadow-pop active:translate-y-0 active:shadow-none"
+              className="lift rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-7 py-3 font-bold text-arcade-ink shadow-pop-sm transition-colors hover:bg-arcade-sun"
             >
-              Browse games
+                  Browse games
             </Link>
-          </div>
-          <dl className="mt-2 flex flex-wrap gap-3">
-            {[
-              { term: 'Games', value: '3', tint: 'bg-arcade-sun', tilt: '-rotate-1' },
-              { term: 'Modes', value: 'Solo · 1v1 · Party', tint: 'bg-arcade-sea', tilt: 'rotate-1' },
-              { term: 'Scores', value: 'Live', tint: 'bg-arcade-pop', tilt: '-rotate-2' },
-            ].map((stat) => (
-              <div key={stat.term} className={`sticker ${stat.tilt} ${stat.tint} px-4 py-2 text-xs text-arcade-ink`}>
-                <dt className="order-2">{stat.term}</dt>
-                <dd className="order-1 font-display">{stat.value}</dd>
-              </div>
-            ))}
-          </dl>
+            </div>
+          </Reveal>
+          <Reveal index={3}>
+            <dl className="mt-2 flex flex-wrap gap-3">
+              {[
+                { term: 'Games', value: '3', tint: 'bg-arcade-sun', tilt: '-rotate-1' },
+                { term: 'Modes', value: 'Solo · 1v1 · Party', tint: 'bg-arcade-sea', tilt: 'rotate-1' },
+                { term: 'Scores', value: 'Live', tint: 'bg-arcade-pop', tilt: '-rotate-2' },
+              ].map((stat) => (
+                <div key={stat.term} className={`sticker ${stat.tilt} ${stat.tint} px-4 py-2 text-xs text-arcade-ink`}>
+                  <dt className="order-2">{stat.term}</dt>
+                  <dd className="order-1 font-display">{stat.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
         </div>
 
-        <div className="relative mt-10 hidden h-[380px] sm:block lg:mt-0">
+        <Reveal index={2} className="relative mt-10 hidden h-[380px] sm:block lg:mt-0">
           <HalfRing className="absolute -left-5 top-6 z-10 h-10 w-20 -rotate-45 text-arcade-sun" />
           <TriShape className="absolute -right-3 bottom-10 z-10 h-9 w-9 rotate-12 text-arcade-accent" />
           <DotCluster className="absolute -bottom-6 left-8 z-10 h-12 w-12 text-arcade-peri" />
-          <div className="slab relative h-full rotate-2 overflow-hidden shadow-pop-lg">
+          <Spotlight className="slab h-full rotate-2 overflow-hidden shadow-pop-lg" color="rgba(255,255,255,0.22)">
             <div className="stripes absolute inset-x-0 top-0 h-3 opacity-80" aria-hidden />
             <ParticleGrid />
             <ZigzagBand className="absolute inset-x-0 bottom-0 h-4 w-full text-arcade-ink" />
-          </div>
-        </div>
+          </Spotlight>
+        </Reveal>
       </section>
 
       {/* Ticker strip */}
@@ -106,7 +117,7 @@ export default function HomePage() {
           </div>
           <Link
             to="/games"
-            className="group hidden items-center gap-1.5 rounded-full border-2 border-arcade-ink bg-arcade-panel px-4 py-1.5 text-sm font-bold text-arcade-ink transition-all hover:bg-arcade-sun hover:shadow-pop-sm sm:inline-flex"
+            className="group hidden items-center gap-1.5 rounded-full border-2 border-arcade-ink bg-arcade-panel px-4 py-1.5 text-sm font-bold text-arcade-ink transition-colors hover:bg-arcade-sun sm:inline-flex"
           >
             All games
             <ArrowRightIcon size={15} className="transition-transform group-hover:translate-x-1" />
@@ -117,10 +128,11 @@ export default function HomePage() {
             const tints = ['bg-arcade-pop', 'bg-arcade-sea', 'bg-arcade-sun'];
             const tilts = ['-rotate-2', 'rotate-1', '-rotate-1'];
             return (
-              <article
-                key={game.key}
-                className={`slab ${tilts[i % tilts.length]} p-6 shadow-pop transition-all duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-pop-lg`}
-              >
+              <Reveal key={game.key} index={i} className="h-full">
+                <Spotlight className="h-full" color="rgba(255,255,255,0.4)">
+                  <article
+                    className={`slab ${tilts[i % tilts.length]} h-full overflow-hidden p-6 shadow-pop transition-transform duration-300 ease-expo hover:-translate-y-1.5 hover:rotate-0`}
+                  >
                 <span
                   className={`flex h-14 w-14 items-center justify-center rounded-2xl border-[3px] border-arcade-ink bg-gradient-to-br ${gameTileGradient(
                     game.key,
@@ -149,7 +161,9 @@ export default function HomePage() {
                   Play now
                   <ArrowRightIcon size={15} className="transition-transform group-hover:translate-x-1" />
                 </Link>
-              </article>
+                  </article>
+                </Spotlight>
+              </Reveal>
             );
           })}
         </div>
@@ -179,17 +193,18 @@ export default function HomePage() {
               tint: 'bg-arcade-sun',
             },
           ].map((item, i) => (
-            <li
-              key={item.step}
-              className={`slab relative p-6 shadow-pop ${i % 2 === 0 ? '-rotate-1' : 'rotate-1'}`}
-            >
-              <span
-                className={`flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-arcade-ink font-display text-sm text-arcade-ink ${item.tint} absolute -top-4 left-5`}
-              >
-                {item.step}
-              </span>
-              <h3 className="mt-4 font-display text-xs uppercase tracking-wide">{item.title}</h3>
-              <p className="mt-1.5 text-sm font-medium text-stone-600">{item.desc}</p>
+            <li key={item.step} className="relative">
+              <Reveal index={i}>
+                <div className={`slab relative p-6 pt-7 shadow-pop ${i % 2 === 0 ? '-rotate-1' : 'rotate-1'}`}>
+                  <span
+                    className={`flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-arcade-ink font-display text-sm text-arcade-ink ${item.tint} absolute -top-4 left-5`}
+                  >
+                    {item.step}
+                  </span>
+                  <h3 className="mt-2 font-display text-xs uppercase tracking-wide">{item.title}</h3>
+                  <p className="mt-1.5 text-sm font-medium text-stone-600">{item.desc}</p>
+                </div>
+              </Reveal>
             </li>
           ))}
         </ol>
@@ -212,7 +227,7 @@ export default function HomePage() {
           </p>
           <Link
             to={session ? '/lobby' : '/auth'}
-            className="mt-1 flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-7 py-3 font-bold text-arcade-ink shadow-pop transition-all hover:-translate-y-0.5 hover:shadow-pop-lg active:translate-y-0 active:shadow-pop-sm"
+            className="mt-1 flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-7 py-3 font-bold text-arcade-ink shadow-pop lift"
           >
             <UsersIcon size={17} aria-hidden />
             {session ? 'Enter the lobby' : 'Create free account'}

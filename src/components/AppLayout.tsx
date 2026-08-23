@@ -37,12 +37,12 @@ export default function AppLayout() {
         aria-current={active ? 'page' : undefined}
         className={
           layout === 'pill'
-            ? `block rounded-full border-2 px-3 py-1 font-semibold transition-all ${
+            ? `block rounded-full border-2 px-3 py-1 font-semibold transition-colors ${
                 active
                   ? 'border-arcade-ink bg-arcade-sun text-arcade-ink shadow-pop-sm'
                   : 'border-transparent text-stone-600 hover:border-arcade-ink hover:bg-arcade-muted hover:text-arcade-ink'
               }`
-            : `block rounded-xl border-2 px-2 py-2 text-center font-semibold transition-all ${
+            : `block rounded-xl border-2 px-2 py-2 text-center font-semibold transition-colors ${
                 active
                   ? 'border-arcade-ink bg-arcade-sun text-arcade-ink shadow-pop-sm'
                   : 'border-transparent bg-arcade-muted/60 text-stone-600 hover:bg-arcade-muted hover:text-arcade-ink'
@@ -67,7 +67,7 @@ export default function AppLayout() {
           {/* Row 1: identity · nav (desktop) · actions */}
           <div className="flex items-center justify-between gap-3">
             <Link to="/" className="group flex shrink-0 items-center gap-2.5">
-              <span className="flex h-10 w-10 -rotate-6 items-center justify-center rounded-xl border-[3px] border-arcade-ink bg-arcade-pop text-arcade-ink transition-transform duration-200 group-hover:rotate-6 group-hover:scale-105">
+              <span className="flex h-10 w-10 -rotate-6 items-center justify-center rounded-xl border-[3px] border-arcade-ink bg-arcade-pop text-arcade-ink transition-transform duration-300 ease-spring group-hover:rotate-6 group-hover:scale-110">
                 <GamepadIcon size={20} aria-hidden />
               </span>
               <span className="font-display text-xs uppercase tracking-wide text-arcade-ink sm:text-base">
@@ -93,7 +93,7 @@ export default function AppLayout() {
                   <button
                     type="button"
                     onClick={handleSignOut}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-arcade-ink bg-arcade-panel px-3 py-1.5 font-semibold text-arcade-ink transition-all hover:bg-arcade-sea hover:shadow-pop-sm"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-arcade-ink bg-arcade-panel px-3 py-1.5 font-semibold text-arcade-ink transition-all hover:bg-arcade-sea"
                   >
                     <LogOutIcon size={14} aria-hidden />
                     <span className="sr-only sm:not-sr-only">Log out</span>
@@ -102,7 +102,7 @@ export default function AppLayout() {
               ) : (
                 <Link
                   to="/auth"
-                  className="rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-1.5 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none"
+                  className="rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-1.5 text-sm font-bold text-arcade-ink shadow-pop-sm lift"
                 >
                   Log in
                 </Link>

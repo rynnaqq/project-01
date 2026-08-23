@@ -13,7 +13,7 @@ export default function AudioControls() {
         aria-pressed={musicEnabled}
         title={musicEnabled ? 'Turn music off' : 'Turn music on'}
         aria-label={`Music ${musicEnabled ? 'on' : 'off'}`}
-        className={`cursor-pointer rounded-full border-2 p-2 transition-all ${
+        className={`cursor-pointer rounded-full border-2 p-2 transition-colors ${
           musicEnabled
             ? 'border-arcade-ink bg-arcade-sea text-arcade-ink shadow-pop-sm'
             : 'border-transparent text-stone-500 hover:bg-arcade-muted hover:text-arcade-ink'
@@ -27,7 +27,7 @@ export default function AudioControls() {
         aria-pressed={sfxEnabled}
         title={sfxEnabled ? 'Turn sound effects off' : 'Turn sound effects on'}
         aria-label={`Sound effects ${sfxEnabled ? 'on' : 'off'}`}
-        className={`cursor-pointer rounded-full border-2 p-2 transition-all ${
+        className={`cursor-pointer rounded-full border-2 p-2 transition-colors ${
           sfxEnabled
             ? 'border-arcade-ink bg-arcade-sea text-arcade-ink shadow-pop-sm'
             : 'border-transparent text-stone-500 hover:bg-arcade-muted hover:text-arcade-ink'

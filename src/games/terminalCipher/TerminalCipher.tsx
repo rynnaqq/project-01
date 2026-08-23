@@ -197,7 +197,7 @@ export default function TerminalCipher({
                   : isEntered
                     ? 'bg-arcade-pop text-arcade-ink shadow-pop-sm'
                     : 'bg-arcade-panel text-arcade-ink shadow-pop-sm'
-              } ${canPlay ? 'hover:-translate-y-0.5 hover:bg-arcade-sea hover:shadow-pop' : 'cursor-not-allowed'}`}
+              } ${canPlay ? 'shadow-pop' : 'cursor-not-allowed'}`}
             >
               {cell + 1}
             </button>

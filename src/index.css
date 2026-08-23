@@ -15,6 +15,10 @@
   --pop: #ff71ce;
   --sun: #ffce5c;
   --sea: #86ccca;
+  /* Motion tokens: decelerating expo for entrances, gentle overshoot for
+     tactile pops. Entrances are weighty; exits are faster than entrances. */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 body {
@@ -63,6 +67,28 @@ body {
     border-radius: 1rem;
   }
 
+  /*
+   * Lift: the tactile replacement for animating box-shadows. The hard shadow
+   * is painted once and never transitions; the element itself drifts up-left
+   * on hover (deepening the offset) and squashes into it on press.
+   * Transform-only, spring timing, disabled on touch where hover sticks.
+   */
+  .lift {
+    transition: transform 0.22s var(--ease-spring);
+  }
+  .lift:hover {
+    transform: translate3d(-3px, -3px, 0);
+  }
+  .lift:active {
+    transform: translate3d(2px, 2px, 0) scale(0.99);
+    transition-duration: 0.09s;
+  }
+  @media (pointer: coarse) {
+    .lift:hover {
+      transform: none;
+    }
+  }
+
   /* A sticker — pill-shaped label with an ink outline. */
   .sticker {
     display: inline-flex;
@@ -76,12 +102,29 @@ body {
     box-shadow: 3px 3px 0 0 var(--ink);
   }
 
+  /* Spotlight host: clips the cursor-following light blob to the card. */
+  .spotlight {
+    position: relative;
+  }
+  .spotlight-beam {
+    position: absolute;
+    left: -190px;
+    top: -190px;
+    width: 380px;
+    height: 380px;
+    border-radius: 9999px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease-out;
+    will-change: transform;
+  }
+
   /* Form field: white, thick border, hard shadow on focus. */
   .field {
     border-radius: 0.75rem;
     border: 3px solid var(--ink);
     background: var(--paper);
-    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    transition: transform 0.18s var(--ease-spring), box-shadow 0.18s var(--ease-spring);
   }
   .field::placeholder {
     color: #a89c88;
@@ -91,6 +134,65 @@ body {
     box-shadow: 4px 4px 0 0 var(--ink);
     transform: translate(-1px, -1px);
   }
+
+  /* Modal choreography: panel springs in from below, exits faster. */
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 16px, 0) scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+  @keyframes modal-out {
+    from {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0) scale(0.96);
+    }
+  }
+  .modal-in {
+    animation: modal-in 0.45s var(--ease-expo) both;
+  }
+  .modal-out {
+    animation: modal-out 0.16s cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  /* Children of a freshly-opened surface cascade in (40ms steps). */
+  @keyframes stag-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+  .stag {
+    animation: stag-in 0.5s var(--ease-expo) both;
+    animation-delay: calc(var(--i, 0) * 40ms + 60ms);
+  }
+
+  /* Toast entrance: quick elastic pop from the bottom edge. */
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 16px, 0) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+  .toast-in {
+    animation: toast-in 0.38s var(--ease-spring) both;
+  }
 }
 
 @layer utilities {
@@ -99,6 +201,36 @@ body {
     text-shadow:
       0.045em 0.045em 0 var(--sun),
       0.09em 0.09em 0 var(--ink);
+  }
+
+  /*
+   * Scroll/mount reveal. Starts hidden and shifted; `.is-visible` (added by
+   * the Reveal component's IntersectionObserver) settles it with an expo
+   * deceleration. will-change is dropped once the transition finishes.
+   */
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0) scale(0.985);
+    transition:
+      transform 0.65s var(--ease-expo),
+      opacity 0.45s cubic-bezier(0.4, 0, 1, 1);
+    transition-delay: calc(var(--reveal-i, 0) * 45ms);
+    will-change: transform, opacity;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  .reveal.is-visible.revealed {
+    will-change: auto;
+  }
+
+  /* Easing helpers for Tailwind transition-* utilities. */
+  .ease-spring {
+    transition-timing-function: var(--ease-spring);
+  }
+  .ease-expo {
+    transition-timing-function: var(--ease-expo);
   }
 
   /* Diagonal candy-stripe band (borders/dividers/decor). */

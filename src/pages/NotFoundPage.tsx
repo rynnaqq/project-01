@@ -22,7 +22,7 @@ export default function NotFoundPage() {
       </p>
       <Link
         to="/"
-        className="group inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-6 py-3 font-bold text-arcade-ink shadow-pop transition-all hover:-translate-y-0.5 hover:shadow-pop-lg active:translate-y-0 active:shadow-pop-sm"
+        className="group inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-6 py-3 font-bold text-arcade-ink shadow-pop lift"
       >
         Back home
         <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" aria-hidden />

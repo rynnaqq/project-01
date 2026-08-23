@@ -180,7 +180,7 @@ export default function RoomPage() {
         <button
           type="button"
           onClick={() => navigate('/lobby')}
-          className="mt-4 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:bg-arcade-sun hover:shadow-pop"
+          className="mt-4 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:bg-arcade-sun"
         >
           Back to lobby
         </button>
@@ -213,7 +213,7 @@ export default function RoomPage() {
           <button
             type="button"
             onClick={handleLeave}
-            className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-4 py-1.5 text-sm font-bold text-arcade-ink transition-all hover:-translate-y-0.5 hover:bg-arcade-sun hover:shadow-pop-sm"
+            className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-4 py-1.5 text-sm font-bold text-arcade-ink transition-all hover:-translate-y-0.5 hover:bg-arcade-sun-sm"
           >
             Leave
           </button>
@@ -263,7 +263,7 @@ export default function RoomPage() {
             <button
               type="button"
               onClick={handleEnd}
-              className="cursor-pointer self-end rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:bg-arcade-sun hover:shadow-pop"
+              className="cursor-pointer self-end rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:bg-arcade-sun"
             >
               Finish & back to lobby
             </button>
@@ -328,7 +328,7 @@ export default function RoomPage() {
             className={`cursor-pointer rounded-full border-[3px] border-arcade-ink px-4 py-1.5 text-sm font-bold transition-all ${
               me?.is_ready
                 ? 'bg-arcade-sea text-arcade-ink shadow-pop-sm hover:-translate-y-0.5'
-                : 'bg-arcade-accent text-arcade-ink shadow-pop-sm hover:-translate-y-0.5 hover:shadow-pop'
+                : 'bg-arcade-accent text-arcade-ink shadow-pop-sm hover:-translate-y-0.5'
             }`}
           >
             {me?.is_ready ? 'Ready ✓' : 'Mark ready'}
@@ -407,7 +407,7 @@ export default function RoomPage() {
               type="button"
               onClick={handleStart}
               disabled={!everyoneReady || room.status === 'playing'}
-              className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+              className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
               title={everyoneReady ? 'Start the game' : 'All players must be ready (min 2)'}
             >
               Start game

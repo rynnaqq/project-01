@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioProvider';
 import { filterGames, type GameFilter } from '../lib/gameFilters';
@@ -16,6 +16,7 @@ import {
   XIcon,
   ZapIcon,
 } from '../components/icons';
+import { Magnetic, Reveal, Spotlight } from '../components/motion';
 import { gameTileGradient } from '../lib/gameArt';
 
 /** Sticker colour per band so cards scan quickly. */
@@ -74,10 +75,11 @@ export default function GamesPage() {
       ) : (
         <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
           {visible.map((game, i) => (
-            <article
-              key={game.key}
-              className={`slab ${CARD_TILTS[i % CARD_TILTS.length]} group flex flex-col p-5 shadow-pop transition-all duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-pop-lg`}
-            >
+            <Reveal key={game.key} index={i % 6} className="h-full">
+              <Spotlight className="h-full" color="rgba(255,255,255,0.4)">
+                <article
+                  className={`slab ${CARD_TILTS[i % CARD_TILTS.length]} group flex h-full flex-col overflow-hidden p-5 shadow-pop transition-transform duration-300 ease-expo hover:-translate-y-1.5 hover:rotate-0`}
+                >
               <div className="flex items-start justify-between">
                 <span
                   className={`flex h-14 w-14 items-center justify-center rounded-2xl border-[3px] border-arcade-ink bg-gradient-to-br ${gameTileGradient(
@@ -112,7 +114,7 @@ export default function GamesPage() {
                 <button
                   type="button"
                   onClick={() => setPreview(game)}
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-3 py-2 text-sm font-bold text-arcade-ink transition-all hover:bg-arcade-muted hover:shadow-pop-sm active:translate-y-0 active:shadow-none"
+                  className="lift flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-3 py-2 text-sm font-bold text-arcade-ink transition-colors hover:bg-arcade-muted"
                 >
                   <EyeIcon size={15} aria-hidden />
                   Preview
@@ -120,12 +122,14 @@ export default function GamesPage() {
                 <button
                   type="button"
                   onClick={() => selectGame(game)}
-                  className="flex-1 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-3 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none"
+                  className="lift flex-1 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-3 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-colors hover:bg-[#ff8ad8]"
                 >
                   Select
                 </button>
               </div>
-            </article>
+                </article>
+              </Spotlight>
+            </Reveal>
           ))}
         </div>
       )}
@@ -182,31 +186,46 @@ function PreviewModal({
   onSelect: (game: GameDefinition) => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  // Exit choreography: play the out animation first, unmount after it ends.
+  const [closing, setClosing] = useState(false);
 
   // Focus the close button on open and support Escape to dismiss, so keyboard
   // users can always leave the dialog.
   useEffect(() => {
     closeRef.current?.focus();
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') requestClose();
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function requestClose() {
+    if (closing) return;
+    setClosing(true);
+  }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-150 bg-stone-900/60 ${
+        closing ? 'opacity-0' : 'opacity-100'
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label={`${game.title} preview`}
-      onClick={onClose}
+      onClick={requestClose}
+      onTransitionEnd={(e) => {
+        if (closing && e.target === e.currentTarget) onClose();
+      }}
     >
       <div
-        className="slab w-full max-w-md rotate-[-1deg] animate-rise p-6 shadow-pop-lg"
+        className={`slab w-full max-w-md rotate-[-1deg] p-6 shadow-pop-lg ${
+          closing ? 'modal-out' : 'modal-in'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="stag flex items-start justify-between gap-4" style={{ '--i': 0 } as CSSProperties}>
           <div className="flex items-start gap-4">
             <span
               className={`flex h-16 w-16 shrink-0 -rotate-3 items-center justify-center rounded-2xl border-[3px] border-arcade-ink bg-gradient-to-br ${gameTileGradient(
@@ -225,41 +244,45 @@ function PreviewModal({
           <button
             ref={closeRef}
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="Close preview"
-            className="cursor-pointer rounded-full border-2 border-arcade-ink bg-arcade-panel p-1.5 text-arcade-ink transition-all hover:bg-arcade-sun hover:shadow-pop-sm"
+            className="lift cursor-pointer rounded-full border-2 border-arcade-ink bg-arcade-panel p-1.5 text-arcade-ink transition-colors hover:bg-arcade-sun"
           >
             <XIcon size={18} />
           </button>
         </div>
 
-        <h3 className="mt-6 text-xs font-bold uppercase tracking-[0.25em] text-stone-500">
-          How to play
-        </h3>
-        <ul className="mt-2 space-y-2 text-sm font-medium text-stone-700">
-          {game.mechanics.map((m) => (
-            <li key={m} className="flex items-start gap-2">
-              <ZapIcon size={14} className="mt-0.5 shrink-0 text-arcade-neon" aria-hidden />
-              {m}
-            </li>
-          ))}
-        </ul>
+        <div className="stag mt-6" style={{ '--i': 1 } as CSSProperties}>
+          <h3 className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">
+            How to play
+          </h3>
+          <ul className="mt-2 space-y-2 text-sm font-medium text-stone-700">
+            {game.mechanics.map((m) => (
+              <li key={m} className="flex items-start gap-2">
+                <ZapIcon size={14} className="mt-0.5 shrink-0 text-arcade-neon" aria-hidden />
+                {m}
+              </li>
+            ))}
+          </ul>
+        </div>
 
-        <div className="mt-6 flex justify-end gap-2.5">
+        <div className="stag mt-6 flex justify-end gap-2.5" style={{ '--i': 2 } as CSSProperties}>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-4 py-2 text-sm font-bold text-arcade-ink transition-colors hover:bg-arcade-muted"
           >
             Close
           </button>
-          <button
-            type="button"
-            onClick={() => onSelect(game)}
-            className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none"
-          >
-            Select this game
-          </button>
+          <Magnetic max={5}>
+            <button
+              type="button"
+              onClick={() => onSelect(game)}
+              className="lift cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-colors hover:bg-[#ff8ad8]"
+            >
+              Select this game
+            </button>
+          </Magnetic>
         </div>
       </div>
     </div>

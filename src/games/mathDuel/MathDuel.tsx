@@ -138,7 +138,7 @@ export default function MathDuel({
         <button
           type="submit"
           disabled={locked}
-          className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none"
+          className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none"
         >
           Enter
         </button>

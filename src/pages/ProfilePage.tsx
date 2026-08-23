@@ -27,7 +27,7 @@ export default function ProfilePage() {
             await refreshProfile();
             setRetrying(false);
           }}
-          className="mt-5 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+          className="mt-5 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
         >
           {retrying ? 'Retrying…' : 'Retry'}
         </button>
@@ -96,10 +96,10 @@ export default function ProfilePage() {
                 title={avatar.label}
                 aria-pressed={selected}
                 aria-label={avatar.label}
-                className={`flex aspect-square cursor-pointer items-center justify-center rounded-xl border-[3px] border-arcade-ink text-3xl transition-all ${
+                className={`flex aspect-square cursor-pointer items-center justify-center rounded-xl border-[3px] border-arcade-ink text-3xl transition-[background-color,transform] duration-200 ${
                   selected
                     ? 'rotate-3 bg-arcade-sun shadow-pop'
-                    : 'bg-arcade-panel hover:-translate-y-0.5 hover:bg-arcade-muted hover:shadow-pop-sm'
+                    : 'bg-arcade-panel hover:-translate-y-0.5 hover:bg-arcade-muted'
                 }`}
               >
                 {avatar.emoji}

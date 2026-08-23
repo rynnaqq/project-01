@@ -21,9 +21,15 @@ export default function GameStage({ lifecycle, children, results }: GameStagePro
     return (
       <div className="slab grid-paper relative flex flex-col items-center justify-center gap-2 overflow-hidden py-20 shadow-pop-lg">
         <p className="sticker bg-arcade-sea px-4 py-1 text-xs text-arcade-ink">Starting in</p>
-        <p className="text-pop-shadow font-display text-6xl tabular-nums text-arcade-accent">
+        {/* key={seconds} remounts the numeral each tick, replaying the pop. */}
+        <p
+          key={seconds}
+          aria-hidden
+          className="text-pop-shadow animate-tick font-display text-6xl tabular-nums text-arcade-accent"
+        >
           {seconds}
         </p>
+        <span className="sr-only" role="timer">{seconds}</span>
       </div>
     );
   }
