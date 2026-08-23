@@ -1,28 +1,31 @@
 import { Link } from 'react-router-dom';
+import { Sparkle, Squiggle } from '../components/decor';
 import { ArrowRightIcon } from '../components/icons';
 
 /** 404 fallback route. */
 export default function NotFoundPage() {
   return (
-    <section className="flex flex-col items-center gap-5 py-16 text-center">
+    <section className="relative flex flex-col items-center gap-6 py-20 text-center">
+      <Sparkle className="pointer-events-none absolute left-1/4 top-10 h-8 w-8 animate-spin-slow text-arcade-accent" />
+      <Squiggle className="pointer-events-none absolute bottom-16 right-1/4 h-7 w-24 -rotate-6 text-arcade-peri" />
       <p
         aria-hidden
-        className="text-spectrum font-display text-8xl font-semibold tracking-widest sm:text-9xl"
+        className="text-pop-shadow font-display text-7xl tracking-widest text-arcade-pop sm:text-9xl"
       >
         404
       </p>
-      <h1 className="font-display text-lg uppercase tracking-tight">
+      <h1 className="font-display text-lg uppercase tracking-wide">
         Game over — page not found
       </h1>
-      <p className="max-w-sm text-slate-400">
+      <p className="max-w-sm font-medium text-stone-600">
         That page does not exist. Insert coin to return to the arcade floor.
       </p>
       <Link
         to="/"
-        className="group inline-flex items-center gap-2 rounded-full bg-arcade-primary px-6 py-3 font-bold text-arcade-ink shadow-underglow-mint transition-all hover:scale-[1.03] hover:brightness-110"
+        className="group inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-6 py-3 font-bold text-arcade-ink shadow-pop transition-all hover:-translate-y-0.5 hover:shadow-pop-lg active:translate-y-0 active:shadow-pop-sm"
       >
         Back home
-        <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" />
+        <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" aria-hidden />
       </Link>
     </section>
   );

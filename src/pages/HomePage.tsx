@@ -1,174 +1,224 @@
 import { Link } from 'react-router-dom';
 import ParticleGrid from '../components/ParticleGrid';
-import TiltCard from '../components/TiltCard';
+import { DotCluster, HalfRing, PlusMark, Sparkle, Squiggle, TriShape, ZigzagBand } from '../components/decor';
 import { useAuth } from '../context/AuthProvider';
 import { GAMES } from '../lib/games';
 import { ArrowRightIcon, GameIcon, TrophyIcon, UsersIcon, ZapIcon } from '../components/icons';
 import { gameTileGradient } from '../lib/gameArt';
 
-/** Landing page: a glass vitrine with the prism spectrum playing behind it. */
+const TICKER_ITEMS = [
+  'Real-time multiplayer',
+  'Three arenas, one leaderboard',
+  'No installs — just a link and a code',
+  'Scores stream live',
+];
+
+/** Landing page: an asymmetric Memphis playground with tumbling confetti. */
 export default function HomePage() {
   const { session } = useAuth();
 
   return (
-    <div className="flex flex-col gap-16">
-      {/* Hero — the display case */}
-      <section className="glass-static sheen relative overflow-hidden rounded-[2rem]">
-        <div aria-hidden className="dot-matrix absolute inset-0 opacity-60" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-28 -top-28 h-80 w-80 rounded-full bg-arcade-neon/20 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-36 right-[-4rem] h-96 w-96 rounded-full bg-arcade-accent/15 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 top-1/3 h-72 w-72 rounded-full bg-arcade-primary/10 blur-3xl"
-        />
-        <div className="pointer-events-none absolute inset-0">
-          <ParticleGrid />
-        </div>
-        <div className="relative flex flex-col items-center gap-6 px-6 py-20 text-center sm:py-28">
-          <p className="glass-chip inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-arcade-neon">
-            <ZapIcon size={13} />
+    <div className="flex flex-col gap-20">
+      {/* Hero — asymmetric split with a tilted confetti case */}
+      <section className="relative lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-12">
+        {/* Scattered decorations */}
+        <Sparkle className="pointer-events-none absolute -top-6 left-1/3 h-8 w-8 animate-spin-slow text-arcade-accent" />
+        <Squiggle className="pointer-events-none absolute -left-2 bottom-2 hidden h-8 w-24 text-arcade-peri lg:block" />
+        <PlusMark className="pointer-events-none absolute right-6 -bottom-4 h-6 w-6 rotate-12 text-arcade-neon" />
+
+        <div className="relative flex flex-col items-start gap-6 pt-4">
+          <p className="sticker -rotate-2 bg-arcade-sea px-4 py-1.5 text-xs text-arcade-ink">
+            <ZapIcon size={13} aria-hidden />
             Real-time multiplayer
           </p>
-          <h1 className="text-spectrum max-w-3xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            Interactive Arcade Hub
+          <h1 className="font-display text-4xl uppercase leading-[1.08] tracking-wide sm:text-5xl lg:text-6xl">
+            Interactive{' '}
+            <span className="text-arcade-accent">Arcade</span>{' '}
+            <span className="text-arcade-neon">Hub</span>
           </h1>
-          <p className="max-w-xl text-slate-300">
-            Real-time multiplayer mini-games behind frosted glass. Create a room, invite friends,
+          <p className="max-w-md text-lg font-medium text-stone-600">
+            Real-time multiplayer mini-games with smooth animations. Create a room, invite friends,
             and battle for the top of the leaderboard.
           </p>
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap gap-4">
             <Link
               to={session ? '/lobby' : '/auth'}
-              className="rounded-full bg-arcade-primary px-7 py-3 font-bold text-arcade-ink shadow-underglow-mint transition-all hover:scale-[1.03] hover:brightness-110"
+              className="rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-7 py-3 font-bold text-arcade-ink shadow-pop transition-all hover:-translate-y-0.5 hover:shadow-pop-lg active:translate-y-0 active:shadow-pop-sm"
             >
               {session ? 'Enter the lobby' : 'Get started'}
             </Link>
             <Link
               to="/games"
-              className="glass-chip rounded-full px-7 py-3 font-semibold text-slate-200 transition-colors hover:text-white"
+              className="rounded-full border-[3px] border-arcade-ink bg-arcade-panel px-7 py-3 font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:bg-arcade-sun hover:shadow-pop active:translate-y-0 active:shadow-none"
             >
               Browse games
             </Link>
           </div>
-          <dl className="glass-chip mt-4 grid w-full max-w-md grid-cols-3 divide-x divide-white/10 rounded-2xl py-3">
+          <dl className="mt-2 flex flex-wrap gap-3">
             {[
-              { term: 'Games', value: '3' },
-              { term: 'Modes', value: 'Solo · 1v1 · Party' },
-              { term: 'Scores', value: 'Live' },
+              { term: 'Games', value: '3', tint: 'bg-arcade-sun', tilt: '-rotate-1' },
+              { term: 'Modes', value: 'Solo · 1v1 · Party', tint: 'bg-arcade-sea', tilt: 'rotate-1' },
+              { term: 'Scores', value: 'Live', tint: 'bg-arcade-pop', tilt: '-rotate-2' },
             ].map((stat) => (
-              <div key={stat.term} className="flex flex-col px-2">
-                <dt className="order-2 text-[11px] uppercase tracking-widest text-slate-500">
-                  {stat.term}
-                </dt>
-                <dd className="order-1 font-display text-xs text-arcade-gold sm:text-sm">
-                  {stat.value}
-                </dd>
+              <div key={stat.term} className={`sticker ${stat.tilt} ${stat.tint} px-4 py-2 text-xs text-arcade-ink`}>
+                <dt className="order-2">{stat.term}</dt>
+                <dd className="order-1 font-display">{stat.value}</dd>
               </div>
             ))}
           </dl>
         </div>
+
+        <div className="relative mt-10 hidden h-[380px] sm:block lg:mt-0">
+          <HalfRing className="absolute -left-5 top-6 z-10 h-10 w-20 -rotate-45 text-arcade-sun" />
+          <TriShape className="absolute -right-3 bottom-10 z-10 h-9 w-9 rotate-12 text-arcade-accent" />
+          <DotCluster className="absolute -bottom-6 left-8 z-10 h-12 w-12 text-arcade-peri" />
+          <div className="slab relative h-full rotate-2 overflow-hidden shadow-pop-lg">
+            <div className="stripes absolute inset-x-0 top-0 h-3 opacity-80" aria-hidden />
+            <ParticleGrid />
+            <ZigzagBand className="absolute inset-x-0 bottom-0 h-4 w-full text-arcade-ink" />
+          </div>
+        </div>
       </section>
 
+      {/* Ticker strip */}
+      <div className="slab relative overflow-hidden rounded-xl bg-arcade-ink py-2.5 shadow-pop" aria-hidden>
+        <div className="flex w-max animate-marquee gap-10 pr-10">
+          {[0, 1].map((copy) => (
+            <div key={copy} className="flex shrink-0 items-center gap-10">
+              {TICKER_ITEMS.map((item) => (
+                <span
+                  key={`${copy}-${item}`}
+                  className="flex items-center gap-10 whitespace-nowrap font-display text-xs uppercase tracking-widest text-arcade-bg"
+                >
+                  {item}
+                  <Sparkle className="h-4 w-4 shrink-0 text-arcade-sun" />
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Featured games */}
-      <section className="flex flex-col gap-5">
-        <div className="flex items-end justify-between">
+      <section className="flex flex-col gap-6">
+        <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="font-display text-xl uppercase tracking-tight sm:text-2xl">
-              Pick your battle
+            <h2 className="font-display text-xl uppercase tracking-wide sm:text-2xl">
+              Pick your <span className="text-arcade-accent">battle</span>
             </h2>
-            <p className="mt-1 text-sm text-slate-400">Three arenas, one leaderboard.</p>
+            <p className="mt-1 font-medium text-stone-600">Three arenas, one leaderboard.</p>
           </div>
           <Link
             to="/games"
-            className="group hidden items-center gap-1.5 text-sm font-semibold text-arcade-neon transition-colors hover:text-white sm:inline-flex"
+            className="group hidden items-center gap-1.5 rounded-full border-2 border-arcade-ink bg-arcade-panel px-4 py-1.5 text-sm font-bold text-arcade-ink transition-all hover:bg-arcade-sun hover:shadow-pop-sm sm:inline-flex"
           >
             All games
             <ArrowRightIcon size={15} className="transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {GAMES.map((game) => (
-            <TiltCard key={game.key} className="rounded-2xl">
-              <article className="glass sheen flex h-full flex-col rounded-2xl p-6 transition-transform duration-200 hover:-translate-y-1">
+        <div className="grid gap-6 sm:grid-cols-3 lg:gap-8">
+          {GAMES.map((game, i) => {
+            const tints = ['bg-arcade-pop', 'bg-arcade-sea', 'bg-arcade-sun'];
+            const tilts = ['-rotate-2', 'rotate-1', '-rotate-1'];
+            return (
+              <article
+                key={game.key}
+                className={`slab ${tilts[i % tilts.length]} p-6 shadow-pop transition-all duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-pop-lg`}
+              >
                 <span
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${gameTileGradient(
+                  className={`flex h-14 w-14 items-center justify-center rounded-2xl border-[3px] border-arcade-ink bg-gradient-to-br ${gameTileGradient(
                     game.key,
-                  )} text-white shadow-glass-sm`}
+                  )} text-white shadow-pop-sm`}
                 >
-                  <GameIcon gameKey={game.key} size={24} />
+                  <GameIcon gameKey={game.key} size={26} />
                 </span>
-                <h3 className="mt-4 font-display text-base tracking-tight">{game.title}</h3>
-                <p className="mt-1 flex-1 text-sm text-slate-400">{game.tagline}</p>
+                <h3 className="mt-4 font-display text-sm uppercase leading-snug tracking-wide">
+                  {game.title}
+                </h3>
+                <p className="mt-1.5 flex-1 text-sm font-medium text-stone-600">{game.tagline}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {game.modes.map((m) => (
+                    <span
+                      key={m}
+                      className={`rounded-full border-2 border-arcade-ink px-2.5 py-0.5 text-xs font-bold ${tints[i % tints.length]} text-arcade-ink`}
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
                 <Link
                   to={`/lobby?game=${game.key}`}
-                  className="group mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-arcade-primary transition-colors hover:text-white"
+                  className="group mt-4 inline-flex items-center gap-1.5 border-b-[3px] border-arcade-ink pb-0.5 text-sm font-bold uppercase tracking-wide text-arcade-ink transition-colors hover:text-arcade-neon"
                 >
                   Play now
                   <ArrowRightIcon size={15} className="transition-transform group-hover:translate-x-1" />
                 </Link>
               </article>
-            </TiltCard>
-          ))}
+            );
+          })}
         </div>
       </section>
 
       {/* How it works */}
-      <section className="flex flex-col gap-5">
-        <h2 className="font-display text-xl uppercase tracking-tight sm:text-2xl">How it works</h2>
-        <ol className="grid gap-4 sm:grid-cols-3">
+      <section className="flex flex-col gap-6">
+        <h2 className="font-display text-xl uppercase tracking-wide sm:text-2xl">How it works</h2>
+        <ol className="grid gap-6 sm:grid-cols-3 lg:gap-8">
           {[
             {
               step: '01',
               title: 'Create or join',
               desc: 'Spin up a room and share the 6-character code with your rivals.',
+              tint: 'bg-arcade-pop',
             },
             {
               step: '02',
               title: 'Ready up',
               desc: 'Everyone marks ready in the live roster — presence synced instantly.',
+              tint: 'bg-arcade-sea',
             },
             {
               step: '03',
               title: 'Battle & win',
               desc: 'Scores stream to a shared scoreboard; history is saved per room.',
+              tint: 'bg-arcade-sun',
             },
-          ].map((item) => (
-            <li key={item.step} className="glass-chip rounded-2xl p-6">
-              <span className="font-display text-2xl text-transparent [background:linear-gradient(120deg,var(--spectrum-cyan),var(--spectrum-rose))] [-webkit-background-clip:text] [background-clip:text]">
+          ].map((item, i) => (
+            <li
+              key={item.step}
+              className={`slab relative p-6 shadow-pop ${i % 2 === 0 ? '-rotate-1' : 'rotate-1'}`}
+            >
+              <span
+                className={`flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-arcade-ink font-display text-sm text-arcade-ink ${item.tint} absolute -top-4 left-5`}
+              >
                 {item.step}
               </span>
-              <h3 className="mt-3 font-semibold">{item.title}</h3>
-              <p className="mt-1 text-sm text-slate-400">{item.desc}</p>
+              <h3 className="mt-4 font-display text-xs uppercase tracking-wide">{item.title}</h3>
+              <p className="mt-1.5 text-sm font-medium text-stone-600">{item.desc}</p>
             </li>
           ))}
         </ol>
       </section>
 
       {/* CTA band */}
-      <section className="glass-static relative overflow-hidden rounded-[2rem] p-10 text-center">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 h-44 w-[120%] -translate-x-1/2 rounded-full bg-gradient-to-r from-arcade-neon/25 via-arcade-primary/20 to-arcade-accent/25 blur-3xl"
-        />
-        <div className="relative flex flex-col items-center gap-5">
-          <TrophyIcon size={36} className="animate-pulse-glow text-arcade-gold drop-shadow-[0_0_18px_rgba(255,200,87,0.45)]" />
-          <h2 className="font-display text-xl uppercase tracking-tight sm:text-2xl">
+      <section className="slab relative overflow-hidden bg-arcade-sun p-10 text-center shadow-pop-lg sm:p-14">
+        <PlusMark className="pointer-events-none absolute left-6 top-6 h-7 w-7 rotate-12 text-arcade-ink" />
+        <TriShape className="pointer-events-none absolute right-8 top-8 h-8 w-8 -rotate-6 text-arcade-accent" />
+        <Squiggle className="pointer-events-none absolute bottom-5 left-10 h-7 w-28 text-arcade-ink" />
+        <div className="relative mx-auto flex max-w-md flex-col items-center gap-5">
+          <span className="flex h-16 w-16 animate-bob items-center justify-center rounded-full border-[3px] border-arcade-ink bg-arcade-panel text-arcade-gold shadow-pop">
+            <TrophyIcon size={30} />
+          </span>
+          <h2 className="font-display text-xl uppercase leading-snug tracking-wide sm:text-2xl">
             Ready for the leaderboard?
           </h2>
-          <p className="max-w-md text-slate-300">
+          <p className="font-medium text-stone-700">
             Spin up a room in seconds — no installs, just a link and a code.
           </p>
           <Link
             to={session ? '/lobby' : '/auth'}
-            className="flex items-center gap-2 rounded-full bg-arcade-primary px-7 py-3 font-bold text-arcade-ink shadow-underglow-mint transition-all hover:scale-[1.03] hover:brightness-110"
+            className="mt-1 flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-7 py-3 font-bold text-arcade-ink shadow-pop transition-all hover:-translate-y-0.5 hover:shadow-pop-lg active:translate-y-0 active:shadow-pop-sm"
           >
-            <UsersIcon size={17} />
+            <UsersIcon size={17} aria-hidden />
             {session ? 'Enter the lobby' : 'Create free account'}
           </Link>
         </div>

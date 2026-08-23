@@ -136,7 +136,7 @@ export default function TerminalCipher({
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="flex w-full flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-gray-400 sm:text-sm">
+      <div className="flex w-full flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-stone-500 sm:text-sm">
         <span>
           Score <span className="font-mono text-base text-arcade-neon tabular-nums">{score}</span>
         </span>
@@ -161,16 +161,16 @@ export default function TerminalCipher({
         {watching ? (
           <span className="text-arcade-neon">Watch the sequence…</span>
         ) : versus && !myTurn ? (
-          <span className="text-amber-400">Player {turnNumber} is cracking the cipher…</span>
+          <span className="text-[#8a5b00]">Player {turnNumber} is cracking the cipher…</span>
         ) : status === 'cleared' ? (
-          <span className="text-green-400">
+          <span className="text-[#0e7a6d]">
             Cracked! +{pointsForRound(round)}
             {versus ? ' — wait for the next round.' : ''}
           </span>
         ) : status === 'failed' ? (
-          <span className="text-red-400">Wrong cell — start the sequence again.</span>
+          <span className="text-[#c2402f]">Wrong cell — start the sequence again.</span>
         ) : (
-          <span className="text-gray-400">
+          <span className="text-stone-500">
             Your turn — repeat {sequence.length} steps ({input.length} entered).
           </span>
         )}
@@ -191,13 +191,13 @@ export default function TerminalCipher({
               onClick={() => handleCell(cell)}
               disabled={!canPlay}
               aria-label={`Cell ${cell + 1}`}
-              className={`h-16 w-16 rounded-lg border font-mono text-sm transition sm:h-20 sm:w-20 ${
+              className={`h-16 w-16 rounded-xl border-[3px] border-arcade-ink font-mono text-sm font-bold transition sm:h-20 sm:w-20 ${
                 isLit
-                  ? 'border-arcade-neon bg-arcade-neon/70 text-arcade-bg'
+                  ? 'bg-arcade-sun text-arcade-ink shadow-pop'
                   : isEntered
-                    ? 'border-arcade-accent bg-arcade-accent/40 text-white'
-                    : 'border-white/10 bg-arcade-bg text-gray-500'
-              } ${canPlay ? 'hover:border-arcade-neon/60 hover:bg-white/5' : 'cursor-not-allowed'}`}
+                    ? 'bg-arcade-pop text-arcade-ink shadow-pop-sm'
+                    : 'bg-arcade-panel text-arcade-ink shadow-pop-sm'
+              } ${canPlay ? 'hover:-translate-y-0.5 hover:bg-arcade-sea hover:shadow-pop' : 'cursor-not-allowed'}`}
             >
               {cell + 1}
             </button>
@@ -205,7 +205,7 @@ export default function TerminalCipher({
         })}
       </div>
 
-      <p className="text-center text-xs text-gray-400">
+      <p className="text-center text-xs text-stone-500">
         {versus
           ? 'Turn-based versus: rounds rotate between players on the shared clock.'
           : 'Timed mode: clear as many rounds as you can before time runs out.'}{' '}

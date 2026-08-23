@@ -1,14 +1,27 @@
 import { useEffect, useRef } from 'react';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 
-type Particle = { x: number; y: number; vx: number; vy: number };
+type Confetto = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rot: number;
+  vr: number;
+  size: number;
+  shape: 0 | 1 | 2;
+  color: string;
+};
+
+const COLORS = ['#ff71ce', '#ffce5c', '#86ccca', '#6a7bb4'];
 
 /**
- * Animated grid-particle backdrop rendered on a <canvas>.
+ * Memphis confetti backdrop rendered on a <canvas>: squares, circles and
+ * triangles tumbling slowly across the frame.
  *
  * Performance guardrails:
  *  - device pixel ratio capped at 2;
- *  - particle count scales with area but is capped;
+ *  - piece count scales with area but is capped;
  *  - honours prefers-reduced-motion by drawing a single static frame.
  */
 export default function ParticleGrid({ className }: { className?: string }) {
@@ -23,12 +36,9 @@ export default function ParticleGrid({ className }: { className?: string }) {
 
     let width = 0;
     let height = 0;
-    let particles: Particle[] = [];
+    let pieces: Confetto[] = [];
     let rafId = 0;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const LINK_DISTANCE = 120;
-    // Prism spectrum — each mote carries its own band of light.
-    const SPECTRUM = ['67, 217, 255', '65, 242, 184', '255, 77, 136', '255, 200, 87'];
 
     function resize() {
       const parent = canvas!.parentElement;
@@ -40,51 +50,64 @@ export default function ParticleGrid({ className }: { className?: string }) {
       canvas!.style.height = `${height}px`;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const target = Math.min(90, Math.floor((width * height) / 12000));
-      particles = Array.from({ length: target }, () => ({
+      const target = Math.min(64, Math.floor((width * height) / 16000));
+      pieces = Array.from({ length: target }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.02,
+        size: 7 + Math.random() * 9,
+        shape: Math.floor(Math.random() * 3) as 0 | 1 | 2,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
       }));
+    }
+
+    function drawPiece(p: Confetto) {
+      ctx!.save();
+      ctx!.translate(p.x, p.y);
+      ctx!.rotate(p.rot);
+      ctx!.fillStyle = p.color;
+      ctx!.strokeStyle = '#1a1611';
+      ctx!.lineWidth = 2;
+      if (p.shape === 0) {
+        // Square
+        ctx!.beginPath();
+        ctx!.rect(-p.size / 2, -p.size / 2, p.size, p.size);
+        ctx!.fill();
+        ctx!.stroke();
+      } else if (p.shape === 1) {
+        // Circle
+        ctx!.beginPath();
+        ctx!.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+        ctx!.fill();
+        ctx!.stroke();
+      } else {
+        // Triangle
+        ctx!.beginPath();
+        ctx!.moveTo(0, -p.size / 2);
+        ctx!.lineTo(p.size / 2, p.size / 2);
+        ctx!.lineTo(-p.size / 2, p.size / 2);
+        ctx!.closePath();
+        ctx!.fill();
+        ctx!.stroke();
+      }
+      ctx!.restore();
     }
 
     function draw() {
       ctx!.clearRect(0, 0, width, height);
-
-      for (let i = 0; i < particles.length; i += 1) {
-        const p = particles[i];
-        ctx!.beginPath();
-        ctx!.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(${SPECTRUM[i % SPECTRUM.length]}, 0.85)`;
-        ctx!.fill();
-      }
-
-      for (let i = 0; i < particles.length; i += 1) {
-        for (let j = i + 1; j < particles.length; j += 1) {
-          const a = particles[i];
-          const b = particles[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < LINK_DISTANCE) {
-            ctx!.beginPath();
-            ctx!.moveTo(a.x, a.y);
-            ctx!.lineTo(b.x, b.y);
-            ctx!.strokeStyle = `rgba(125, 170, 235, ${0.22 * (1 - dist / LINK_DISTANCE)})`;
-            ctx!.lineWidth = 1;
-            ctx!.stroke();
-          }
-        }
-      }
+      for (const p of pieces) drawPiece(p);
     }
 
     function step() {
-      for (const p of particles) {
+      for (const p of pieces) {
         p.x += p.vx;
         p.y += p.vy;
-        if (p.x < 0 || p.x > width) p.vx *= -1;
-        if (p.y < 0 || p.y > height) p.vy *= -1;
+        p.rot += p.vr;
+        if (p.x < -20 || p.x > width + 20) p.vx *= -1;
+        if (p.y < -20 || p.y > height + 20) p.vy *= -1;
       }
       draw();
       rafId = requestAnimationFrame(step);

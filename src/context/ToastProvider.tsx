@@ -70,12 +70,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             data-testid={`toast-${toast.kind}`}
-            className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border px-4 py-3 text-sm backdrop-blur-xl shadow-glass ${
+            className={`slab pointer-events-auto flex w-full max-w-sm items-start gap-3 px-4 py-3 text-sm font-semibold shadow-pop ${
               toast.kind === 'error'
-                ? 'border-red-400/40 bg-red-950/80 text-red-200'
+                ? 'border-l-8 border-l-[#c2402f] bg-[#ffe3df] text-[#7c2d24]'
                 : toast.kind === 'success'
-                  ? 'border-arcade-primary/40 bg-[#062018]/85 text-emerald-200'
-                  : 'glass-deep text-slate-200'
+                  ? 'border-l-8 border-l-arcade-neon bg-arcade-panel text-arcade-ink'
+                  : 'border-l-8 border-l-arcade-peri bg-arcade-panel text-arcade-ink'
             }`}
           >
             <span className="flex-1">{toast.message}</span>

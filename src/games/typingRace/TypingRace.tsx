@@ -55,7 +55,7 @@ export default function TypingRace({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-gray-400 sm:text-sm">
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-stone-500 sm:text-sm">
         <span>
           Progress{' '}
           <span className="font-mono text-base text-arcade-neon tabular-nums">
@@ -71,7 +71,7 @@ export default function TypingRace({
       </div>
 
       <p
-        className="rounded-lg border border-white/10 bg-arcade-bg p-3 font-mono text-sm leading-7 sm:text-base"
+        className="rounded-xl border-[3px] border-arcade-ink bg-arcade-panel p-3 font-mono text-sm leading-7 sm:text-base"
         aria-hidden
       >
         {passage.split('').map((char, index) => {
@@ -83,12 +83,12 @@ export default function TypingRace({
               key={`${index}-${char}`}
               className={
                 isTypedCorrect
-                  ? 'text-green-400'
+                  ? 'text-[#0e7a6d]'
                   : showError
-                    ? 'rounded bg-red-500/40 text-white'
+                    ? 'rounded bg-[#ffb3ab] text-arcade-ink'
                     : isCursor
-                      ? 'rounded bg-arcade-neon/30 text-white'
-                      : 'text-gray-500'
+                      ? 'rounded bg-arcade-sea text-arcade-ink'
+                      : 'text-stone-400'
               }
             >
               {char}
@@ -114,23 +114,21 @@ export default function TypingRace({
         autoFocus
         placeholder={progress.done ? 'Finished!' : 'Start typing…'}
         aria-describedby="typing-race-status"
-        className={`w-full rounded-md border bg-arcade-bg px-3 py-2 font-mono text-sm outline-none disabled:opacity-50 sm:text-base ${
-          progress.errorChars > 0
-            ? 'border-red-500/60 focus:border-red-500'
-            : 'border-white/10 focus:border-arcade-neon'
-        }`}
+        className={`field w-full px-3 py-2 font-mono text-sm sm:text-base ${
+          progress.errorChars > 0 ? 'border-[#c2402f]' : 'border-arcade-ink focus:border-arcade-neon'
+        } disabled:opacity-50`}
       />
 
       <p id="typing-race-status" role="status" aria-live="polite" className="min-h-5 text-sm">
         {progress.done ? (
-          <span className="text-green-400">Finished — nice run!</span>
+          <span className="text-[#0e7a6d]">Finished — nice run!</span>
         ) : progress.errorChars > 0 ? (
-          <span className="text-red-400">
+          <span className="text-[#c2402f]">
             Mistake — delete {progress.errorChars} character{progress.errorChars > 1 ? 's' : ''} to
             continue.
           </span>
         ) : (
-          <span className="text-gray-400">
+          <span className="text-stone-500">
             Next character: <span className="font-mono text-arcade-neon">{upcoming === ' ' ? '␣' : upcoming}</span>
           </span>
         )}
@@ -142,11 +140,11 @@ export default function TypingRace({
           const isMe = entry.playerId === userId;
           return (
             <li key={entry.playerId} className="flex items-center gap-3 text-xs sm:text-sm">
-              <span className="w-24 shrink-0 truncate text-gray-300">
+              <span className="w-24 shrink-0 truncate text-stone-700">
                 {entry.username ?? 'player'}
-                {isMe && <span className="ml-1 text-gray-500">(you)</span>}
+                {isMe && <span className="ml-1 text-stone-400">(you)</span>}
               </span>
-              <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/10">
+              <span className="h-2.5 flex-1 overflow-hidden rounded-full border-2 border-arcade-ink bg-arcade-panel">
                 <span
                   role="progressbar"
                   aria-label={`${entry.username ?? 'player'} progress`}
@@ -159,7 +157,7 @@ export default function TypingRace({
                   style={{ width: `${pct}%` }}
                 />
               </span>
-              <span className="w-10 shrink-0 text-right font-mono tabular-nums text-gray-400">
+              <span className="w-10 shrink-0 text-right font-mono tabular-nums text-stone-500">
                 {pct}%
               </span>
             </li>

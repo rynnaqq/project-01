@@ -7,14 +7,16 @@ type ScoreboardProps = {
   winnerId?: string | null;
 };
 
-/** Ranked live scoreboard. Gold marks the winner; glass carries the rest. */
+const RANK_TINTS = ['bg-arcade-pop', 'bg-arcade-sun', 'bg-arcade-sea', 'bg-arcade-muted'];
+
+/** Ranked live scoreboard. A sun-yellow sticker crowns the winner. */
 export default function Scoreboard({ scores, currentUserId, winnerId }: ScoreboardProps) {
   if (scores.length === 0) {
-    return <p className="text-sm text-slate-400">No scores yet.</p>;
+    return <p className="text-sm font-medium text-stone-600">No scores yet.</p>;
   }
 
   return (
-    <ol className="flex flex-col gap-2">
+    <ol className="flex flex-col gap-2.5">
       {scores.map((entry, index) => {
         const avatar = getAvatar(entry.profile?.avatar);
         const isWinner = winnerId != null && entry.player_id === winnerId;
@@ -22,28 +24,30 @@ export default function Scoreboard({ scores, currentUserId, winnerId }: Scoreboa
         return (
           <li
             key={entry.player_id}
-            className={`flex items-center gap-3 rounded-xl border px-4 py-2 ${
-              isWinner
-                ? 'border-arcade-gold/40 bg-arcade-gold/10 shadow-underglow-gold'
-                : 'glass-chip'
+            className={`slab flex items-center gap-3 px-4 py-2.5 shadow-pop-sm ${
+              isWinner ? '-rotate-1 bg-arcade-sun' : ''
             }`}
           >
-            <span className="w-6 text-center font-mono text-slate-400">{index + 1}</span>
+            <span
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-arcade-ink font-mono text-xs font-bold text-arcade-ink ${
+                RANK_TINTS[index % RANK_TINTS.length]
+              }`}
+            >
+              {index + 1}
+            </span>
             <span className="text-2xl" aria-hidden>
               {avatar.emoji}
             </span>
-            <span className="flex-1 font-medium">
+            <span className="flex-1 font-semibold">
               {entry.profile?.username ?? 'player'}
-              {isMe && <span className="ml-1 text-xs text-slate-500">(you)</span>}
+              {isMe && <span className="ml-1 text-xs font-medium text-stone-500">(you)</span>}
               {isWinner && (
-                <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-arcade-gold">
+                <span className="sticker ml-2 bg-arcade-panel px-2 py-0.5 text-[10px] normal-case text-arcade-ink">
                   ★ winner
                 </span>
               )}
             </span>
-            <span className={`font-mono tabular-nums ${isWinner ? 'text-arcade-gold' : 'text-arcade-neon'}`}>
-              {entry.score}
-            </span>
+            <span className="font-mono font-bold tabular-nums text-arcade-ink">{entry.score}</span>
           </li>
         );
       })}

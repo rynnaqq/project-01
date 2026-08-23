@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
 import { validatePassword, validateUsername } from '../lib/authHelpers';
 import { friendlyMessage } from '../lib/errors';
+import { PlusMark, Sparkle, Squiggle } from '../components/decor';
 import { GamepadIcon, UserIcon, ZapIcon } from '../components/icons';
 
 type Mode = 'login' | 'register';
@@ -40,20 +41,19 @@ export default function AuthPage() {
   }
 
   return (
-    <section className="relative mx-auto w-full max-w-sm">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-16 left-1/2 h-48 w-72 -translate-x-1/2 rounded-full bg-gradient-to-r from-arcade-neon/20 via-arcade-primary/15 to-arcade-accent/20 blur-3xl"
-      />
-      <div className="glass-deep relative rounded-3xl p-8">
+    <section className="relative mx-auto w-full max-w-sm pt-6">
+      <Sparkle className="pointer-events-none absolute -left-10 top-0 h-9 w-9 animate-spin-slow text-arcade-accent" />
+      <Squiggle className="pointer-events-none absolute -right-12 bottom-16 hidden h-7 w-24 text-arcade-peri sm:block" />
+      <PlusMark className="pointer-events-none absolute -top-4 right-2 h-6 w-6 rotate-12 text-arcade-neon" />
+      <div className="slab relative rotate-[-1deg] p-8 shadow-pop-lg">
         <div className="flex flex-col items-center gap-3 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-arcade-neon to-arcade-primary text-[#04241a] shadow-underglow-cyan">
-            <GamepadIcon size={24} />
+          <span className="flex h-14 w-14 -rotate-6 items-center justify-center rounded-2xl border-[3px] border-arcade-ink bg-arcade-pop text-arcade-ink shadow-pop">
+            <GamepadIcon size={26} aria-hidden />
           </span>
-          <h1 className="font-display text-lg uppercase tracking-tight">
+          <h1 className="font-display text-base uppercase tracking-wide">
             {mode === 'login' ? 'Welcome back' : 'Join the arcade'}
           </h1>
-          <p className="-mt-1 text-sm text-slate-400">
+          <p className="-mt-1 text-sm font-medium text-stone-600">
             {mode === 'login'
               ? 'Log in to enter your rooms.'
               : 'Create an account to host matches.'}
@@ -63,7 +63,7 @@ export default function AuthPage() {
         <div
           role="group"
           aria-label="Authentication mode"
-          className="glass-chip mt-6 grid grid-cols-2 gap-1 rounded-full p-1"
+          className="mt-6 grid grid-cols-2 gap-1 rounded-full border-[3px] border-arcade-ink bg-arcade-muted p-1"
         >
           {(
             [
@@ -79,10 +79,10 @@ export default function AuthPage() {
                 setMode(value);
                 setError(null);
               }}
-              className={`cursor-pointer rounded-full py-1.5 text-sm font-semibold transition-all duration-200 ${
+              className={`cursor-pointer rounded-full py-1.5 text-sm font-bold transition-all ${
                 mode === value
-                  ? 'bg-white/12 text-white shadow-glass-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-arcade-sun text-arcade-ink shadow-pop-sm'
+                  : 'text-stone-500 hover:text-arcade-ink'
               }`}
             >
               {label}
@@ -92,11 +92,11 @@ export default function AuthPage() {
 
         <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-xs font-medium uppercase tracking-[0.25em] text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">
               Username
             </span>
             <input
-              className="field px-3 py-2.5 text-white"
+              className="field px-3 py-2.5 font-semibold text-arcade-ink"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
@@ -105,12 +105,12 @@ export default function AuthPage() {
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-xs font-medium uppercase tracking-[0.25em] text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">
               Password
             </span>
             <input
               type="password"
-              className="field px-3 py-2.5 text-white"
+              className="field px-3 py-2.5 font-semibold text-arcade-ink"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -122,9 +122,9 @@ export default function AuthPage() {
           {error && (
             <p
               role="alert"
-              className="flex items-start gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              className="flex items-start gap-2 rounded-xl border-[3px] border-arcade-ink bg-[#ffe3df] px-3 py-2.5 text-sm font-semibold text-[#7c2d24]"
             >
-              <ZapIcon size={15} className="mt-0.5 shrink-0" />
+              <ZapIcon size={15} className="mt-0.5 shrink-0" aria-hidden />
               {error}
             </p>
           )}
@@ -132,9 +132,9 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={busy}
-            className="mt-1 flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-arcade-primary px-4 py-2.5 font-bold text-arcade-ink shadow-underglow-mint transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+            className="mt-1 flex cursor-pointer items-center justify-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2.5 font-bold text-arcade-ink shadow-pop transition-all hover:-translate-y-0.5 hover:shadow-pop-lg disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
           >
-            {!busy && <UserIcon size={16} />}
+            {!busy && <UserIcon size={16} aria-hidden />}
             {busy ? (
               <span aria-live="polite">Please wait…</span>
             ) : mode === 'login' ? (

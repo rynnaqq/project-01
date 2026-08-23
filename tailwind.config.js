@@ -5,50 +5,56 @@ export default {
     extend: {
       colors: {
         arcade: {
-          bg: '#06080f',
-          panel: '#0b1220',
-          muted: '#141d31',
-          line: '#233250',
-          // Spectrum semantics: mint = action, cyan = info, gold = achievement,
-          // rose = energy/alerts.
-          primary: '#41f2b8',
-          soft: '#a7f5dc',
-          neon: '#43d9ff',
-          accent: '#ff4d88',
-          gold: '#ffc857',
-          ink: '#04241a',
+          // Memphis Design system — clashing 80s brights on warm paper.
+          bg: '#fbf3e4',
+          panel: '#fffdf8',
+          muted: '#f3ead8',
+          line: '#1a1611',
+          primary: '#ffce5c', // sun yellow — action highlights
+          soft: '#ffe9a8',
+          neon: '#2ba8a0', // deepened teal for text-safe accents
+          accent: '#ff71ce', // hot pink — energy
+          gold: '#ffb03a', // amber — achievements
+          ink: '#1a1611',
+          sea: '#86ccca',
+          peri: '#6a7bb4',
         },
       },
       fontFamily: {
-        display: ['"Unbounded"', 'system-ui', 'sans-serif'],
-        body: ['"Chakra Petch"', 'system-ui', 'sans-serif'],
+        display: ['"Bungee"', 'system-ui', 'sans-serif'],
+        body: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        glass: '0 24px 48px -24px rgba(2, 6, 16, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.14)',
-        'glass-sm': '0 12px 32px -20px rgba(2, 6, 16, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-        'underglow-mint': '0 14px 34px -14px rgba(65, 242, 184, 0.55)',
-        'underglow-cyan': '0 14px 34px -14px rgba(67, 217, 255, 0.45)',
-        'underglow-rose': '0 14px 34px -14px rgba(255, 77, 136, 0.5)',
-        'underglow-gold': '0 14px 34px -14px rgba(255, 200, 87, 0.45)',
+        'pop-sm': '3px 3px 0 0 #1a1611',
+        pop: '6px 6px 0 0 #1a1611',
+        'pop-lg': '10px 10px 0 0 #1a1611',
       },
       keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
+        bob: {
+          '0%, 100%': { transform: 'translateY(0) rotate(-3deg)' },
+          '50%': { transform: 'translateY(-8px) rotate(3deg)' },
         },
-        'pulse-glow': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.55' },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(-4deg)' },
+          '50%': { transform: 'rotate(4deg)' },
         },
         rise: {
           from: { opacity: '0', transform: 'translateY(16px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        marquee: {
+          to: { transform: 'translateX(-50%)' },
+        },
+        'spin-slow': {
+          to: { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
-        float: 'float 6s ease-in-out infinite',
-        'pulse-glow': 'pulse-glow 2.4s ease-in-out infinite',
+        bob: 'bob 4s ease-in-out infinite',
+        wiggle: 'wiggle 1.6s ease-in-out infinite',
         rise: 'rise 0.5s ease-out both',
+        marquee: 'marquee 20s linear infinite',
+        'spin-slow': 'spin-slow 14s linear infinite',
       },
     },
   },

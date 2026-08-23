@@ -28,17 +28,17 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     if (!error) return this.props.children;
     return (
       <section className="mx-auto max-w-md py-16 text-center">
-        <h1 role="alert" className="text-2xl font-bold text-red-400">
+        <h1 role="alert" className="font-display text-base uppercase tracking-wide text-[#7c2d24]">
           Something went wrong
         </h1>
-        <p className="mt-3 text-sm text-gray-400">
+        <p className="mt-3 font-medium text-stone-600">
           The screen hit an unexpected error. Your match state is safe — reloading will put you
           back where you were.
         </p>
         <button
           type="button"
           onClick={this.handleReload}
-          className="mt-6 rounded-xl bg-arcade-primary px-4 py-2 text-sm font-bold text-arcade-ink transition hover:brightness-110"
+          className="mt-6 cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop"
         >
           Reload
         </button>

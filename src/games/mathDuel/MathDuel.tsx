@@ -85,7 +85,7 @@ export default function MathDuel({
 
   return (
     <div className="flex flex-col items-center gap-5 py-2">
-      <div className="flex w-full flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-gray-400 sm:text-sm">
+      <div className="flex w-full flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-stone-500 sm:text-sm">
         <span>
           Score <span className="font-mono text-base text-arcade-neon tabular-nums">{score}</span>
         </span>
@@ -101,10 +101,10 @@ export default function MathDuel({
       </div>
 
       {solo && (
-        <p className="text-xs text-gray-400 sm:text-sm">
+        <p className="text-xs text-stone-500 sm:text-sm">
           AI benchmark:{' '}
           <span className="font-mono tabular-nums text-arcade-neon">{aiScore}</span>{' '}
-          <span className={score >= aiScore ? 'text-green-400' : 'text-amber-400'}>
+          <span className={score >= aiScore ? 'text-[#0e7a6d]' : 'text-[#8a5b00]'}>
             ({score >= aiScore ? 'you lead' : `behind by ${aiScore - score}`})
           </span>
         </p>
@@ -133,12 +133,12 @@ export default function MathDuel({
           // keystrokes the moment the game mounts.
           autoFocus
           placeholder={locked ? 'Penalty…' : 'Answer'}
-          className="min-w-0 flex-1 rounded-md border border-white/10 bg-arcade-bg px-3 py-2 text-center text-lg tabular-nums outline-none focus:border-arcade-neon disabled:opacity-40"
+          className="field min-w-0 flex-1 px-3 py-2 text-center text-lg font-semibold tabular-nums text-arcade-ink disabled:opacity-40"
         />
         <button
           type="submit"
           disabled={locked}
-          className="rounded-md bg-arcade-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-arcade-accent/80 disabled:opacity-40"
+          className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-2 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none"
         >
           Enter
         </button>
@@ -146,15 +146,15 @@ export default function MathDuel({
 
       <p role="status" aria-live="polite" className="min-h-5 text-sm">
         {locked ? (
-          <span className="text-red-400">
+          <span className="text-[#c2402f]">
             Wrong — locked out for {(WRONG_PENALTY_MS / 1000).toFixed(1)}s
           </span>
         ) : feedback === 'correct' ? (
-          <span className="text-green-400">Correct! +{pointsForStreak(streak)}</span>
+          <span className="text-[#0e7a6d]">Correct! +{pointsForStreak(streak)}</span>
         ) : feedback === 'wrong' ? (
-          <span className="text-gray-400">Try the next one.</span>
+          <span className="text-stone-500">Try the next one.</span>
         ) : (
-          <span className="text-gray-400">Type the answer and press Enter.</span>
+          <span className="text-stone-500">Type the answer and press Enter.</span>
         )}
       </p>
     </div>

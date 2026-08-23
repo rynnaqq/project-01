@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import AudioControls from './AudioControls';
+import { ZigzagBand } from './decor';
 import { GamepadIcon, LogOutIcon, WifiOffIcon } from './icons';
 
 const NAV = [
@@ -12,7 +13,7 @@ const NAV = [
 ];
 
 /**
- * Shared application shell: a floating glass navigation slab + routed content.
+ * Shared application shell: an inked navigation slab + routed content outlet.
  * Feature content is rendered by child routes via <Outlet />.
  */
 export default function AppLayout() {
@@ -30,26 +31,23 @@ export default function AppLayout() {
     <div className="flex min-h-screen flex-col">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-arcade-accent focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+        className="sticker sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-arcade-sun focus:px-4 focus:py-2 focus:text-sm focus:text-arcade-ink"
       >
         Skip to content
       </a>
       <header className="sticky top-3 z-40 px-3 sm:px-4">
-        <nav className="glass-deep mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-2 rounded-2xl px-3 py-2.5 sm:px-4">
+        <nav className="slab mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-2 rounded-2xl px-3 py-2.5 shadow-pop sm:px-4">
           <Link to="/" className="group flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-arcade-neon to-arcade-primary text-[#04241a] shadow-underglow-cyan transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105">
+            <span className="flex h-10 w-10 -rotate-6 items-center justify-center rounded-xl border-[3px] border-arcade-ink bg-arcade-pop text-arcade-ink transition-transform duration-200 group-hover:rotate-6 group-hover:scale-105">
               <GamepadIcon size={20} />
             </span>
-            <span className="font-display text-sm font-semibold uppercase tracking-widest text-white sm:text-base">
-              Arcade
-              <span className="bg-gradient-to-r from-arcade-neon via-arcade-primary to-arcade-accent bg-clip-text text-transparent">
-                Hub
-              </span>
+            <span className="font-display text-xs uppercase tracking-wide text-arcade-ink sm:text-base">
+              Arcade<span className="text-arcade-accent">Hub</span>
             </span>
           </Link>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <AudioControls />
-            <ul className="flex gap-1 text-sm">
+            <ul className="flex gap-1.5 text-sm">
               {NAV.map((item) => {
                 const active =
                   item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
@@ -58,19 +56,13 @@ export default function AppLayout() {
                     <Link
                       to={item.to}
                       aria-current={active ? 'page' : undefined}
-                      className={`relative block rounded-full px-3 py-1.5 transition-all duration-200 ${
+                      className={`block rounded-full border-2 px-3 py-1 font-semibold transition-all ${
                         active
-                          ? 'bg-white/10 text-white shadow-glass-sm'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                          ? 'border-arcade-ink bg-arcade-sun text-arcade-ink shadow-pop-sm'
+                          : 'border-transparent text-stone-600 hover:border-arcade-ink hover:bg-arcade-muted hover:text-arcade-ink'
                       }`}
                     >
                       {item.label}
-                      {active && (
-                        <span
-                          aria-hidden
-                          className="absolute left-1/2 top-1.5 h-1 w-1 -translate-x-1/2 rounded-full bg-arcade-primary shadow-underglow-mint"
-                        />
-                      )}
                     </Link>
                   </li>
                 );
@@ -78,11 +70,13 @@ export default function AppLayout() {
             </ul>
             {session ? (
               <div className="flex items-center gap-2 text-sm">
-                <span className="hidden text-slate-400 sm:inline">{profile?.username ?? 'player'}</span>
+                <span className="hidden font-medium text-stone-600 sm:inline">
+                  {profile?.username ?? 'player'}
+                </span>
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="glass-chip flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-slate-300 transition-colors hover:text-white"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-arcade-ink bg-arcade-panel px-3 py-1 font-semibold text-arcade-ink transition-all hover:bg-arcade-sea hover:shadow-pop-sm"
                 >
                   <LogOutIcon size={14} />
                   <span className="sr-only sm:not-sr-only">Log out</span>
@@ -91,7 +85,7 @@ export default function AppLayout() {
             ) : (
               <Link
                 to="/auth"
-                className="rounded-full bg-arcade-primary px-4 py-1.5 text-sm font-bold text-arcade-ink shadow-underglow-mint transition-all hover:brightness-110"
+                className="rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-1.5 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none"
               >
                 Log in
               </Link>
@@ -102,9 +96,9 @@ export default function AppLayout() {
       {!online && (
         <p
           role="alert"
-          className="mt-3 mx-3 flex items-center justify-center gap-2 rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-2 text-center text-sm text-amber-200 backdrop-blur-md sm:mx-4"
+          className="mt-3 mx-3 flex items-center justify-center gap-2 rounded-xl border-[3px] border-arcade-ink bg-[#ffe3df] px-4 py-2 text-center text-sm font-medium text-[#7c2d24] shadow-pop-sm sm:mx-4"
         >
-          <WifiOffIcon size={16} />
+          <WifiOffIcon size={16} aria-hidden />
           You're offline — actions will fail until the connection returns. Mid-game reloads resync
           automatically.
         </p>
@@ -116,8 +110,9 @@ export default function AppLayout() {
       >
         <Outlet />
       </main>
-      <footer className="border-t border-white/5 py-6">
-        <p className="mx-auto max-w-6xl px-4 text-xs uppercase tracking-[0.25em] text-slate-600">
+      <footer className="relative mt-8">
+        <ZigzagBand className="h-4 w-full text-arcade-ink" />
+        <p className="mx-auto max-w-6xl px-4 pt-4 pb-6 text-xs font-bold uppercase tracking-[0.25em] text-stone-500">
           Interactive Arcade Hub · real-time multiplayer mini-games
         </p>
       </footer>

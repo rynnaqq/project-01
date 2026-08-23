@@ -7,7 +7,7 @@ export default function RequireAuth() {
   const location = useLocation();
 
   if (loading) {
-    return <p className="text-gray-400">Loading…</p>;
+    return <p className="text-stone-500">Loading…</p>;
   }
   if (!session) {
     return <Navigate to="/auth" replace state={{ from: location.pathname }} />;

@@ -23,11 +23,11 @@ export default function TapGame({ reportScore }: GameComponentProps) {
 
   return (
     <div className="flex flex-col items-center gap-4 py-6 text-center">
-      <p className="text-sm text-gray-300">Tap to score — lifecycle &amp; scoreboard demo.</p>
+      <p className="text-sm font-medium text-stone-600">Tap to score — lifecycle &amp; scoreboard demo.</p>
       <button
         type="button"
         onClick={handleTap}
-        className="rounded-full bg-arcade-accent px-8 py-8 text-2xl font-bold text-white transition hover:scale-105 hover:bg-arcade-accent/80"
+        className="cursor-pointer rounded-full border-[3px] border-arcade-ink bg-arcade-pop px-8 py-8 text-2xl font-bold text-arcade-ink shadow-pop transition-transform hover:scale-105 active:scale-95"
       >
         +1 ({taps})
       </button>
