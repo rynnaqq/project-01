@@ -19,6 +19,7 @@ import { getAvatar } from '../lib/avatars';
 import { friendlyMessage } from '../lib/errors';
 import { getGame } from '../lib/games';
 import { getGameComponent, getGameDuration } from '../games/registry';
+import { GameIcon } from '../components/icons';
 
 /**
  * Room view (P2.3 + P4.1 + P4.2 + Phase 5): live roster/presence/ready, host
@@ -148,9 +149,11 @@ export default function RoomPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Room</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Share this code:{' '}
-            <span className="font-mono text-xl tracking-widest text-arcade-neon">{room.code}</span>
+          <p className="mt-1 flex items-center gap-2 text-sm text-gray-400">
+            Share this code:
+            <span className="rounded-md border border-arcade-neon/30 bg-arcade-neon/10 px-2 py-0.5 font-mono text-xl tracking-widest text-arcade-neon">
+              {room.code}
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -229,7 +232,11 @@ export default function RoomPage() {
                   key={match.id}
                   className="flex items-center gap-3 rounded-md border border-white/10 bg-arcade-panel px-3 py-1.5 text-sm"
                 >
-                  <span aria-hidden>{getGame(match.game_key)?.emoji ?? '🎮'}</span>
+                  <GameIcon
+                    gameKey={match.game_key}
+                    size={18}
+                    className="shrink-0 text-arcade-neon"
+                  />
                   <span className="flex-1 text-gray-300">
                     {getGame(match.game_key)?.title ?? match.game_key}
                     {match.ended_at == null && (

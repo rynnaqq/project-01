@@ -5,6 +5,13 @@ import { createRoom, joinRoom } from '../lib/rooms';
 import { friendlyMessage } from '../lib/errors';
 import { normalizeRoomCode } from '../lib/roomCode';
 import { getGame } from '../lib/games';
+import {
+  GameIcon,
+  PlayIcon,
+  UsersIcon,
+  ZapIcon,
+} from '../components/icons';
+import { gameTileGradient } from '../lib/gameArt';
 
 /** Lobby: create a new room or join an existing one by code. */
 export default function LobbyPage() {
@@ -46,59 +53,89 @@ export default function LobbyPage() {
   }
 
   return (
-    <section className="mx-auto flex max-w-md flex-col gap-8">
+    <section className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold">Lobby</h1>
+        <h1 className="font-display text-3xl uppercase tracking-wide">Lobby</h1>
         <p className="mt-1 text-gray-400">Create a room or join with a code.</p>
       </div>
 
       {error && (
-        <p role="alert" className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+        >
+          <ZapIcon size={15} className="mt-0.5 shrink-0" />
           {error}
         </p>
       )}
 
-      <div className="rounded-lg border border-white/10 bg-arcade-panel p-5">
-        <h2 className="text-lg font-semibold">Create a room</h2>
-        <p className="mt-1 text-sm text-gray-400">
-          {selectedGame ? (
-            <>
-              Game: <span className="text-arcade-neon">{selectedGame.title}</span>. You'll be the
-              host.
-            </>
-          ) : (
-            "You'll be the host."
-          )}
-        </p>
-        <button
-          type="button"
-          onClick={handleCreate}
-          disabled={busy !== null}
-          className="mt-4 w-full rounded-md bg-arcade-accent px-4 py-2 font-medium text-white transition hover:bg-arcade-accent/80 disabled:opacity-50"
-        >
-          {busy === 'create' ? 'Creating…' : 'Create room'}
-        </button>
-      </div>
-
-      <div className="rounded-lg border border-white/10 bg-arcade-panel p-5">
-        <h2 className="text-lg font-semibold">Join a room</h2>
-        <form onSubmit={handleJoin} className="mt-4 flex gap-2">
-          <input
-            value={code}
-            onChange={(e) => setCode(normalizeRoomCode(e.target.value))}
-            maxLength={6}
-            placeholder="ABC234"
-            aria-label="Room code"
-            className="flex-1 rounded-md border border-white/10 bg-arcade-bg px-3 py-2 font-mono uppercase tracking-widest outline-none focus:border-arcade-accent"
-          />
-          <button
-            type="submit"
-            disabled={busy !== null || code.length !== 6}
-            className="rounded-md border border-white/10 px-4 py-2 font-medium text-gray-200 transition hover:bg-white/5 disabled:opacity-50"
+      {selectedGame && (
+        <div className="flex items-center gap-3 rounded-xl border border-arcade-neon/25 bg-arcade-neon/5 px-4 py-3">
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${gameTileGradient(
+              selectedGame.key,
+            )} text-white`}
           >
-            {busy === 'join' ? 'Joining…' : 'Join'}
+            <GameIcon gameKey={selectedGame.key} size={18} />
+          </span>
+          <p className="text-sm text-gray-300">
+            Pre-selected game: <span className="font-semibold text-arcade-neon">{selectedGame.title}</span>
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-arcade-panel p-6">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-arcade-primary/20 blur-2xl"
+          />
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-arcade-primary/20 text-arcade-soft">
+            <UsersIcon size={20} />
+          </span>
+          <h2 className="mt-4 font-display text-lg tracking-wide">Create a room</h2>
+          <p className="mt-1 text-sm text-gray-400">
+            {selectedGame ? "You'll host this game." : "You'll be the host."}
+          </p>
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={busy !== null}
+            className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-arcade-accent px-4 py-2.5 font-semibold text-white shadow-glow-rose transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          >
+            <PlayIcon size={16} />
+            {busy === 'create' ? 'Creating…' : 'Create room'}
           </button>
-        </form>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-arcade-panel p-6">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-arcade-neon/15 blur-2xl"
+          />
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-arcade-neon/15 text-arcade-neon">
+            <ZapIcon size={20} />
+          </span>
+          <h2 className="mt-4 font-display text-lg tracking-wide">Join a room</h2>
+          <p className="mt-1 text-sm text-gray-400">Enter the 6-character room code.</p>
+          <form onSubmit={handleJoin} className="mt-5 flex gap-2">
+            <input
+              value={code}
+              onChange={(e) => setCode(normalizeRoomCode(e.target.value))}
+              maxLength={6}
+              placeholder="ABC234"
+              aria-label="Room code"
+              className="w-full flex-1 rounded-lg border border-white/10 bg-arcade-bg px-3 py-2.5 text-center font-mono text-lg uppercase tracking-[0.35em] outline-none transition-colors placeholder:text-gray-600 focus:border-arcade-neon"
+            />
+            <button
+              type="submit"
+              disabled={busy !== null || code.length !== 6}
+              className="shrink-0 cursor-pointer rounded-lg border border-white/15 px-5 font-semibold text-gray-200 transition-colors hover:border-white/30 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy === 'join' ? 'Joining…' : 'Join'}
+            </button>
+          </form>
+        </div>
       </div>
     </section>
   );

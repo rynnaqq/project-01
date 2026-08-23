@@ -1,4 +1,5 @@
 import { useAudio } from '../context/AudioProvider';
+import { MusicIcon, VolumeOffIcon, VolumeOnIcon } from './icons';
 
 /** Compact music/SFX toggle control for the app header. */
 export default function AudioControls() {
@@ -11,24 +12,28 @@ export default function AudioControls() {
         onClick={toggleMusic}
         aria-pressed={musicEnabled}
         title={musicEnabled ? 'Turn music off' : 'Turn music on'}
-        className={`rounded-md px-2 py-1.5 text-sm transition ${
+        aria-label={`Music ${musicEnabled ? 'on' : 'off'}`}
+        className={`cursor-pointer rounded-md p-2 transition-colors ${
           musicEnabled
-            ? 'bg-arcade-accent/20 text-arcade-neon'
-            : 'text-gray-500 line-through hover:bg-white/5'
+            ? 'bg-arcade-primary/20 text-arcade-neon'
+            : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
         }`}
       >
-        ♪ <span className="sr-only">Music {musicEnabled ? 'on' : 'off'}</span>
+        <MusicIcon size={16} />
       </button>
       <button
         type="button"
         onClick={toggleSfx}
         aria-pressed={sfxEnabled}
         title={sfxEnabled ? 'Turn sound effects off' : 'Turn sound effects on'}
-        className={`rounded-md px-2 py-1.5 text-sm transition ${
-          sfxEnabled ? 'bg-arcade-accent/20 text-arcade-neon' : 'text-gray-400 hover:bg-white/5'
+        aria-label={`Sound effects ${sfxEnabled ? 'on' : 'off'}`}
+        className={`cursor-pointer rounded-md p-2 transition-colors ${
+          sfxEnabled
+            ? 'bg-arcade-primary/20 text-arcade-neon'
+            : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
         }`}
       >
-        {sfxEnabled ? '🔊' : '🔇'} <span className="sr-only">Sound effects</span>
+        {sfxEnabled ? <VolumeOnIcon size={16} /> : <VolumeOffIcon size={16} />}
       </button>
     </div>
   );
