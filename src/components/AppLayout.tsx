@@ -27,6 +27,33 @@ export default function AppLayout() {
     navigate('/');
   }
 
+  /** One nav entry; active state derived from the current path. */
+  function NavTab({ item, layout }: { item: (typeof NAV)[number]; layout: 'pill' | 'cell' }) {
+    const active =
+      item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
+    return (
+      <Link
+        to={item.to}
+        aria-current={active ? 'page' : undefined}
+        className={
+          layout === 'pill'
+            ? `block rounded-full border-2 px-3 py-1 font-semibold transition-all ${
+                active
+                  ? 'border-arcade-ink bg-arcade-sun text-arcade-ink shadow-pop-sm'
+                  : 'border-transparent text-stone-600 hover:border-arcade-ink hover:bg-arcade-muted hover:text-arcade-ink'
+              }`
+            : `block rounded-xl border-2 px-2 py-2 text-center font-semibold transition-all ${
+                active
+                  ? 'border-arcade-ink bg-arcade-sun text-arcade-ink shadow-pop-sm'
+                  : 'border-transparent bg-arcade-muted/60 text-stone-600 hover:bg-arcade-muted hover:text-arcade-ink'
+              }`
+        }
+      >
+        {item.label}
+      </Link>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <a
@@ -36,61 +63,61 @@ export default function AppLayout() {
         Skip to content
       </a>
       <header className="sticky top-3 z-40 px-3 sm:px-4">
-        <nav className="slab mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-2 rounded-2xl px-3 py-2.5 shadow-pop sm:px-4">
-          <Link to="/" className="group flex items-center gap-2.5">
-            <span className="flex h-10 w-10 -rotate-6 items-center justify-center rounded-xl border-[3px] border-arcade-ink bg-arcade-pop text-arcade-ink transition-transform duration-200 group-hover:rotate-6 group-hover:scale-105">
-              <GamepadIcon size={20} />
-            </span>
-            <span className="font-display text-xs uppercase tracking-wide text-arcade-ink sm:text-base">
-              Arcade<span className="text-arcade-accent">Hub</span>
-            </span>
-          </Link>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <AudioControls />
-            <ul className="flex gap-1.5 text-sm">
-              {NAV.map((item) => {
-                const active =
-                  item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
-                return (
-                  <li key={item.to}>
-                    <Link
-                      to={item.to}
-                      aria-current={active ? 'page' : undefined}
-                      className={`block rounded-full border-2 px-3 py-1 font-semibold transition-all ${
-                        active
-                          ? 'border-arcade-ink bg-arcade-sun text-arcade-ink shadow-pop-sm'
-                          : 'border-transparent text-stone-600 hover:border-arcade-ink hover:bg-arcade-muted hover:text-arcade-ink'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
+        <nav className="slab mx-auto max-w-6xl rounded-2xl p-3 shadow-pop sm:px-4">
+          {/* Row 1: identity · nav (desktop) · actions */}
+          <div className="flex items-center justify-between gap-3">
+            <Link to="/" className="group flex shrink-0 items-center gap-2.5">
+              <span className="flex h-10 w-10 -rotate-6 items-center justify-center rounded-xl border-[3px] border-arcade-ink bg-arcade-pop text-arcade-ink transition-transform duration-200 group-hover:rotate-6 group-hover:scale-105">
+                <GamepadIcon size={20} aria-hidden />
+              </span>
+              <span className="font-display text-xs uppercase tracking-wide text-arcade-ink sm:text-base">
+                Arcade<span className="text-arcade-accent">Hub</span>
+              </span>
+            </Link>
+
+            <ul className="hidden items-center gap-1.5 text-sm md:flex">
+              {NAV.map((item) => (
+                <li key={item.to}>
+                  <NavTab item={item} layout="pill" />
+                </li>
+              ))}
             </ul>
-            {session ? (
-              <div className="flex items-center gap-2 text-sm">
-                <span className="hidden font-medium text-stone-600 sm:inline">
-                  {profile?.username ?? 'player'}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-arcade-ink bg-arcade-panel px-3 py-1 font-semibold text-arcade-ink transition-all hover:bg-arcade-sea hover:shadow-pop-sm"
+
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              <AudioControls />
+              {session ? (
+                <>
+                  <span className="hidden max-w-28 truncate font-medium text-stone-600 lg:inline">
+                    {profile?.username ?? 'player'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-arcade-ink bg-arcade-panel px-3 py-1.5 font-semibold text-arcade-ink transition-all hover:bg-arcade-sea hover:shadow-pop-sm"
+                  >
+                    <LogOutIcon size={14} aria-hidden />
+                    <span className="sr-only sm:not-sr-only">Log out</span>
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/auth"
+                  className="rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-1.5 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none"
                 >
-                  <LogOutIcon size={14} />
-                  <span className="sr-only sm:not-sr-only">Log out</span>
-                </button>
-              </div>
-            ) : (
-              <Link
-                to="/auth"
-                className="rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-4 py-1.5 text-sm font-bold text-arcade-ink shadow-pop-sm transition-all hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none"
-              >
-                Log in
-              </Link>
-            )}
+                  Log in
+                </Link>
+              )}
+            </div>
           </div>
+
+          {/* Row 2 (mobile only): equal-width tab cells — cannot overflow. */}
+          <ul className="mt-3 grid grid-cols-4 gap-1.5 border-t-[3px] border-dashed border-stone-300 pt-3 text-sm md:hidden">
+            {NAV.map((item) => (
+              <li key={item.to}>
+                <NavTab item={item} layout="cell" />
+              </li>
+            ))}
+          </ul>
         </nav>
       </header>
       {!online && (
