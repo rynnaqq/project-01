@@ -15,10 +15,10 @@ export default function NotFoundPage() {
         404
       </p>
       <h1 className="font-display text-lg uppercase tracking-wide">
-        Game over — page not found
+        Game over. Page not found.
       </h1>
       <p className="max-w-sm font-medium text-stone-600">
-        That page does not exist. Insert coin to return to the arcade floor.
+        This page doesn't exist. Insert coin to head back.
       </p>
       <Link
         to="/"

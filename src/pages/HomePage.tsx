@@ -3,14 +3,14 @@ import ParticleGrid from '../components/ParticleGrid';
 import { DotCluster, HalfRing, PlusMark, Sparkle, Squiggle, TriShape, ZigzagBand } from '../components/decor';
 import { useAuth } from '../context/AuthProvider';
 import { GAMES } from '../lib/games';
-import { ArrowRightIcon, GameIcon, TrophyIcon, UsersIcon, ZapIcon } from '../components/icons';
+import { ArrowRightIcon, GameIcon, TrophyIcon, UsersIcon } from '../components/icons';
 import { gameTileGradient } from '../lib/gameArt';
 
 const TICKER_ITEMS = [
-  'Real-time multiplayer',
+  'Multiplayer mini-games',
   'Three arenas, one leaderboard',
-  'No installs — just a link and a code',
-  'Scores stream live',
+  'Solo, 1v1, or party mode',
+  'Scores update live',
 ];
 
 /** Landing page: an asymmetric Memphis playground with tumbling confetti. */
@@ -27,18 +27,14 @@ export default function HomePage() {
         <PlusMark className="pointer-events-none absolute right-6 -bottom-4 h-6 w-6 rotate-12 text-arcade-neon" />
 
         <div className="relative flex flex-col items-start gap-6 pt-4">
-          <p className="sticker -rotate-2 bg-arcade-sea px-4 py-1.5 text-xs text-arcade-ink">
-            <ZapIcon size={13} aria-hidden />
-            Real-time multiplayer
-          </p>
           <h1 className="font-display text-4xl uppercase leading-[1.08] tracking-wide sm:text-5xl lg:text-6xl">
             Interactive{' '}
             <span className="text-arcade-accent">Arcade</span>{' '}
             <span className="text-arcade-neon">Hub</span>
           </h1>
           <p className="max-w-md text-lg font-medium text-stone-600">
-            Real-time multiplayer mini-games with smooth animations. Create a room, invite friends,
-            and battle for the top of the leaderboard.
+            Quick mini-games against your friends. Make a room, send them the code, and fight for
+            the top score.
           </p>
           <div className="flex flex-wrap gap-4">
             <Link
@@ -167,19 +163,19 @@ export default function HomePage() {
             {
               step: '01',
               title: 'Create or join',
-              desc: 'Spin up a room and share the 6-character code with your rivals.',
+              desc: 'Start a room and give your friends the 6-character code.',
               tint: 'bg-arcade-pop',
             },
             {
               step: '02',
               title: 'Ready up',
-              desc: 'Everyone marks ready in the live roster — presence synced instantly.',
+              desc: 'Everyone marks ready in the roster. Presence syncs as people join.',
               tint: 'bg-arcade-sea',
             },
             {
               step: '03',
               title: 'Battle & win',
-              desc: 'Scores stream to a shared scoreboard; history is saved per room.',
+              desc: 'Scores land on a shared scoreboard. Each room keeps its match history.',
               tint: 'bg-arcade-sun',
             },
           ].map((item, i) => (
@@ -212,7 +208,7 @@ export default function HomePage() {
             Ready for the leaderboard?
           </h2>
           <p className="font-medium text-stone-700">
-            Spin up a room in seconds — no installs, just a link and a code.
+            It runs in your browser. Send a link and a code, and you're playing.
           </p>
           <Link
             to={session ? '/lobby' : '/auth'}

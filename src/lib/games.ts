@@ -36,7 +36,7 @@ export const GAMES: GameDefinition[] = [
     category: 'Puzzle',
     modes: ['Solo', '1v1', 'Party'],
     mechanics: [
-      'A sequence flashes on a grid — reproduce it from memory.',
+      'A sequence flashes on a grid. Reproduce it from memory.',
       'Each round adds one more step to the sequence.',
       'Timed mode or turn-based versus mode.',
     ],
@@ -51,7 +51,7 @@ export const GAMES: GameDefinition[] = [
     mechanics: [
       'Race to type a shared passage accurately.',
       'Live progress bars show every racer’s position.',
-      'Accuracy matters — mistakes slow you down.',
+      'Accuracy matters. Mistakes slow you down.',
     ],
   },
 ];

@@ -23,7 +23,7 @@ export default function TapGame({ reportScore }: GameComponentProps) {
 
   return (
     <div className="flex flex-col items-center gap-4 py-6 text-center">
-      <p className="text-sm font-medium text-stone-600">Tap to score — lifecycle &amp; scoreboard demo.</p>
+      <p className="text-sm font-medium text-stone-600">Tap to score. Demo round for the match engine.</p>
       <button
         type="button"
         onClick={handleTap}

@@ -165,13 +165,13 @@ export default function TerminalCipher({
         ) : status === 'cleared' ? (
           <span className="text-[#0e7a6d]">
             Cracked! +{pointsForRound(round)}
-            {versus ? ' — wait for the next round.' : ''}
+            {versus ? ' Wait for the next round.' : ''}
           </span>
         ) : status === 'failed' ? (
-          <span className="text-[#c2402f]">Wrong cell — start the sequence again.</span>
+          <span className="text-[#c2402f]">Wrong cell. Start over.</span>
         ) : (
           <span className="text-stone-500">
-            Your turn — repeat {sequence.length} steps ({input.length} entered).
+            Your turn. Repeat {sequence.length} steps ({input.length} entered).
           </span>
         )}
       </p>

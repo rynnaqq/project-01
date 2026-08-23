@@ -121,10 +121,10 @@ export default function TypingRace({
 
       <p id="typing-race-status" role="status" aria-live="polite" className="min-h-5 text-sm">
         {progress.done ? (
-          <span className="text-[#0e7a6d]">Finished — nice run!</span>
+          <span className="text-[#0e7a6d]">Finished. Nice run!</span>
         ) : progress.errorChars > 0 ? (
           <span className="text-[#c2402f]">
-            Mistake — delete {progress.errorChars} character{progress.errorChars > 1 ? 's' : ''} to
+            Mistake. Delete {progress.errorChars} character{progress.errorChars > 1 ? 's' : ''} to
             continue.
           </span>
         ) : (

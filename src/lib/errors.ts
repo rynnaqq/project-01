@@ -7,7 +7,7 @@
 export const FALLBACK_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 export const OFFLINE_ERROR_MESSAGE =
   'You appear to be offline. Check your connection and try again.';
-export const SESSION_EXPIRED_MESSAGE = 'Your session expired — please log in again.';
+export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Log in again.';
 
 type Rule = { test: RegExp; message: string };
 
@@ -27,7 +27,7 @@ const RULES: Rule[] = [
   },
   {
     test: /rate limit|too many requests|over_request_rate_limit/i,
-    message: 'Too many attempts — wait a moment and try again.',
+    message: 'Too many attempts. Wait a moment and try again.',
   },
   { test: /\bjwt\b|token.*expired|invalid claim|session.*expired/i, message: SESSION_EXPIRED_MESSAGE },
   // Postgres / RLS

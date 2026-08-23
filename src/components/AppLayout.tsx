@@ -126,7 +126,7 @@ export default function AppLayout() {
           className="mt-3 mx-3 flex items-center justify-center gap-2 rounded-xl border-[3px] border-arcade-ink bg-[#ffe3df] px-4 py-2 text-center text-sm font-medium text-[#7c2d24] shadow-pop-sm sm:mx-4"
         >
           <WifiOffIcon size={16} aria-hidden />
-          You're offline — actions will fail until the connection returns. Mid-game reloads resync
+          You're offline. Actions will fail until the connection returns. Mid-game reloads resync
           automatically.
         </p>
       )}
@@ -140,7 +140,7 @@ export default function AppLayout() {
       <footer className="relative mt-8">
         <ZigzagBand className="h-4 w-full text-arcade-ink" />
         <p className="mx-auto max-w-6xl px-4 pt-4 pb-6 text-xs font-bold uppercase tracking-[0.25em] text-stone-500">
-          Interactive Arcade Hub · real-time multiplayer mini-games
+          Arcade Hub
         </p>
       </footer>
     </div>

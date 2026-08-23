@@ -147,7 +147,7 @@ export default function MathDuel({
       <p role="status" aria-live="polite" className="min-h-5 text-sm">
         {locked ? (
           <span className="text-[#c2402f]">
-            Wrong — locked out for {(WRONG_PENALTY_MS / 1000).toFixed(1)}s
+            Wrong. Locked for {(WRONG_PENALTY_MS / 1000).toFixed(1)}s
           </span>
         ) : feedback === 'correct' ? (
           <span className="text-[#0e7a6d]">Correct! +{pointsForStreak(streak)}</span>

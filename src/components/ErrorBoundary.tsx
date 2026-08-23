@@ -32,8 +32,8 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
           Something went wrong
         </h1>
         <p className="mt-3 font-medium text-stone-600">
-          The screen hit an unexpected error. Your match state is safe — reloading will put you
-          back where you were.
+          The screen hit an unexpected error. Your match state is safe. Reload to pick up where
+          you left off.
         </p>
         <button
           type="button"
