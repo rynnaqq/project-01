@@ -237,6 +237,7 @@ scene.fog = new THREE.Fog(0xe9895b, 28, 105);
 
 let baseFov = 66;
 const camera = new THREE.PerspectiveCamera(baseFov, window.innerWidth / window.innerHeight, 0.1, 900);
+camera.position.set(0, 3.4, 7.2); // low, close chase cam — updateCamera only steers x/y
 
 scene.add(new THREE.HemisphereLight(0xffb08a, 0x4a3550, 1.05));
 const sunLight = new THREE.DirectionalLight(0xffb36b, 1.9);
@@ -766,7 +767,7 @@ const SPAWN_Z = new Map([
   [highBarriers, CONFIG.spawnAheadZ],
 ]);
 
-/* Coins: instanced — one draw call for all spinning gold. */
+/* Coins: instanced — one draw call for all gold. Coins face the camera; no spin. */
 const COIN_COUNT = 64;
 const coinMesh = new THREE.InstancedMesh(GEO.coin, MAT.coin, COIN_COUNT);
 coinMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -1361,10 +1362,13 @@ function updatePlayer(dt) {
 }
 
 function updateCamera(dt, speedRatio = 0) {
-  camera.position.x = damp(camera.position.x, player.x * 0.55, 6, dt);
+  // Tight x-follow keeps the runner near screen center through lane changes;
+  // the slight offset between position (0.72) and lookAt (0.55) keeps a
+  // hint of parallax so sways still read as motion.
+  camera.position.x = damp(camera.position.x, player.x * 0.72, 7, dt);
   const shake = game.shakeT > 0 && !REDUCED_MOTION ? (Math.random() - 0.5) * game.shakeT * 2.2 : 0;
-  camera.position.y = 4.6 + Math.sin(game.distance * 1.4) * 0.045 + shake;
-  camera.lookAt(player.x * 0.3, 1.4, -8);
+  camera.position.y = 3.4 + Math.sin(game.distance * 1.4) * 0.04 + shake;
+  camera.lookAt(player.x * 0.55, 1.55, -10);
   // FOV kick sells acceleration.
   const targetFov = baseFov + speedRatio * 7;
   if (Math.abs(camera.fov - targetFov) > 0.01) {
@@ -1416,7 +1420,7 @@ function loop(now) {
     updateParticles(dt);
     updateStreaks(dt);
     updateCamera(dt, speedRatio);
-    drawCoins(game.distance * 2.2, now / 1000);
+    drawCoins(0, now / 1000); // fixed angle: coins stay camera-facing
 
     renderer.render(scene, camera);
 
