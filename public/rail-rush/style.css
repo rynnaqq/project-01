@@ -1,0 +1,214 @@
+/* Rail Rush — standalone arcade page. Memphis-flavored to match the hub. */
+:root {
+  --ink: #1a1611;
+  --paper: #fffdf8;
+  --pop: #ff71ce;
+  --sun: #ffce5c;
+  --sea: #86ccca;
+  --peri: #6a7bb4;
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#game-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none; /* swipes belong to the game */
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+}
+.hud-stat {
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  padding: 6px 14px 7px;
+  min-width: 86px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.hud-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: #8b7f6a;
+}
+.hud-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1.05;
+}
+.hud-gold { color: #c47f00; }
+
+.hud-power {
+  align-self: center;
+  flex: 0 1 120px;
+  height: 12px;
+  margin-top: 6px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, .35);
+  overflow: hidden;
+}
+.hud-power i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--sea), var(--peri));
+  transform-origin: left center;
+}
+
+.hud-actions { margin-left: auto; display: flex; gap: 8px; }
+.hud-actions button {
+  pointer-events: auto;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--sun);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform .18s var(--ease-spring);
+}
+.hud-actions button:hover { transform: translate(-2px, -2px); }
+.hud-actions button:active { transform: translate(2px, 2px); box-shadow: none; }
+.hud-actions svg { width: 22px; height: 22px; }
+#btn-mute[aria-pressed="true"] #mute-wave { opacity: 0; }
+#btn-mute[aria-pressed="true"] { background: var(--sea); }
+
+/* ---------- Screens ---------- */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  padding: 24px;
+  background: radial-gradient(120% 90% at 50% 20%, rgba(26, 22, 17, .82), rgba(26, 22, 17, .94));
+  backdrop-filter: blur(3px);
+  animation: screen-in .45s var(--ease-expo) both;
+}
+.screen[hidden] { display: none; }
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.boot-logo {
+  font-size: clamp(44px, 11vw, 84px);
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: .95;
+  color: var(--sun);
+  text-shadow: 4px 4px 0 var(--pop), 8px 8px 0 var(--ink);
+}
+.boot-logo span { color: var(--sea); }
+
+.boot-msg { font-weight: 500; color: #e8ddc8; letter-spacing: .06em; }
+
+.boot-hint {
+  font-size: 13px;
+  line-height: 2;
+  color: #bdb096;
+}
+.boot-hint b { color: var(--paper); }
+
+.btn-primary {
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: .12em;
+  color: var(--ink);
+  background: var(--pop);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  padding: 14px 38px;
+  box-shadow: 6px 6px 0 var(--ink);
+  transition: transform .2s var(--ease-spring), box-shadow .2s var(--ease-spring), background-color .15s;
+}
+.btn-primary:hover { transform: translate(-3px, -3px); box-shadow: 9px 9px 0 var(--ink); background: #ff8ad8; }
+.btn-primary:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+
+.screen-title {
+  font-size: clamp(34px, 9vw, 60px);
+  letter-spacing: .05em;
+  color: var(--sun);
+  text-shadow: 3px 3px 0 var(--ink);
+}
+.screen-title.crash { color: var(--pop); }
+
+.over-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.over-stats > div {
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 10px 22px;
+  min-width: 104px;
+}
+.over-stats dt {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .22em;
+  color: #8b7f6a;
+}
+.over-stats dd { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.newbest {
+  color: var(--sun);
+  font-weight: 700;
+  letter-spacing: .28em;
+  animation: best-pulse .8s var(--ease-spring) infinite alternate;
+}
+@keyframes best-pulse {
+  from { transform: scale(1) rotate(-1deg); }
+  to { transform: scale(1.08) rotate(1deg); }
+}
+
+@media (max-width: 480px) {
+  .hud-stat { min-width: 70px; padding: 4px 10px 5px; }
+  .hud-value { font-size: 17px; }
+  .over-stats dd { font-size: 24px; }
+}

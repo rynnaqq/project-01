@@ -169,6 +169,37 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Rail Rush — standalone 3D game */}
+      <section className="flex flex-col gap-6">
+        <Reveal>
+          <a
+            href="/rail-rush/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="slab lift group relative flex flex-col items-start gap-5 overflow-hidden bg-arcade-peri p-8 shadow-pop sm:flex-row sm:items-center sm:justify-between sm:p-10"
+          >
+            <TriShape className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rotate-12 text-white/15" />
+            <Squiggle className="pointer-events-none absolute bottom-3 right-8 hidden h-6 w-24 text-white/25 sm:block" />
+            <div className="relative">
+              <p className="sticker bg-arcade-sun px-3 py-0.5 text-[10px] text-arcade-ink">
+                3D · runs in your browser
+              </p>
+              <h2 className="mt-3 font-display text-xl uppercase tracking-wide text-white sm:text-2xl">
+                Rail Rush
+              </h2>
+              <p className="mt-1 max-w-md text-sm font-medium text-[#e6ecff]">
+                Dodge oncoming trains on a 3-lane railway. Grab coins, snag
+                power-ups, and outrun the schedule.
+              </p>
+            </div>
+            <span className="lift relative inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-6 py-3 font-bold text-arcade-ink shadow-pop transition-colors group-hover:bg-[#ff8ad8]">
+              Play now
+              <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" aria-hidden />
+            </span>
+          </a>
+        </Reveal>
+      </section>
+
       {/* How it works */}
       <section className="flex flex-col gap-6">
         <h2 className="font-display text-xl uppercase tracking-wide sm:text-2xl">How it works</h2>

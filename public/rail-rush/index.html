@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1611" />
+  <title>Rail Rush — Arcade Hub</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD -->
+  <header id="hud" hidden>
+    <div class="hud-stat">
+      <span class="hud-label">Score</span>
+      <span id="hud-score" class="hud-value">0</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">Coins</span>
+      <span id="hud-coins" class="hud-value hud-gold">0</span>
+    </div>
+    <div id="hud-power" class="hud-power" hidden><i></i></div>
+    <div class="hud-actions">
+      <button id="btn-mute" type="button" aria-label="Toggle sound" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden><path id="mute-path" d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path id="mute-wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <button id="btn-pause" type="button" aria-label="Pause game">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Loading / Start -->
+  <div id="screen-boot" class="screen">
+    <p id="boot-title" class="boot-logo">RAIL<span>RUSH</span></p>
+    <p id="boot-msg" class="boot-msg">Loading track&hellip;</p>
+    <button id="btn-start" type="button" class="btn-primary" hidden>TAP TO START</button>
+    <p class="boot-hint" hidden id="boot-controls">
+      <b>&larr;/&rarr;</b> switch lane &nbsp;·&nbsp; <b>&uarr;</b> jump &nbsp;·&nbsp; <b>&darr;</b> slide
+      <br />or swipe on touch screens
+    </p>
+  </div>
+
+  <!-- Paused -->
+  <div id="screen-paused" class="screen" hidden>
+    <h2 class="screen-title">PAUSED</h2>
+    <button id="btn-resume" type="button" class="btn-primary">RESUME</button>
+  </div>
+
+  <!-- Game over -->
+  <div id="screen-over" class="screen" hidden>
+    <h2 class="screen-title crash">WRECKED!</h2>
+    <dl class="over-stats">
+      <div><dt>Score</dt><dd id="over-score">0</dd></div>
+      <div><dt>Coins</dt><dd id="over-coins">0</dd></div>
+      <div><dt>Best</dt><dd id="over-best">0</dd></div>
+    </dl>
+    <p id="over-newbest" class="newbest" hidden>NEW BEST!</p>
+    <button id="btn-restart" type="button" class="btn-primary">RUN AGAIN</button>
+  </div>
+
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js" } }
+  </script>
+  <script type="module" src="./game.js"></script>
+</body>
+</html>
