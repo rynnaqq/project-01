@@ -425,7 +425,7 @@ const MAT = {
     blending: THREE.AdditiveBlending, depthWrite: false,
   }),
 };
-MAT.ground.map.repeat.set(10, 50);
+MAT.ground.map.repeat.set(58, 125);
 MAT.ballast.map.repeat.set(4, 70);
 MAT.rust.map.repeat.set(3, 1.5);
 [MAT.ground.map, MAT.ballast.map, MAT.rust.map].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
@@ -463,8 +463,10 @@ function shadows(root, on = true) {
 
 /* ------------------------------------------------------- static environment */
 {
-  const ground = mesh(GEO.box, MAT.ground, 90, 1, 320);
-  ground.position.set(0, -0.51, -135);
+  // Huge so no edge ever enters even ultrawide FOVs (fog ends at ~105 but
+  // sky-colored void beyond a ground edge would read as "the world pans").
+  const ground = mesh(GEO.box, MAT.ground, 520, 1, 800);
+  ground.position.set(0, -0.51, -230);
   ground.receiveShadow = true;
   scene.add(ground);
 
@@ -689,8 +691,12 @@ const player = {
   player.legL = limb(MAT.legs, 0.19, 0.64, -0.16, 0.66);
   player.legR = limb(MAT.legs, 0.19, 0.64, 0.16, 0.66);
 
-  player.group.add(torso, head, capTop, brim, packBody, packFlap, player.scarf,
+  // Inner pivot so the slide roll spins around the body's center, not the
+  // feet — otherwise head/cap/pack sweep below the floor mid-roll.
+  player.tumbler = new THREE.Group();
+  player.tumbler.add(torso, head, capTop, brim, packBody, packFlap, player.scarf,
     player.armL, player.armR, player.legL, player.legR);
+  player.group.add(player.tumbler);
   shadows(player.group);
   scene.add(player.group);
 }
@@ -1197,6 +1203,9 @@ const game = {
     player.group.position.set(0, 0, 0);
     player.group.rotation.set(0, 0, 0);
     player.group.scale.set(1, 1, 1);
+    player.tumbler.rotation.set(0, 0, 0);
+    player.tumbler.position.y = 0;
+    player.scarf.visible = true;
     trains.reset(); crates.reset(); lowBarriers.reset(); highBarriers.reset();
     powerups.reset(); particles.reset();
     rings.reset(); tumbleweeds.reset(); tunnels.reset(); towers.reset();
@@ -1276,6 +1285,11 @@ const game = {
     sfx.crash();
     sfx.syncMusic(false);
     this.shakeT = REDUCED_MOTION ? 0 : 0.5;
+    // Normalize an in-roll crash so the wreck topples from a clean pose.
+    player.sliding = 0;
+    player.scarf.visible = true;
+    player.tumbler.rotation.x = 0;
+    player.tumbler.position.y = 0;
     player.corpseActive = true;
     burst(player.x, 1, 0, 0xff8a3d, 14, 7, { size: 1.4 });
     burst(player.x, 1.2, 0, 0xc9566b, 8, 6, { size: 1.1 });
@@ -1573,6 +1587,7 @@ function checkCollisions() {
 
 let legSwingPhase = 0;
 let runDustT = 0;
+const ROLL_PIVOT_Y = 1.06; // roll center: max tucked body radius stays above 0
 
 function animateScarf(timeSec) {
   const posAttr = player.scarf.geometry.attributes.position;
@@ -1649,19 +1664,26 @@ function updatePlayer(dt) {
   }
 
   if (sliding) {
-    // Forward roll: one clean revolution across the slide's own duration.
+    // Forward roll about the body's center: one clean revolution across the
+    // slide's own duration, lowest point of the arc exactly on the floor.
     player.rollT += dt;
     const t = clamp(player.rollT / player.slideTotal, 0, 1);
-    g.rotation.x = -Math.PI * 2 * t;
-    g.scale.set(1, 0.78, 1);
+    g.rotation.x = 0;
+    player.tumbler.rotation.x = -Math.PI * 2 * t;
+    player.tumbler.position.y = ROLL_PIVOT_Y;
+    g.position.y = player.y - ROLL_PIVOT_Y;
+    g.scale.set(1, 1, 1);
+    player.scarf.visible = false; // tucked — keeps the roll radius tight
     player.legL.rotation.x = 1.1;
     player.legR.rotation.x = 1.1;
     player.armL.rotation.x = -0.9;
     player.armR.rotation.x = -0.9;
   } else {
+    player.scarf.visible = true;
+    player.tumbler.position.y = 0;
     const airTuck = player.grounded ? 0 : 1;
-    g.rotation.x = player.grounded
-      ? damp(g.rotation.x % (Math.PI * 2), 0, 14, dt)
+    player.tumbler.rotation.x = player.grounded
+      ? damp(player.tumbler.rotation.x % (Math.PI * 2), 0, 14, dt)
       : clamp(-player.vy * 0.02, -0.35, 0.3);
     const squash = 1 - Math.sin((player.squashT / 0.18) * Math.PI) * 0.2;
     g.scale.set(1, squash, 1);
