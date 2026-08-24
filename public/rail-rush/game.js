@@ -4,7 +4,24 @@
 
    Tunables live in CONFIG below; see README.md for the parameter table.
    ========================================================================== */
-const THREE = await import('three');
+/* Three.js from CDN with one fallback host; surfaces failures on the boot
+   screen instead of hanging there forever. */
+async function loadThree() {
+  const hosts = [
+    'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js',
+    'https://unpkg.com/three@0.164.1/build/three.module.js',
+  ];
+  let lastError = new Error('no source attempted');
+  for (const url of hosts) {
+    try {
+      return await import(/* @vite-ignore */ url);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+const THREE = await loadThree();
 
 /* ------------------------------------------------------------------ config */
 const CONFIG = {
@@ -36,6 +53,7 @@ const CONFIG = {
 /* ------------------------------------------------------------------ helpers */
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const randInt = (n) => Math.floor(Math.random() * n);
+const pick = (arr) => arr[randInt(arr.length)];
 const damp = (cur, target, lambda, dt) => cur + (target - cur) * (1 - Math.exp(-lambda * dt));
 
 const store = {
@@ -53,6 +71,19 @@ const ui = {
   overScore: $('over-score'), overCoins: $('over-coins'), overBest: $('over-best'),
   newBest: $('over-newbest'),
 };
+
+/* Any boot-time crash must show up on the boot screen — never hang silently
+   on "Loading track…". Runtime errors after start stay console-only. */
+let bootDone = false; // flipped once the run handoff below completes
+function surfaceBootError(message) {
+  if (bootDone) return;
+  ui.boot.hidden = false;
+  ui.start.hidden = true;
+  ui.controls.hidden = true;
+  ui.bootMsg.textContent = `Failed to start: ${message}`;
+}
+window.addEventListener('error', (e) => surfaceBootError(e.message || 'unknown error'));
+window.addEventListener('unhandledrejection', (e) => surfaceBootError(String(e.reason ?? 'unknown failure')));
 
 /* --------------------------------------------------------------------- sfx */
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -846,6 +877,7 @@ $('btn-resume').addEventListener('click', () => game.togglePause());
 $('btn-restart').addEventListener('click', () => game.startRun());
 
 game.state = 'ready';
+bootDone = true;
 ui.bootMsg.textContent = `${game.best > 0 ? `Best: ${game.best} · ` : ''}Ready on platform 3.`;
 ui.controls.hidden = false;
 ui.start.hidden = false;

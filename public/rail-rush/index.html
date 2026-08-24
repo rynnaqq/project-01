@@ -60,9 +60,18 @@
     <button id="btn-restart" type="button" class="btn-primary">RUN AGAIN</button>
   </div>
 
-  <script type="importmap">
-    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js" } }
+  <!-- Classic script: runs even when ES modules are blocked (file:// CORS). -->
+  <script>
+    if (location.protocol === 'file:') {
+      var bootMsg = document.getElementById('boot-msg');
+      if (bootMsg) {
+        bootMsg.textContent = 'This page must be served over HTTP. From the repo root run: npm run dev, then open /rail-rush/';
+      }
+      var startBtn = document.getElementById('btn-start');
+      if (startBtn) startBtn.hidden = true;
+    }
   </script>
+
   <script type="module" src="./game.js"></script>
 </body>
 </html>
