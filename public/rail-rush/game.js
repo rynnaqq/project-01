@@ -302,12 +302,12 @@ function terrainTexture(base, spots, density) {
       }
     };
     // Macro: big soft radial tone blobs give regions their own character.
-    for (let i = 0; i < 40; i += 1) {
+    for (let i = 0; i < 60; i += 1) {
       const x = Math.random() * w;
       const y = Math.random() * h;
-      const r = 30 + Math.random() * 60;
+      const r = 40 + Math.random() * 90;
       const col = spots[randInt(spots.length)];
-      const a = 0.10 + Math.random() * 0.15;
+      const a = 0.18 + Math.random() * 0.24;
       const gr = g.createRadialGradient(x, y, r * 0.15, x, y, r);
       gr.addColorStop(0, col);
       gr.addColorStop(1, 'rgba(0,0,0,0)');
@@ -343,7 +343,7 @@ function terrainTexture(base, spots, density) {
       const rw = 1 + Math.random() * 2;
       const rh = 1 + Math.random() * 2;
       const col = spots[randInt(spots.length)];
-      const a = 0.25 + Math.random() * 0.4;
+      const a = 0.15 + Math.random() * 0.17;
       wrapFill(() => {
         g.globalAlpha = a;
         g.fillStyle = col;
@@ -443,10 +443,10 @@ const MAT = {
   rail: new THREE.MeshPhongMaterial({ color: 0xb8a68e, shininess: 90, specular: 0xffd9a0 }),
   sleeper: new THREE.MeshLambertMaterial({ color: 0x4a3626 }),
   ground: new THREE.MeshLambertMaterial({
-    map: terrainTexture('#54406b', ['#473659', '#61496f', '#3f3050'], 1500),
+    map: terrainTexture('#54406b', ['#322844', '#4e3f63', '#6b5882', '#66506b'], 1500),
   }),
   ballast: new THREE.MeshLambertMaterial({
-    map: terrainTexture('#4a4048', ['#3a333c', '#5a5058', '#332c38'], 2200),
+    map: terrainTexture('#55504e', ['#6a625c', '#463f3d', '#5d5854', '#6e6659'], 2200),
   }),
   hazard: new THREE.MeshLambertMaterial({ map: hazardTexture }),
   steel: new THREE.MeshLambertMaterial({ color: 0x39415a }),
@@ -502,7 +502,7 @@ const MAT = {
   }),
 };
 MAT.ground.map.repeat.set(29, 62);
-MAT.ballast.map.repeat.set(4, 70);
+MAT.ballast.map.repeat.set(2, 36);
 MAT.rust.map.repeat.set(3, 1.5);
 [MAT.ground.map, MAT.ballast.map, MAT.rust.map].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
 
@@ -1276,6 +1276,7 @@ const spawner = {
 
 /* --------------------------------------------------------------------- game */
 const BEST_KEY = 'railrush.best';
+const BUILD_TAG = 'ground-tex-2'; // shown on the boot screen to verify live code
 
 const game = {
   state: 'loading', // loading | ready | running | paused | over
@@ -1922,7 +1923,7 @@ $('btn-restart').addEventListener('click', () => game.startRun());
 
 game.state = 'ready';
 bootDone = true;
-ui.bootMsg.textContent = `${game.best > 0 ? `Best: ${game.best} · ` : ''}Ready on platform 3.`;
+ui.bootMsg.textContent = `${game.best > 0 ? `Best: ${game.best} · ` : ''}Ready on platform 3 · build ${BUILD_TAG}.`;
 ui.controls.hidden = false;
 ui.start.hidden = false;
 
