@@ -250,7 +250,9 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xe9895b, 28, 105);
+// Fog matches the sky dome's horizon band (#f2a45c): fully fogged ground
+// melts into the sky instead of ending in a visible world-edge line.
+scene.fog = new THREE.Fog(0xf2a45c, 28, 105);
 
 let baseFov = 66;
 const camera = new THREE.PerspectiveCamera(baseFov, window.innerWidth / window.innerHeight, 0.1, 900);
@@ -289,7 +291,17 @@ function speckleTexture(base, spots, density) {
     for (let i = 0; i < density; i += 1) {
       g.fillStyle = spots[randInt(spots.length)];
       g.globalAlpha = 0.25 + Math.random() * 0.4;
-      g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const rw = 1 + Math.random() * 2;
+      const rh = 1 + Math.random() * 2;
+      // Wrapped copies: speckles crossing an edge continue on the opposite
+      // side, so repeated tiles join seamlessly (no per-tile seam grid).
+      for (const ox of [0, -w]) {
+        for (const oy of [0, -h]) {
+          g.fillRect(x + ox, y + oy, rw, rh);
+        }
+      }
     }
   });
 }
@@ -651,7 +663,7 @@ const player = {
   lane: 1, x: 0, y: 0, vy: 0,
   sliding: 0, grounded: true,
   pendingJumpT: 0, fastFall: false, squashT: 0,
-  rollT: 0, slideTotal: CONFIG.slideDuration,
+  slideTotal: CONFIG.slideDuration,
   laneFrom: 0, laneT: CONFIG.laneStepTime, jumpCutUsed: false,
   corpseActive: false,
 };
@@ -1203,7 +1215,7 @@ const game = {
     Object.assign(player, {
       lane: 1, x: 0, y: 0, vy: 0, sliding: 0, grounded: true,
       pendingJumpT: 0, fastFall: false, squashT: 0,
-      rollT: 0, slideTotal: CONFIG.slideDuration,
+      slideTotal: CONFIG.slideDuration,
       laneFrom: 0, laneT: CONFIG.laneStepTime, jumpCutUsed: false,
       corpseActive: false,
     });
@@ -1279,7 +1291,6 @@ const game = {
       if (player.sliding <= 0) sfx.slide();
       player.sliding = CONFIG.slideDuration;
       player.slideTotal = CONFIG.slideDuration;
-      player.rollT = 0;
     } else {
       player.vy = Math.min(player.vy, -16); // fast-fall into a landing roll
       player.fastFall = true;
@@ -1643,7 +1654,6 @@ function updatePlayer(dt) {
     } else if (player.fastFall) {
       player.sliding = CONFIG.autoSlideAfterFastFall;
       player.slideTotal = CONFIG.autoSlideAfterFastFall;
-      player.rollT = 0;
     }
     player.fastFall = false;
   }
@@ -1670,8 +1680,9 @@ function updatePlayer(dt) {
   if (sliding) {
     // Forward roll about the body's center via the counter-offset rig; the
     // +0.18 lift makes the arc graze sleeper tops instead of raw ground.
-    player.rollT += dt;
-    const t = clamp(player.rollT / player.slideTotal, 0, 1);
+    // Progress reads from `sliding` itself so it always completes at exactly
+    // one full revolution when the slide runs out (no leftover angle).
+    const t = clamp(1 - player.sliding / player.slideTotal, 0, 1);
     g.rotation.x = 0;
     player.tumbler.rotation.x = -Math.PI * 2 * t;
     g.position.y = player.y + 0.18;
@@ -1684,9 +1695,16 @@ function updatePlayer(dt) {
   } else {
     player.scarf.visible = true;
     const airTuck = player.grounded ? 0 : 1;
-    player.tumbler.rotation.x = player.grounded
-      ? damp(player.tumbler.rotation.x % (Math.PI * 2), 0, 14, dt)
-      : clamp(-player.vy * 0.02, -0.35, 0.3);
+    if (player.grounded) {
+      // Normalize residue to [-π, π] before settling: a completed roll ends
+      // near -2π, and damping that raw value would whip-spin the figure back.
+      let rx = player.tumbler.rotation.x % (Math.PI * 2);
+      if (rx > Math.PI) rx -= Math.PI * 2;
+      else if (rx < -Math.PI) rx += Math.PI * 2;
+      player.tumbler.rotation.x = damp(rx, 0, 14, dt);
+    } else {
+      player.tumbler.rotation.x = clamp(-player.vy * 0.02, -0.35, 0.3);
+    }
     const squash = 1 - Math.sin((player.squashT / 0.18) * Math.PI) * 0.2;
     g.scale.set(1, squash, 1);
 
