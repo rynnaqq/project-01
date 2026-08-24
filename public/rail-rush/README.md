@@ -96,6 +96,9 @@ Edit, save, refresh — no bundler involved.
   spawned by a distance scheduler — gantries hide while inside a tunnel
 - Real-time shadows: one 1024px PCFSoft directional "sun" with a tight
   frustum around the playfield; ground/ballast/sleepers receive
+- Camera is fully locked laterally — the world streams past a fixed frame
+  while only the runner crosses lanes; scrolling dirt patches and drifting
+  cloud shadows reinforce the motion
 - Collision is swept AABB vs the player's pose (the player box widens along z
   by the frame's travel, so thin obstacles can't tunnel at low fps; trains
   widen it further by their speed multiplier)

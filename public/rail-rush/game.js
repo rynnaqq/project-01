@@ -323,6 +323,14 @@ const glowTexture = canvasTexture(64, 64, (g, w, h) => {
   g.fillStyle = gr;
   g.fillRect(0, 0, w, h);
 });
+const cloudShadowTexture = canvasTexture(128, 128, (g, w, h) => {
+  const gr = g.createRadialGradient(w / 2, h / 2, 8, w / 2, h / 2, w / 2);
+  gr.addColorStop(0, 'rgba(22,13,36,0.55)');
+  gr.addColorStop(0.6, 'rgba(22,13,36,0.24)');
+  gr.addColorStop(1, 'rgba(22,13,36,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, w, h);
+});
 
 /* ------------------------------------------------------- sky dome & sun disc */
 const tmpStarDir = new THREE.Vector3();
@@ -401,6 +409,14 @@ const MAT = {
   crateFrame: new THREE.MeshLambertMaterial({ color: 0x6b4726 }),
   barrierLowLeg: new THREE.MeshLambertMaterial({ color: 0x2c2f3a }),
   cactus: new THREE.MeshLambertMaterial({ color: 0x4a7a5a }),
+  patch: [
+    new THREE.MeshLambertMaterial({ color: 0x3f3050 }),
+    new THREE.MeshLambertMaterial({ color: 0x473659 }),
+    new THREE.MeshLambertMaterial({ color: 0x38304a }),
+  ],
+  cloudShadow: new THREE.MeshBasicMaterial({
+    map: cloudShadowTexture, transparent: true, depthWrite: false,
+  }),
   shrub: [new THREE.MeshLambertMaterial({ color: 0x8a744a }), new THREE.MeshLambertMaterial({ color: 0x77643f })],
   rust: new THREE.MeshLambertMaterial({
     map: speckleTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600),
@@ -588,6 +604,34 @@ const shrubs = makeTreadmill(14, 13, 1, () => {
   g.userData.respin(g);
   return g;
 }, 9);
+
+/* Dark dirt patches on the open ground flanks — scrolling reference points
+   that sell world motion against the locked camera. */
+const dirtPatches = makeTreadmill(18, 24, 1, () => {
+  const r = 2 + Math.random() * 6;
+  const p = mesh(GEO.circle, pick(MAT.patch), r, r * (0.6 + Math.random() * 0.5), 1);
+  p.rotation.x = -Math.PI / 2;
+  p.rotation.z = Math.random() * Math.PI * 2;
+  p.position.y = 0.012; // just above the ground top to avoid z-fighting
+  const g = new THREE.Group();
+  g.add(p);
+  g.userData.respin = (o) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 16); };
+  g.userData.respin(g);
+  return g;
+}, 14);
+
+/* Soft cloud shadows drifting over the terrain — slow parallax layer. */
+const cloudShadows = makeTreadmill(3, 90, 0.25, () => {
+  const q = new THREE.Mesh(new THREE.PlaneGeometry(46, 30), MAT.cloudShadow);
+  q.rotation.x = -Math.PI / 2;
+  q.rotation.z = Math.random() * Math.PI;
+  q.position.y = 0.04;
+  const g = new THREE.Group();
+  g.add(q);
+  g.userData.respin = (o) => { o.position.x = (Math.random() - 0.5) * 40; };
+  g.userData.respin(g);
+  return g;
+});
 
 const poles = makeTreadmill(12, 17, 1, (i) => {
   const g = new THREE.Group();
@@ -1427,6 +1471,8 @@ function scrollWorld(dt) {
   clouds.items.forEach((c) => { c.position.x += c.userData.drift * dt; });
   cacti.advance(dz);
   shrubs.advance(dz);
+  dirtPatches.advance(dz);
+  cloudShadows.advance(dz);
   poles.advance(dz);
   gantries.advance(dz);
 
@@ -1734,13 +1780,12 @@ function updatePlayer(dt) {
 }
 
 function updateCamera(dt, speedRatio = 0) {
-  // Near-locked lateral camera (Subway-Surfers style): the world stays put
-  // on screen while the runner crosses lanes. A whisper of follow keeps a
-  // breath of life without the ground visibly sliding.
-  camera.position.x = damp(camera.position.x, player.x * 0.15, 5, dt);
+  // Fully locked lateral camera: the world streams past a fixed frame while
+  // only the runner crosses lanes. Zero follow = zero ground slide.
   const shake = game.shakeT > 0 && !REDUCED_MOTION ? (Math.random() - 0.5) * game.shakeT * 2.2 : 0;
+  camera.position.x = 0;
   camera.position.y = 4.9 + Math.sin(game.distance * 1.4) * 0.04 + shake;
-  camera.lookAt(player.x * 0.1, 1.3, -10);
+  camera.lookAt(0, 1.3, -10);
   // FOV kick sells acceleration.
   const targetFov = baseFov + speedRatio * 7;
   if (Math.abs(camera.fov - targetFov) > 0.01) {
