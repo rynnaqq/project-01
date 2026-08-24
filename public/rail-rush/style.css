@@ -30,7 +30,17 @@ html, body {
   touch-action: none; /* swipes belong to the game */
 }
 
-/* Dusk vignette — sits above the canvas, below every UI layer. */
+/* Dusk grade + vignette — sit above the canvas, below every UI layer. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 140, 80, .10), rgba(255, 90, 120, .06));
+  mix-blend-mode: overlay;
+}
+
 body::after {
   content: "";
   position: fixed;

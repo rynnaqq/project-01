@@ -30,7 +30,8 @@ const THREE = await loadThree();
 /* ------------------------------------------------------------------ config */
 const CONFIG = {
   lanes: [-2.2, 0, 2.2],
-  laneShiftSpeed: 13,        // lane-change lerp rate
+  laneStepTime: 0.17,        // fixed-duration lane change (cubic ease-out)
+  startBoostTime: 0.8,       // s of 72%->100% speed acceleration at run start
   baseSpeed: 11,             // world units/s at start
   speedRamp: 0.22,           // extra units/s per second survived
   maxSpeed: 30,
@@ -135,6 +136,10 @@ class Sfx {
     this.blip(233, 0.5, 'sawtooth', 0.10, -14);
     this.blip(185, 0.55, 'sawtooth', 0.09, -12);
   }
+  tunnel() { // rushing-air whoosh when entering a tunnel
+    this.blip(620, 0.4, 'sawtooth', 0.11, -400);
+    this.blip(180, 0.5, 'triangle', 0.09, -90);
+  }
   crash() {
     this.blip(160, 0.35, 'sawtooth', 0.24, -110);
     setTimeout(() => this.blip(90, 0.4, 'square', 0.2, -50), 60);
@@ -202,6 +207,16 @@ window.addEventListener('keydown', (e) => {
   }
 }, { passive: false });
 
+/* Releasing jump early cuts the arc (keyboard short-hop). Touch taps are
+   inherently full-length so they always jump high. */
+window.addEventListener('keyup', (e) => {
+  if ((e.code === 'ArrowUp' || e.code === 'Space' || e.code === 'KeyW')
+    && !player.grounded && !player.jumpCutUsed && player.vy > 4) {
+    player.vy *= 0.55;
+    player.jumpCutUsed = true;
+  }
+});
+
 /* Swipes/taps on HUD buttons and overlay screens belong to those widgets —
    never leak into the game as a jump/start. */
 const touchesUI = (el) => !!(el && el.closest && el.closest('#hud, .screen'));
@@ -231,16 +246,18 @@ renderer.setPixelRatio(clamp(window.devicePixelRatio, 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xe9895b, 28, 105);
 
 let baseFov = 66;
 const camera = new THREE.PerspectiveCamera(baseFov, window.innerWidth / window.innerHeight, 0.1, 900);
-camera.position.set(0, 3.4, 7.2); // low, close chase cam — updateCamera only steers x/y
+camera.position.set(0, 4.9, 8.0); // high chase overview — updateCamera steers x/y
 
-scene.add(new THREE.HemisphereLight(0xffb08a, 0x4a3550, 1.05));
-const sunLight = new THREE.DirectionalLight(0xffb36b, 1.9);
+scene.add(new THREE.HemisphereLight(0xffb08a, 0x4a3550, 1.35));
+const sunLight = new THREE.DirectionalLight(0xffb36b, 2.5);
 sunLight.position.set(-18, 14, -16);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.set(1024, 1024);
@@ -296,6 +313,7 @@ const glowTexture = canvasTexture(64, 64, (g, w, h) => {
 });
 
 /* ------------------------------------------------------- sky dome & sun disc */
+const tmpStarDir = new THREE.Vector3();
 {
   const skyTex = canvasTexture(64, 256, (g, w, h) => {
     const gr = g.createLinearGradient(0, 0, 0, h);
@@ -330,6 +348,26 @@ const glowTexture = canvasTexture(64, 64, (g, w, h) => {
   halo.scale.setScalar(150);
   halo.renderOrder = -2;
   scene.add(halo);
+
+  // Faint stars in the upper dome — dusk deepening overhead.
+  const STAR_COUNT = 130;
+  const starPos = new Float32Array(STAR_COUNT * 3);
+  for (let i = 0; i < STAR_COUNT; i += 1) {
+    tmpStarDir.set(Math.random() - 0.5, 0.35 + Math.random() * 0.6, Math.random() - 0.5)
+      .normalize()
+      .multiplyScalar(440);
+    starPos[i * 3] = tmpStarDir.x;
+    starPos[i * 3 + 1] = tmpStarDir.y;
+    starPos[i * 3 + 2] = tmpStarDir.z;
+  }
+  const starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+    color: 0xffe9cf, size: 2, sizeAttenuation: false,
+    transparent: true, opacity: 0.65, fog: false, depthWrite: false,
+  }));
+  stars.renderOrder = -2;
+  scene.add(stars);
 }
 
 /* Shared geometry & materials (draw-call budget stays low). */
@@ -351,6 +389,13 @@ const MAT = {
   crateFrame: new THREE.MeshLambertMaterial({ color: 0x6b4726 }),
   barrierLowLeg: new THREE.MeshLambertMaterial({ color: 0x2c2f3a }),
   cactus: new THREE.MeshLambertMaterial({ color: 0x4a7a5a }),
+  shrub: [new THREE.MeshLambertMaterial({ color: 0x8a744a }), new THREE.MeshLambertMaterial({ color: 0x77643f })],
+  rust: new THREE.MeshLambertMaterial({
+    map: speckleTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600),
+  }),
+  tunnelLiner: new THREE.MeshLambertMaterial({ color: 0x574e63 }),
+  tunnelRib: new THREE.MeshLambertMaterial({ color: 0x3e3749 }),
+  tunnelSkirt: new THREE.MeshLambertMaterial({ color: 0x463f52 }),
   cloud: new THREE.MeshLambertMaterial({ color: 0xffc9d6, emissive: 0x55283c }),
   mountainFar: new THREE.MeshLambertMaterial({ color: 0x472d63, fog: false }),
   mountainNear: [new THREE.MeshLambertMaterial({ color: 0x5d3a5f }), new THREE.MeshLambertMaterial({ color: 0x6e4356 })],
@@ -364,6 +409,16 @@ const MAT = {
   arms: new THREE.MeshLambertMaterial({ color: 0xd97f66 }),
   cap: new THREE.MeshLambertMaterial({ color: 0x86ccca }),
   pack: new THREE.MeshLambertMaterial({ color: 0xc9566b }),
+  scarf: new THREE.MeshBasicMaterial({ color: 0xff71ce, side: THREE.DoubleSide }),
+  ring: new THREE.MeshBasicMaterial({
+    color: 0xffdf9e, transparent: true, opacity: 0.95,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }),
+  lightCone: new THREE.MeshBasicMaterial({
+    map: glowTexture, color: 0xffbf80, transparent: true, opacity: 0.5,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }),
+  tumbleweed: new THREE.MeshLambertMaterial({ color: 0x9a7f52, wireframe: true }),
   particle: new THREE.MeshBasicMaterial({ color: 0xffce5c }),
   streak: new THREE.MeshBasicMaterial({
     color: 0xffd9a0, transparent: true, opacity: 0,
@@ -372,7 +427,8 @@ const MAT = {
 };
 MAT.ground.map.repeat.set(10, 50);
 MAT.ballast.map.repeat.set(4, 70);
-[MAT.ground.map, MAT.ballast.map].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+MAT.rust.map.repeat.set(3, 1.5);
+[MAT.ground.map, MAT.ballast.map, MAT.rust.map].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
 
 /* Train liveries — body/accent materials are cloned per train so each spawn
    can be repainted. */
@@ -393,6 +449,7 @@ const GEO = {
   wheel: new THREE.CylinderGeometry(1, 1, 1, 12),
   puff: new THREE.SphereGeometry(1, 7, 5),
   circle: new THREE.CircleGeometry(0.5, 16),
+  ring: new THREE.TorusGeometry(0.34, 0.05, 8, 26),
 };
 
 function mesh(geo, mat, sx, sy, sz) {
@@ -507,6 +564,17 @@ const cacti = makeTreadmill(10, 19, 1, () => {
   return g;
 }, 8);
 
+const shrubs = makeTreadmill(14, 13, 1, () => {
+  const s = 0.7 + Math.random() * 0.6;
+  const bush = mesh(GEO.cone, pick(MAT.shrub), s * 0.8, s * 0.5, s * 0.8);
+  bush.position.y = s * 0.25;
+  const g = new THREE.Group();
+  g.add(bush);
+  g.userData.respin = (o) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (5.1 + Math.random() * 1.5); };
+  g.userData.respin(g);
+  return g;
+}, 9);
+
 const poles = makeTreadmill(12, 17, 1, (i) => {
   const g = new THREE.Group();
   const post = mesh(GEO.box, MAT.pole, 0.16, 4.4, 0.16);
@@ -563,6 +631,14 @@ sleepers.receiveShadow = true;
 scene.add(sleepers);
 const sleeperMatrix = new THREE.Matrix4();
 let sleeperOffset = 0;
+{
+  // Per-sleeper tint variation — breaks up the perfect repetition.
+  const c = new THREE.Color();
+  for (let i = 0; i < SLEEPER_ROWS * 3; i += 1) {
+    sleepers.setColorAt(i, c.setHex(0x4a3626).offsetHSL(0, (Math.random() - 0.5) * 0.06, (Math.random() - 0.5) * 0.09));
+  }
+  sleepers.instanceColor.needsUpdate = true;
+}
 
 /* ------------------------------------------------------------------- player */
 const player = {
@@ -572,6 +648,7 @@ const player = {
   sliding: 0, grounded: true,
   pendingJumpT: 0, fastFall: false, squashT: 0,
   rollT: 0, slideTotal: CONFIG.slideDuration,
+  laneFrom: 0, laneT: CONFIG.laneStepTime, jumpCutUsed: false,
   corpseActive: false,
 };
 {
@@ -590,6 +667,15 @@ const player = {
   const packFlap = mesh(GEO.box, MAT.cap, 0.46, 0.14, 0.22);
   packFlap.position.set(0, 1.32, 0.29);
 
+  // Fluttering scarf: plane strip trailing backward, vertices waved per frame.
+  const scarfGeo = new THREE.PlaneGeometry(0.2, 1.0, 1, 7);
+  scarfGeo.translate(0, 0.5, 0); // hang from the top edge
+  player.scarf = new THREE.Mesh(scarfGeo, MAT.scarf);
+  player.scarf.rotation.x = Math.PI / 2; // local +y -> world +z (trails behind)
+  player.scarf.position.set(0, 1.48, 0.2);
+  player.scarf.frustumCulled = false;
+  player.scarf.userData.base = Float32Array.from(scarfGeo.attributes.position.array);
+
   const limb = (mat, w, len, hipX, hipY) => {
     const pivot = new THREE.Group();
     pivot.position.set(hipX, hipY, 0);
@@ -603,7 +689,7 @@ const player = {
   player.legL = limb(MAT.legs, 0.19, 0.64, -0.16, 0.66);
   player.legR = limb(MAT.legs, 0.19, 0.64, 0.16, 0.66);
 
-  player.group.add(torso, head, capTop, brim, packBody, packFlap,
+  player.group.add(torso, head, capTop, brim, packBody, packFlap, player.scarf,
     player.armL, player.armR, player.legL, player.legR);
   shadows(player.group);
   scene.add(player.group);
@@ -667,6 +753,11 @@ function makeTrain() {
   glow.scale.setScalar(1.7);
   glow.position.set(0, 1.55, 4.5);
 
+  // Pool of headlight on the ballast ahead — reads beautifully at dusk.
+  const beam = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 6.4), MAT.lightCone);
+  beam.rotation.x = -Math.PI / 2;
+  beam.position.set(0, 0.26, 7.6);
+
   const wheels = [];
   for (const wz of [2.6, 0, -2.6]) {
     for (const wx of [-1.0, 1.0]) {
@@ -679,7 +770,7 @@ function makeTrain() {
     }
   }
 
-  g.add(chassis, hood, cab, cabRoof, stripe, band, facePlate, chimney, dome, cow, light, glow);
+  g.add(chassis, hood, cab, cabRoof, stripe, band, facePlate, chimney, dome, cow, light, glow, beam);
   shadows(g);
   g.userData.hit = { hw: 0.98, y0: 0, y1: 2.85, hd: 4.7 };
   g.userData.span = 11.5;
@@ -848,6 +939,157 @@ function smokePuff(x, y, z) {
   p.userData.vel.set((Math.random() - 0.5) * 0.8, 1.8 + Math.random(), (Math.random() - 0.5) * 0.8 - 1.2);
 }
 
+/* Expanding pickup rings for coins (per-instance material for the fade). */
+const rings = new Pool(8, () => {
+  const r = new THREE.Mesh(GEO.ring, MAT.ring.clone());
+  r.userData.life = 0;
+  return r;
+});
+function spawnRing(x, y, z) {
+  const r = rings.get();
+  if (!r) return;
+  r.position.set(x, y, z);
+  r.scale.setScalar(0.5);
+  r.material.opacity = 0.95;
+  r.visible = true;
+  r.userData.active = true;
+  r.userData.life = 0.32;
+}
+function updateRings(dt) {
+  rings.forEachActive((r) => {
+    r.userData.life -= dt;
+    if (r.userData.life <= 0) { rings.release(r); return; }
+    const t = 1 - r.userData.life / 0.32;
+    r.scale.setScalar(0.5 + t * 1.5);
+    r.material.opacity = 0.95 * (1 - t);
+  });
+}
+
+/* Tumbleweeds cross far off-lane now and then; purely decorative. */
+const tumbleweeds = new Pool(2, () => {
+  const t = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), MAT.tumbleweed);
+  t.userData.vx = 0;
+  return t;
+});
+let tumbleweedTimer = 9;
+
+/* ------------------------------------------------------- set-pieces */
+const TUNNEL_LEN = 50;
+
+function makeTower() {
+  const g = new THREE.Group();
+  for (const [lx, lz] of [[-0.85, -0.85], [0.85, -0.85], [-0.85, 0.85], [0.85, 0.85]]) {
+    const leg = mesh(GEO.box, MAT.pole, 0.22, 3.4, 0.22);
+    leg.position.set(lx, 1.7, lz);
+    leg.rotation.z = lx > 0 ? -0.06 : 0.06;
+    leg.rotation.x = lz > 0 ? 0.06 : -0.06;
+    g.add(leg);
+  }
+  const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 2.6, 14), MAT.rust);
+  tank.position.y = 4.4;
+  g.add(tank);
+  for (const hy of [3.45, 5.35]) {
+    const hoop = new THREE.Mesh(new THREE.CylinderGeometry(1.94, 1.94, 0.12, 14), MAT.darkMetal);
+    hoop.position.y = hy;
+    g.add(hoop);
+  }
+  const roof = new THREE.Mesh(GEO.cone, MAT.pole);
+  roof.scale.set(2.05, 1.1, 2.05);
+  roof.position.y = 6.25;
+  g.add(roof);
+  const ladder = mesh(GEO.box, MAT.darkMetal, 0.1, 3.4, 0.1);
+  ladder.position.set(1.98, 2.2, 0);
+  g.add(ladder);
+  shadows(g);
+  return g;
+}
+const towers = new Pool(3, makeTower);
+
+/* Arched stone tunnel: half-torus vault ribs + skirts + portals. Decorative,
+   no collision; ceiling radius keeps full jumps safe inside. */
+function makeTunnel() {
+  const g = new THREE.Group();
+  const linerGeo = new THREE.TorusGeometry(4.2, 0.6, 9, 14, Math.PI);
+  const ribGeo = new THREE.TorusGeometry(4.32, 0.72, 9, 14, Math.PI);
+  for (let i = 0; i < 11; i += 1) {
+    const ribbed = i % 3 === 0;
+    const seg = new THREE.Mesh(ribbed ? ribGeo : linerGeo, ribbed ? MAT.tunnelRib : MAT.tunnelLiner);
+    seg.position.z = -i * 5;
+    g.add(seg);
+  }
+  for (const sx of [-4.85, 4.85]) {
+    const skirt = mesh(GEO.box, MAT.tunnelSkirt, 0.7, 2.4, TUNNEL_LEN);
+    skirt.position.set(sx, 1.2, -TUNNEL_LEN / 2);
+    g.add(skirt);
+  }
+  const portalGeo = new THREE.TorusGeometry(4.55, 0.85, 10, 16, Math.PI);
+  for (const pz of [0, -TUNNEL_LEN]) {
+    const portal = new THREE.Mesh(portalGeo, MAT.tunnelRib);
+    portal.position.z = pz;
+    g.add(portal);
+  }
+  for (const lx of [-3.4, 3.4]) {
+    const lamp = new THREE.Mesh(
+      new THREE.SphereGeometry(0.16, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffe9b8 }),
+    );
+    lamp.position.set(lx, 3.4, 0.4);
+    g.add(lamp);
+  }
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture, color: 0xffb070, transparent: true, opacity: 0.8, depthWrite: false,
+  }));
+  glow.scale.setScalar(2.4);
+  glow.position.set(0, 3.55, 0.55);
+  g.add(glow);
+  shadows(g);
+  g.userData.len = TUNNEL_LEN;
+  return g;
+}
+const tunnels = new Pool(2, makeTunnel);
+
+/* Distance-based scheduler, same pattern as spawner but for scenery pieces. */
+const setPieces = {
+  nextTunnelAt: 320,
+  nextTowerAt: 170,
+  towerSide: 1,
+  wasInsideTunnel: false,
+
+  reset() {
+    this.nextTunnelAt = 320;
+    this.nextTowerAt = 170;
+    this.towerSide = 1;
+    this.wasInsideTunnel = false;
+  },
+
+  update(travel) {
+    if (travel >= this.nextTunnelAt) {
+      const t = tunnels.get();
+      if (t) {
+        t.position.set(0, 0, -150);
+        t.visible = true;
+        t.userData.active = true;
+        this.nextTunnelAt = travel + 420 + Math.random() * 260;
+      } else {
+        this.nextTunnelAt = travel + 60; // both busy — retry soon
+      }
+    }
+    if (travel >= this.nextTowerAt) {
+      const w = towers.get();
+      if (w) {
+        this.towerSide *= -1;
+        w.position.set(this.towerSide * (9.5 + Math.random() * 3), 0, -140);
+        w.rotation.y = Math.random() * Math.PI * 2;
+        w.visible = true;
+        w.userData.active = true;
+        this.nextTowerAt = travel + 240 + Math.random() * 260;
+      } else {
+        this.nextTowerAt = travel + 60;
+      }
+    }
+  },
+};
+
 /* ------------------------------------------------------------------ spawner */
 const spawner = {
   nextEventDist: 40,
@@ -948,16 +1190,21 @@ const game = {
     Object.assign(player, {
       lane: 1, x: 0, y: 0, vy: 0, sliding: 0, grounded: true,
       pendingJumpT: 0, fastFall: false, squashT: 0,
-      rollT: 0, slideTotal: CONFIG.slideDuration, corpseActive: false,
+      rollT: 0, slideTotal: CONFIG.slideDuration,
+      laneFrom: 0, laneT: CONFIG.laneStepTime, jumpCutUsed: false,
+      corpseActive: false,
     });
     player.group.position.set(0, 0, 0);
     player.group.rotation.set(0, 0, 0);
     player.group.scale.set(1, 1, 1);
     trains.reset(); crates.reset(); lowBarriers.reset(); highBarriers.reset();
     powerups.reset(); particles.reset();
+    rings.reset(); tumbleweeds.reset(); tunnels.reset(); towers.reset();
     coinState.forEach((c) => { c.active = false; });
     spawner.reset();
+    setPieces.reset();
     legSwingPhase = 0;
+    runDustT = 0;
 
     ui.boot.hidden = true;
     ui.over.hidden = true;
@@ -992,6 +1239,9 @@ const game = {
   switchLane(dir) {
     const next = clamp(player.lane + dir, 0, 2);
     if (next !== player.lane) {
+      // Fixed-duration step; re-targeting mid-move restarts from current x.
+      player.laneFrom = player.x;
+      player.laneT = 0;
       player.lane = next;
       sfx.lane();
     }
@@ -1002,6 +1252,7 @@ const game = {
       player.sliding = 0; // jump cancels a slide
       player.vy = CONFIG.jumpVelocity * (this.jumpBoostT > 0 ? CONFIG.highJumpMultiplier : 1);
       player.grounded = false;
+      player.jumpCutUsed = false;
       sfx.jump();
     } else {
       player.pendingJumpT = CONFIG.jumpBufferTime; // buffered until touchdown
@@ -1145,6 +1396,7 @@ function scrollWorld(dt) {
   clouds.advance(dz);
   clouds.items.forEach((c) => { c.position.x += c.userData.drift * dt; });
   cacti.advance(dz);
+  shrubs.advance(dz);
   poles.advance(dz);
   gantries.advance(dz);
 
@@ -1153,7 +1405,52 @@ function scrollWorld(dt) {
     if (o.position.z > CONFIG.despawnZ) pool.release(o);
   });
   advance(crates); advance(lowBarriers); advance(highBarriers);
+  advance(towers);
   advanceTrains(dt, dz);
+
+  // Tunnels: origin sits at the entrance (+z end), vault trails to -LEN.
+  tunnels.forEachActive((o) => {
+    o.position.z += dz;
+    if (o.position.z - TUNNEL_LEN > CONFIG.despawnZ) tunnels.release(o);
+  });
+
+  // Gantry beams would clip through the vault — hide them inside tunnels.
+  for (const gt of gantries.items) {
+    let hide = false;
+    tunnels.forEachActive((tn) => {
+      if (gt.position.z < tn.position.z + 2 && gt.position.z > tn.position.z - TUNNEL_LEN - 2) hide = true;
+    });
+    gt.visible = !hide;
+  }
+
+  // Tunnel-entry whoosh.
+  let insideTunnel = false;
+  tunnels.forEachActive((tn) => {
+    if (tn.position.z >= 0 && tn.position.z <= TUNNEL_LEN) insideTunnel = true;
+  });
+  if (insideTunnel && !setPieces.wasInsideTunnel) sfx.tunnel();
+  setPieces.wasInsideTunnel = insideTunnel;
+
+  // Tumbleweeds: world-scrolled drift with a lateral push and a roll.
+  tumbleweedTimer -= dt;
+  if (tumbleweedTimer <= 0) {
+    tumbleweedTimer = 12 + Math.random() * 10;
+    const tw = tumbleweeds.get();
+    if (tw) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      tw.visible = true;
+      tw.userData.active = true;
+      tw.position.set(side * (8 + Math.random() * 6), 0.55, -100 - Math.random() * 20);
+      tw.userData.vx = -side * (1.2 + Math.random());
+    }
+  }
+  tumbleweeds.forEachActive((tw) => {
+    tw.position.z += dz;
+    tw.position.x += tw.userData.vx * dt;
+    tw.rotation.x += dz / 0.55;
+    tw.rotation.y += tw.userData.vx * dt / 0.55;
+    if (tw.position.z > CONFIG.despawnZ || Math.abs(tw.position.x) > 22) tumbleweeds.release(tw);
+  });
 
   powerups.forEachActive((o) => {
     o.position.z += dz;
@@ -1254,6 +1551,7 @@ function checkCollisions() {
       game.coins += 1;
       game.score += CONFIG.coinScore;
       sfx.coin();
+      spawnRing(c.x, c.y, c.z);
       burst(c.x, c.y, c.z, 0xffce5c, 5, 2.4);
     }
   }
@@ -1274,6 +1572,22 @@ function checkCollisions() {
 }
 
 let legSwingPhase = 0;
+let runDustT = 0;
+
+function animateScarf(timeSec) {
+  const posAttr = player.scarf.geometry.attributes.position;
+  const base = player.scarf.userData.base;
+  for (let i = 0; i < posAttr.count; i += 1) {
+    const row = i >> 1;
+    const f = row / 7; // 0 at the neck, 1 at the tail
+    posAttr.array[i * 3] = base[i * 3]
+      + Math.sin(timeSec * 9 + f * 4) * 0.09 * f; // lateral flutter
+    posAttr.array[i * 3 + 1] = base[i * 3 + 1] * (1 - f * 0.2)
+      + Math.sin(timeSec * 7 + f * 3) * 0.05 * f; // lift wave along the trail
+  }
+  posAttr.needsUpdate = true;
+}
+
 function updatePlayer(dt) {
   if (input.left) { input.left = false; game.switchLane(-1); }
   if (input.right) { input.right = false; game.switchLane(1); }
@@ -1282,8 +1596,13 @@ function updatePlayer(dt) {
 
   const wasGrounded = player.grounded;
   const targetX = CONFIG.lanes[player.lane];
-  player.x = damp(player.x, targetX, CONFIG.laneShiftSpeed, dt);
-  if (Math.abs(targetX - player.x) < 0.02) player.x = targetX; // settle, kill drift
+  // Fixed-duration cubic ease-out lane step: crisp arcade step, no drift tail.
+  if (player.laneT < CONFIG.laneStepTime) {
+    player.laneT = Math.min(CONFIG.laneStepTime, player.laneT + dt);
+    const t = player.laneT / CONFIG.laneStepTime;
+    const e = 1 - (1 - t) ** 3;
+    player.x = player.laneFrom + (targetX - player.laneFrom) * e;
+  }
 
   if (!player.grounded) {
     player.vy -= CONFIG.gravity * dt;
@@ -1317,6 +1636,17 @@ function updatePlayer(dt) {
   const bob = player.grounded && !sliding ? Math.abs(Math.sin(legSwingPhase)) * 0.07 : 0;
   g.position.set(player.x, player.y + bob, 0);
   g.rotation.z = damp(g.rotation.z, (targetX - player.x) * -0.14, 12, dt);
+  // Body yaw toward the lane being taken — makes the step readable.
+  g.rotation.y = damp(g.rotation.y, clamp((targetX - player.x) * 0.3, -0.42, 0.42), 10, dt);
+
+  animateScarf(game.runTime);
+
+  // Small dust kicks under the feet while running.
+  runDustT -= dt;
+  if (player.grounded && !sliding && runDustT <= 0) {
+    runDustT = 0.24;
+    burst(player.x + (Math.random() - 0.5) * 0.3, 0.12, 0.45, 0x7d6a86, 1, 1.2, { size: 0.55, grav: 6 });
+  }
 
   if (sliding) {
     // Forward roll: one clean revolution across the slide's own duration.
@@ -1362,13 +1692,12 @@ function updatePlayer(dt) {
 }
 
 function updateCamera(dt, speedRatio = 0) {
-  // Tight x-follow keeps the runner near screen center through lane changes;
-  // the slight offset between position (0.72) and lookAt (0.55) keeps a
-  // hint of parallax so sways still read as motion.
-  camera.position.x = damp(camera.position.x, player.x * 0.72, 7, dt);
+  // Higher overview POV; follow-x loose enough (0.6 vs lookAt 0.35) that the
+  // runner visibly travels each lane while the camera keeps the track ahead.
+  camera.position.x = damp(camera.position.x, player.x * 0.6, 6.5, dt);
   const shake = game.shakeT > 0 && !REDUCED_MOTION ? (Math.random() - 0.5) * game.shakeT * 2.2 : 0;
-  camera.position.y = 3.4 + Math.sin(game.distance * 1.4) * 0.04 + shake;
-  camera.lookAt(player.x * 0.55, 1.55, -10);
+  camera.position.y = 4.9 + Math.sin(game.distance * 1.4) * 0.04 + shake;
+  camera.lookAt(player.x * 0.35, 1.3, -10);
   // FOV kick sells acceleration.
   const targetFov = baseFov + speedRatio * 7;
   if (Math.abs(camera.fov - targetFov) > 0.01) {
@@ -1411,13 +1740,17 @@ function loop(now) {
 
   try {
     game.runTime += dt;
-    game.speed = Math.min(CONFIG.maxSpeed, CONFIG.baseSpeed + game.runTime * CONFIG.speedRamp);
+    // Brief acceleration burst at the start of each run.
+    game.speed = Math.min(CONFIG.maxSpeed, (CONFIG.baseSpeed + game.runTime * CONFIG.speedRamp)
+      * clamp(game.runTime / CONFIG.startBoostTime, 0.72, 1));
 
     scrollWorld(dt);
     spawner.update(game.distance);
+    setPieces.update(game.distance);
     const speedRatio = updatePlayer(dt);
     checkCollisions();
     updateParticles(dt);
+    updateRings(dt);
     updateStreaks(dt);
     updateCamera(dt, speedRatio);
     drawCoins(0, now / 1000); // fixed angle: coins stay camera-facing

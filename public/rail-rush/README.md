@@ -43,6 +43,13 @@ loop. Music starts off.
   overhead barriers and even train roofs with a well-timed jump
 - Jump inputs pressed up to 90ms before landing are buffered; a fast-fall
   lands into a short roll; jumping cancels a slide
+- Keyboard jump is height-variable: hold for a full arc, release early for a
+  short hop (touch taps always jump full)
+- Runs start with a brief acceleration burst; lane changes are crisp
+  fixed-duration steps
+- Scenery set-pieces pass by on a distance scheduler: arched **tunnels**
+  (decorative, no collision) and rusty **water towers** beside the track;
+  watch for gantries dipping out of view inside tunnels
 - Crash = run over. Best score persists in `localStorage` (`railrush.best`)
 
 ## Tuning
@@ -56,7 +63,8 @@ Every gameplay number sits in the `CONFIG` object at the top of `game.js`:
 | `gravity` / `jumpVelocity` | 34 / 12.2 | jump arc height & feel |
 | `highJumpMultiplier` | 1.32 | power-up jump boost |
 | `slideDuration` | 0.62 s | how long the slide roll lasts |
-| `laneShiftSpeed` | 13 | lane-change snappiness |
+| `laneStepTime` | 0.17 s | fixed-duration lane change (cubic ease-out) |
+| `startBoostTime` | 0.8 s | acceleration burst length at run start |
 | `trainSpeedMult` | 1.35 | how much faster trains close than the world scroll |
 | `trainSpawnZ` | -120 | trains spawn deeper to compensate for their speed |
 | `jumpBufferTime` | 0.09 s | early jump press still fires on landing |
@@ -78,7 +86,14 @@ Edit, save, refresh — no bundler involved.
   too. Scenery (mountains ×2 parallax layers, clouds, cacti, poles, catenary
   gantries) runs on spacing-based treadmills that wrap behind the camera
 - All textures are procedural canvases: sky gradient, ground/ballast speckle,
-  hazard stripes, headlight glow — zero asset files
+  hazard stripes, headlight glow, tower rust — zero asset files
+- ACES filmic tone mapping (exposure 1.2) with retuned light intensities;
+  stars, drifting clouds and two parallax mountain layers dress the dusk sky
+- Character juice: vertex-waved scarf, run dust, landing squash, forward-roll
+  slide, body yaw on lane steps; coins pop an expanding pickup ring
+- Trains carry an additive headlight pool on the ballast; tunnels are
+  half-torus vaults from a 2-item pool, water towers from a 3-item pool,
+  spawned by a distance scheduler — gantries hide while inside a tunnel
 - Real-time shadows: one 1024px PCFSoft directional "sun" with a tight
   frustum around the playfield; ground/ballast/sleepers receive
 - Collision is swept AABB vs the player's pose (the player box widens along z
