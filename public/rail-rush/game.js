@@ -1734,12 +1734,13 @@ function updatePlayer(dt) {
 }
 
 function updateCamera(dt, speedRatio = 0) {
-  // Higher overview POV; follow-x loose enough (0.6 vs lookAt 0.35) that the
-  // runner visibly travels each lane while the camera keeps the track ahead.
-  camera.position.x = damp(camera.position.x, player.x * 0.6, 6.5, dt);
+  // Near-locked lateral camera (Subway-Surfers style): the world stays put
+  // on screen while the runner crosses lanes. A whisper of follow keeps a
+  // breath of life without the ground visibly sliding.
+  camera.position.x = damp(camera.position.x, player.x * 0.15, 5, dt);
   const shake = game.shakeT > 0 && !REDUCED_MOTION ? (Math.random() - 0.5) * game.shakeT * 2.2 : 0;
   camera.position.y = 4.9 + Math.sin(game.distance * 1.4) * 0.04 + shake;
-  camera.lookAt(player.x * 0.35, 1.3, -10);
+  camera.lookAt(player.x * 0.1, 1.3, -10);
   // FOV kick sells acceleration.
   const targetFov = baseFov + speedRatio * 7;
   if (Math.abs(camera.fov - targetFov) > 0.01) {
