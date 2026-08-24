@@ -85,8 +85,9 @@ Edit, save, refresh — no bundler involved.
   coins and sleepers are `InstancedMesh` (one draw call each); wind streaks
   too. Scenery (mountains ×2 parallax layers, clouds, cacti, poles, catenary
   gantries) runs on spacing-based treadmills that wrap behind the camera
-- All textures are procedural canvases: sky gradient, ground/ballast speckle,
-  hazard stripes, headlight glow, tower rust — zero asset files
+- All textures are procedural canvases: sky gradient, multi-scale
+  ground/ballast terrain (macro tone blobs + mottling + grain, seamless
+  tiles), hazard stripes, headlight glow, tower rust — zero asset files
 - ACES filmic tone mapping (exposure 1.2) with retuned light intensities;
   stars, drifting clouds and two parallax mountain layers dress the dusk sky
 - Character juice: vertex-waved scarf, run dust, landing squash, forward-roll

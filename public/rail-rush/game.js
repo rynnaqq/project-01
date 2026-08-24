@@ -281,28 +281,76 @@ function canvasTexture(w, h, draw) {
   draw(c.getContext('2d'), w, h);
   const tx = new THREE.CanvasTexture(c);
   tx.colorSpace = THREE.SRGBColorSpace;
-  tx.anisotropy = 4;
+  tx.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   return tx;
 }
-function speckleTexture(base, spots, density) {
-  return canvasTexture(128, 128, (g, w, h) => {
+/* Multi-scale procedural terrain: large soft tone blobs + mid mottling +
+   fine grain. Every layer is drawn with wrapped copies so tiles join
+   seamlessly — single-scale speckle read as TV static near and flat mush far. */
+function terrainTexture(base, spots, density) {
+  return canvasTexture(512, 512, (g, w, h) => {
     g.fillStyle = base;
     g.fillRect(0, 0, w, h);
+    const wrapFill = (draw) => {
+      for (const ox of [0, -w]) {
+        for (const oy of [0, -h]) {
+          g.save();
+          g.translate(ox, oy);
+          draw();
+          g.restore();
+        }
+      }
+    };
+    // Macro: big soft radial tone blobs give regions their own character.
+    for (let i = 0; i < 40; i += 1) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const r = 30 + Math.random() * 60;
+      const col = spots[randInt(spots.length)];
+      const a = 0.10 + Math.random() * 0.15;
+      const gr = g.createRadialGradient(x, y, r * 0.15, x, y, r);
+      gr.addColorStop(0, col);
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      wrapFill(() => {
+        g.globalAlpha = a;
+        g.fillStyle = gr;
+        g.beginPath();
+        g.arc(x, y, r, 0, Math.PI * 2);
+        g.fill();
+      });
+    }
+    // Mid: mottled ellipses break up flatness organically.
+    for (let i = 0; i < 250; i += 1) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const rw = 4 + Math.random() * 18;
+      const rh = 3 + Math.random() * 12;
+      const rot = Math.random() * Math.PI;
+      const col = spots[randInt(spots.length)];
+      const a = 0.08 + Math.random() * 0.12;
+      wrapFill(() => {
+        g.globalAlpha = a;
+        g.fillStyle = col;
+        g.beginPath();
+        g.ellipse(x, y, rw, rh, rot, 0, Math.PI * 2);
+        g.fill();
+      });
+    }
+    // Fine: grain on top for close-up detail.
     for (let i = 0; i < density; i += 1) {
-      g.fillStyle = spots[randInt(spots.length)];
-      g.globalAlpha = 0.25 + Math.random() * 0.4;
       const x = Math.random() * w;
       const y = Math.random() * h;
       const rw = 1 + Math.random() * 2;
       const rh = 1 + Math.random() * 2;
-      // Wrapped copies: speckles crossing an edge continue on the opposite
-      // side, so repeated tiles join seamlessly (no per-tile seam grid).
-      for (const ox of [0, -w]) {
-        for (const oy of [0, -h]) {
-          g.fillRect(x + ox, y + oy, rw, rh);
-        }
-      }
+      const col = spots[randInt(spots.length)];
+      const a = 0.25 + Math.random() * 0.4;
+      wrapFill(() => {
+        g.globalAlpha = a;
+        g.fillStyle = col;
+        g.fillRect(x, y, rw, rh);
+      });
     }
+    g.globalAlpha = 1;
   });
 }
 const hazardTexture = canvasTexture(128, 128, (g, w, h) => {
@@ -395,10 +443,10 @@ const MAT = {
   rail: new THREE.MeshPhongMaterial({ color: 0xb8a68e, shininess: 90, specular: 0xffd9a0 }),
   sleeper: new THREE.MeshLambertMaterial({ color: 0x4a3626 }),
   ground: new THREE.MeshLambertMaterial({
-    map: speckleTexture('#54406b', ['#473659', '#61496f', '#3f3050'], 1500),
+    map: terrainTexture('#54406b', ['#473659', '#61496f', '#3f3050'], 1500),
   }),
   ballast: new THREE.MeshLambertMaterial({
-    map: speckleTexture('#4a4048', ['#3a333c', '#5a5058', '#332c38'], 2200),
+    map: terrainTexture('#4a4048', ['#3a333c', '#5a5058', '#332c38'], 2200),
   }),
   hazard: new THREE.MeshLambertMaterial({ map: hazardTexture }),
   steel: new THREE.MeshLambertMaterial({ color: 0x39415a }),
@@ -419,7 +467,7 @@ const MAT = {
   }),
   shrub: [new THREE.MeshLambertMaterial({ color: 0x8a744a }), new THREE.MeshLambertMaterial({ color: 0x77643f })],
   rust: new THREE.MeshLambertMaterial({
-    map: speckleTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600),
+    map: terrainTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600),
   }),
   tunnelLiner: new THREE.MeshLambertMaterial({ color: 0x574e63 }),
   tunnelRib: new THREE.MeshLambertMaterial({ color: 0x3e3749 }),
@@ -453,7 +501,7 @@ const MAT = {
     blending: THREE.AdditiveBlending, depthWrite: false,
   }),
 };
-MAT.ground.map.repeat.set(58, 125);
+MAT.ground.map.repeat.set(29, 62);
 MAT.ballast.map.repeat.set(4, 70);
 MAT.rust.map.repeat.set(3, 1.5);
 [MAT.ground.map, MAT.ballast.map, MAT.rust.map].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
