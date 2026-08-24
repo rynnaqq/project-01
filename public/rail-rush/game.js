@@ -88,6 +88,7 @@ window.addEventListener('unhandledrejection', (e) => surfaceBootError(String(e.r
 /* --------------------------------------------------------------------- sfx */
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let musicWanted = false;
+let muteLastTap = 0;
 
 class Sfx {
   constructor() { this.ctx = null; this.muted = false; this.musicTimer = null; }
@@ -158,7 +159,6 @@ $('btn-mute').addEventListener('click', () => {
     sfx.syncMusic(false);
   }
 });
-let muteLastTap = 0;
 
 /* ------------------------------------------------------------------- input */
 const input = { left: false, right: false, jump: false, slide: false };
@@ -637,9 +637,15 @@ function loopOver(now) {
   if (game.state !== 'over') return;
   const dt = Math.min(0.05, (now - game.lastT) / 1000 || 0.016);
   game.lastT = now;
-  updateParticles(dt);
-  updateCamera(dt);
-  requestAnimationFrame(loopOver);
+
+  try {
+    updateParticles(dt);
+    updateCamera(dt);
+    renderer.render(scene, camera);
+    requestAnimationFrame(loopOver);
+  } catch (err) {
+    haltWithError(err);
+  }
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -837,25 +843,47 @@ function updateParticles(dt) {
   });
 }
 
+/* A mid-run crash must never freeze the canvas silently again. */
+function haltWithError(err) {
+  console.error('[Rail Rush]', err);
+  sfx.syncMusic(false);
+  game.state = 'paused';
+  ui.hud.hidden = true;
+  ui.power.hidden = true;
+  ui.bootTitle.textContent = 'RUNTIME ERROR';
+  ui.bootMsg.textContent = String(err?.message ?? err);
+  ui.controls.hidden = true;
+  ui.start.hidden = true;
+  ui.boot.hidden = false;
+}
+
 function loop(now) {
   if (game.state !== 'running') return;
   const dt = Math.min(0.05, (now - game.lastT) / 1000 || 0.016);
   game.lastT = now;
 
-  game.runTime += dt;
-  game.speed = Math.min(CONFIG.maxSpeed, CONFIG.baseSpeed + game.runTime * CONFIG.speedRamp);
+  try {
+    game.runTime += dt;
+    game.speed = Math.min(CONFIG.maxSpeed, CONFIG.baseSpeed + game.runTime * CONFIG.speedRamp);
 
-  scrollWorld(dt);
-  spawner.update(game.distance);
-  updatePlayer(dt);
-  checkCollisions();
-  updateParticles(dt);
-  updateCamera(dt);
-  drawCoins(game.distance * 2.2);
+    scrollWorld(dt);
+    spawner.update(game.distance);
+    updatePlayer(dt);
+    checkCollisions();
+    updateParticles(dt);
+    updateCamera(dt);
+    drawCoins(game.distance * 2.2);
 
-  ui.score.textContent = String(Math.floor(game.score));
-  ui.coins.textContent = String(game.coins);
-  requestAnimationFrame(loop);
+    // THE frame that used to be missing: without this, every system above
+    // updates state while the canvas keeps showing the boot snapshot.
+    renderer.render(scene, camera);
+
+    ui.score.textContent = String(Math.floor(game.score));
+    ui.coins.textContent = String(game.coins);
+    requestAnimationFrame(loop);
+  } catch (err) {
+    haltWithError(err);
+  }
 }
 
 /* --------------------------------------------------------------------- view */

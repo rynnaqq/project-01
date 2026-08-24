@@ -41,6 +41,8 @@ html, body {
   gap: 10px;
   pointer-events: none;
 }
+/* Author display:flex would defeat the UA [hidden] rule without this. */
+#hud[hidden] { display: none; }
 .hud-stat {
   background: var(--paper);
   border: 3px solid var(--ink);
