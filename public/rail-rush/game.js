@@ -643,6 +643,8 @@ let sleeperOffset = 0;
 }
 
 /* ------------------------------------------------------------------- player */
+const ROLL_PIVOT_Y = 1.05; // roll center: max tucked body radius (1.03) stays above 0
+
 const player = {
   group: new THREE.Group(),
   legL: null, legR: null, armL: null, armR: null,
@@ -691,11 +693,16 @@ const player = {
   player.legL = limb(MAT.legs, 0.19, 0.64, -0.16, 0.66);
   player.legR = limb(MAT.legs, 0.19, 0.64, 0.16, 0.66);
 
-  // Inner pivot so the slide roll spins around the body's center, not the
-  // feet — otherwise head/cap/pack sweep below the floor mid-roll.
+  // Counter-offset rig: tumbler sits at +C, body parts hang at -C inside it,
+  // so rotating the tumbler spins the figure around its actual mid-body —
+  // translating a container alone would keep the pivot at the feet.
   player.tumbler = new THREE.Group();
-  player.tumbler.add(torso, head, capTop, brim, packBody, packFlap, player.scarf,
+  player.body = new THREE.Group();
+  player.body.position.y = -ROLL_PIVOT_Y;
+  player.body.add(torso, head, capTop, brim, packBody, packFlap, player.scarf,
     player.armL, player.armR, player.legL, player.legR);
+  player.tumbler.position.y = ROLL_PIVOT_Y;
+  player.tumbler.add(player.body);
   player.group.add(player.tumbler);
   shadows(player.group);
   scene.add(player.group);
@@ -1204,7 +1211,6 @@ const game = {
     player.group.rotation.set(0, 0, 0);
     player.group.scale.set(1, 1, 1);
     player.tumbler.rotation.set(0, 0, 0);
-    player.tumbler.position.y = 0;
     player.scarf.visible = true;
     trains.reset(); crates.reset(); lowBarriers.reset(); highBarriers.reset();
     powerups.reset(); particles.reset();
@@ -1289,7 +1295,6 @@ const game = {
     player.sliding = 0;
     player.scarf.visible = true;
     player.tumbler.rotation.x = 0;
-    player.tumbler.position.y = 0;
     player.corpseActive = true;
     burst(player.x, 1, 0, 0xff8a3d, 14, 7, { size: 1.4 });
     burst(player.x, 1.2, 0, 0xc9566b, 8, 6, { size: 1.1 });
@@ -1587,7 +1592,6 @@ function checkCollisions() {
 
 let legSwingPhase = 0;
 let runDustT = 0;
-const ROLL_PIVOT_Y = 1.06; // roll center: max tucked body radius stays above 0
 
 function animateScarf(timeSec) {
   const posAttr = player.scarf.geometry.attributes.position;
@@ -1664,14 +1668,13 @@ function updatePlayer(dt) {
   }
 
   if (sliding) {
-    // Forward roll about the body's center: one clean revolution across the
-    // slide's own duration, lowest point of the arc exactly on the floor.
+    // Forward roll about the body's center via the counter-offset rig; the
+    // +0.18 lift makes the arc graze sleeper tops instead of raw ground.
     player.rollT += dt;
     const t = clamp(player.rollT / player.slideTotal, 0, 1);
     g.rotation.x = 0;
     player.tumbler.rotation.x = -Math.PI * 2 * t;
-    player.tumbler.position.y = ROLL_PIVOT_Y;
-    g.position.y = player.y - ROLL_PIVOT_Y;
+    g.position.y = player.y + 0.18;
     g.scale.set(1, 1, 1);
     player.scarf.visible = false; // tucked — keeps the roll radius tight
     player.legL.rotation.x = 1.1;
@@ -1680,7 +1683,6 @@ function updatePlayer(dt) {
     player.armR.rotation.x = -0.9;
   } else {
     player.scarf.visible = true;
-    player.tumbler.position.y = 0;
     const airTuck = player.grounded ? 0 : 1;
     player.tumbler.rotation.x = player.grounded
       ? damp(player.tumbler.rotation.x % (Math.PI * 2), 0, 14, dt)
