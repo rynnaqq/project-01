@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthProvider';
 import { AVATARS, getAvatar } from '../lib/avatars';
 import { updateAvatar } from '../lib/profile';
+import Glyph from '../components/Glyph';
 
 /** Profile page: avatar selection, badge display, online status. */
 export default function ProfilePage() {
@@ -53,8 +54,8 @@ export default function ProfilePage() {
   return (
     <section className="flex flex-col gap-8">
       <header className="slab flex -rotate-[0.5deg] items-center gap-4 p-6 shadow-pop">
-        <div className="flex h-16 w-16 shrink-0 -rotate-3 items-center justify-center rounded-full border-[3px] border-arcade-ink bg-arcade-sun text-4xl shadow-pop-sm">
-          {current.emoji}
+        <div className="flex h-16 w-16 shrink-0 -rotate-3 items-center justify-center rounded-full border-[3px] border-arcade-ink bg-arcade-sun shadow-pop-sm">
+          <Glyph id={current.art} size={38} />
         </div>
         <div>
           <h1 className="font-display text-base uppercase tracking-wide">{profile.username}</h1>
@@ -102,7 +103,7 @@ export default function ProfilePage() {
                     : 'bg-arcade-panel hover:-translate-y-0.5 hover:bg-arcade-muted'
                 }`}
               >
-                {avatar.emoji}
+                <Glyph id={avatar.art} size={30} />
               </button>
             );
           })}

@@ -203,6 +203,14 @@ export function LogOutIcon(props: IconProps) {
   );
 }
 
+export function CheckIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </Icon>
+  );
+}
+
 /** Per-game vector icon mapped from the game catalog key. */
 const GAME_ICONS: Record<string, ComponentType<IconProps>> = {
   'math-duel': DivideIcon,

@@ -10,6 +10,7 @@
     "lint": "node node_modules/eslint/bin/eslint.js . --max-warnings 0",
     "format": "node node_modules/prettier/bin/prettier.cjs --write .",
     "validate:sql": "node scripts/validate-sql.cjs",
+    "emoji:generate": "node scripts/generate-emoji-images.mjs",
     "test": "node node_modules/vitest/vitest.mjs run"
   },
   "dependencies": {

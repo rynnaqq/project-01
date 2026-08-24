@@ -1,0 +1,62 @@
+{
+  "robot": {
+    "src": "/emoji/1f916.svg",
+    "alt": "Robot",
+    "codepoint": "1f916"
+  },
+  "alien": {
+    "src": "/emoji/1f47e.svg",
+    "alt": "Alien monster",
+    "codepoint": "1f47e"
+  },
+  "ghost": {
+    "src": "/emoji/1f47b.svg",
+    "alt": "Ghost",
+    "codepoint": "1f47b"
+  },
+  "cat": {
+    "src": "/emoji/1f431.svg",
+    "alt": "Cat face",
+    "codepoint": "1f431"
+  },
+  "fox": {
+    "src": "/emoji/1f98a.svg",
+    "alt": "Fox",
+    "codepoint": "1f98a"
+  },
+  "dragon": {
+    "src": "/emoji/1f432.svg",
+    "alt": "Dragon face",
+    "codepoint": "1f432"
+  },
+  "wizard": {
+    "src": "/emoji/1f9d9.svg",
+    "alt": "Mage",
+    "codepoint": "1f9d9"
+  },
+  "ninja": {
+    "src": "/emoji/1f977.svg",
+    "alt": "Ninja",
+    "codepoint": "1f977"
+  },
+  "rocket": {
+    "src": "/emoji/1f680.svg",
+    "alt": "Rocket",
+    "codepoint": "1f680"
+  },
+  "star": {
+    "src": "/emoji/2b50.svg",
+    "alt": "Star",
+    "codepoint": "2b50"
+  },
+  "fire": {
+    "src": "/emoji/1f525.svg",
+    "alt": "Fire",
+    "codepoint": "1f525"
+  },
+  "skull": {
+    "src": "/emoji/1f480.svg",
+    "alt": "Skull",
+    "codepoint": "1f480"
+  }
+}

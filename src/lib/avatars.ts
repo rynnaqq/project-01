@@ -1,19 +1,19 @@
 /** Preset avatar catalog. Avatar ids are stored in `profiles.avatar`. */
-export type Avatar = { id: string; label: string; emoji: string };
+export type Avatar = { id: string; label: string; art: string };
 
 export const AVATARS: Avatar[] = [
-  { id: 'avatar-01', label: 'Robot', emoji: '🤖' },
-  { id: 'avatar-02', label: 'Alien', emoji: '👾' },
-  { id: 'avatar-03', label: 'Ghost', emoji: '👻' },
-  { id: 'avatar-04', label: 'Cat', emoji: '🐱' },
-  { id: 'avatar-05', label: 'Fox', emoji: '🦊' },
-  { id: 'avatar-06', label: 'Dragon', emoji: '🐲' },
-  { id: 'avatar-07', label: 'Wizard', emoji: '🧙' },
-  { id: 'avatar-08', label: 'Ninja', emoji: '🥷' },
-  { id: 'avatar-09', label: 'Rocket', emoji: '🚀' },
-  { id: 'avatar-10', label: 'Star', emoji: '⭐' },
-  { id: 'avatar-11', label: 'Fire', emoji: '🔥' },
-  { id: 'avatar-12', label: 'Skull', emoji: '💀' },
+  { id: 'avatar-01', label: 'Robot', art: 'robot' },
+  { id: 'avatar-02', label: 'Alien', art: 'alien' },
+  { id: 'avatar-03', label: 'Ghost', art: 'ghost' },
+  { id: 'avatar-04', label: 'Cat', art: 'cat' },
+  { id: 'avatar-05', label: 'Fox', art: 'fox' },
+  { id: 'avatar-06', label: 'Dragon', art: 'dragon' },
+  { id: 'avatar-07', label: 'Wizard', art: 'wizard' },
+  { id: 'avatar-08', label: 'Ninja', art: 'ninja' },
+  { id: 'avatar-09', label: 'Rocket', art: 'rocket' },
+  { id: 'avatar-10', label: 'Star', art: 'star' },
+  { id: 'avatar-11', label: 'Fire', art: 'fire' },
+  { id: 'avatar-12', label: 'Skull', art: 'skull' },
 ];
 
 const DEFAULT_AVATAR = AVATARS[0];

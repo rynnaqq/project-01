@@ -1,5 +1,7 @@
 import type { ScoreEntry } from '../lib/matches';
 import { getAvatar } from '../lib/avatars';
+import Glyph from './Glyph';
+import { Sparkle } from './decor';
 
 type ScoreboardProps = {
   scores: ScoreEntry[];
@@ -35,15 +37,14 @@ export default function Scoreboard({ scores, currentUserId, winnerId }: Scoreboa
             >
               {index + 1}
             </span>
-            <span className="text-2xl" aria-hidden>
-              {avatar.emoji}
-            </span>
+            <Glyph id={avatar.art} size={26} />
             <span className="flex-1 font-semibold">
               {entry.profile?.username ?? 'player'}
               {isMe && <span className="ml-1 text-xs font-medium text-stone-500">(you)</span>}
               {isWinner && (
-                <span className="sticker ml-2 bg-arcade-panel px-2 py-0.5 text-[10px] normal-case text-arcade-ink">
-                  ★ winner
+                <span className="sticker ml-2 gap-1 bg-arcade-panel px-2 py-0.5 text-[10px] normal-case text-arcade-ink">
+                  winner
+                  <Sparkle className="inline h-3 w-3 text-arcade-gold" />
                 </span>
               )}
             </span>

@@ -17,10 +17,11 @@ import {
 import { computeWinner } from '../lib/scoreHelpers';
 import { shouldAwardWalkover } from '../lib/walkover';
 import { getAvatar } from '../lib/avatars';
+import Glyph from '../components/Glyph';
 import { friendlyMessage } from '../lib/errors';
 import { getGame } from '../lib/games';
 import { getGameComponent, getGameDuration } from '../games/registry';
-import { GameIcon } from '../components/icons';
+import { GameIcon, CheckIcon } from '../components/icons';
 
 /**
  * Room view (P2.3 + P4.1 + P4.2 + Phase 5): live roster/presence/ready, host
@@ -85,10 +86,7 @@ export default function RoomPage() {
     void (async () => {
       const { error: finalizeError } = await finalizeMatch(matchId, userId);
       reportError(finalizeError);
-      push(
-        `${getAvatar(last.profile?.avatar).emoji} Everyone else left. You win the match!`,
-        'success',
-      );
+      push('Everyone else left. You win the match!', 'success');
       const { error: endError } = await endMatch();
       reportError(endError);
     })();
@@ -325,13 +323,20 @@ export default function RoomPage() {
           <button
             type="button"
             onClick={() => void toggleReady()}
-            className={`cursor-pointer rounded-full border-[3px] border-arcade-ink px-4 py-1.5 text-sm font-bold transition-all ${
+            className={`flex cursor-pointer items-center gap-1.5 rounded-full border-[3px] border-arcade-ink px-4 py-1.5 text-sm font-bold transition-all ${
               me?.is_ready
                 ? 'bg-arcade-sea text-arcade-ink shadow-pop-sm hover:-translate-y-0.5'
                 : 'bg-arcade-accent text-arcade-ink shadow-pop-sm hover:-translate-y-0.5'
             }`}
           >
-            {me?.is_ready ? 'Ready ✓' : 'Mark ready'}
+            {me?.is_ready ? (
+              <>
+                <CheckIcon size={15} aria-hidden />
+                Ready
+              </>
+            ) : (
+              'Mark ready'
+            )}
           </button>
         </div>
 
@@ -342,9 +347,7 @@ export default function RoomPage() {
             const isEntryHost = entry.player_id === room.host_id;
             return (
               <li key={entry.player_id} className="slab flex items-center gap-3 px-4 py-2.5 shadow-pop-sm">
-                <span className="text-2xl" aria-hidden>
-                  {avatar.emoji}
-                </span>
+                <Glyph id={avatar.art} size={26} />
                 <span className="flex-1 font-semibold">
                   {entry.profile?.username ?? 'player'}
                   {isEntryHost && (

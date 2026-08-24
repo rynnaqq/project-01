@@ -6,7 +6,6 @@ export type GameCategory = 'Puzzle' | 'Speed' | 'Trivia';
 export type GameDefinition = {
   key: string;
   title: string;
-  emoji: string;
   tagline: string;
   category: GameCategory;
   modes: GameMode[];
@@ -18,7 +17,6 @@ export const GAMES: GameDefinition[] = [
   {
     key: 'math-duel',
     title: 'Quick Math Duel',
-    emoji: '➗',
     tagline: 'Solve arithmetic faster than your rival.',
     category: 'Speed',
     modes: ['Solo', '1v1'],
@@ -31,7 +29,6 @@ export const GAMES: GameDefinition[] = [
   {
     key: 'terminal-cipher',
     title: 'Terminal Cipher',
-    emoji: '🧩',
     tagline: 'Memorise the grid, crack the code.',
     category: 'Puzzle',
     modes: ['Solo', '1v1', 'Party'],
@@ -44,7 +41,6 @@ export const GAMES: GameDefinition[] = [
   {
     key: 'typing-race',
     title: 'Typing Race',
-    emoji: '⌨️',
     tagline: 'Type the passage first to win.',
     category: 'Speed',
     modes: ['1v1', 'Party'],
