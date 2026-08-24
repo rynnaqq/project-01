@@ -1,20 +1,20 @@
 # Rail Rush
 
 A 3-lane, 3D endless runner for the browser — low-poly railway world built
-with Three.js (loaded from a CDN import map), zero external assets, zero build
-step. Part of the Arcade Hub family.
+with Three.js (bundled locally via Vite), zero external assets. Part of the
+Arcade Hub family.
 
 ## Run it
 
-Everything lives in this folder and is served as plain static files:
+Everything lives in this folder and is compiled by the repo's Vite build
+(multi-page entry):
 
 - Dev: `npm run dev` (repo root) then open `http://localhost:5173/rail-rush/`
-- Prod: `npm run build` — Vite copies this folder to `dist/rail-rush/`;
+- Prod: `npm run build` — Vite bundles this folder to `dist/rail-rush/`;
   the Cloudflare Workers asset handler serves it at `/rail-rush/`
-- Or open `index.html` directly from any static file server
 
-> Three.js loads from `cdn.jsdelivr.net`, so the first load needs internet.
-> After that the module is HTTP-cached.
+> Fully offline: Three.js is installed from npm and bundled — no CDN at
+> runtime.
 
 ## Controls
 
@@ -54,7 +54,7 @@ loop. Music starts off.
 
 ## Tuning
 
-Every gameplay number sits in the `CONFIG` object at the top of `game.js`:
+Every gameplay number sits in the `CONFIG` object at the top of `game.ts`:
 
 | Key | Default | Effect |
 |---|---|---|
@@ -75,12 +75,12 @@ Every gameplay number sits in the `CONFIG` object at the top of `game.js`:
 | `coinMagnetRadius` | 4.5 | magnet pull range (world units) |
 | `scorePerUnit` / `coinScore` | 0.6 / 10 | scoring rates |
 
-Edit, save, refresh — no bundler involved.
+Edit, save — Vite HMR reloads instantly in dev.
 
 ## Architecture notes
 
-- Single ES module (`game.js`); Three.js resolved via dynamic CDN import
-  (one fallback host) — no import map, no bundler
+- Single TypeScript module (`game.ts`, strict-checked by `tsc -b`);
+  Three.js imported statically from npm and bundled with the game
 - Fixed object pools for trains/barriers/crates/power-ups/particles;
   coins and sleepers are `InstancedMesh` (one draw call each); wind streaks
   too. Scenery (mountains ×2 parallax layers, clouds, cacti, poles, catenary

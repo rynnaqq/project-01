@@ -1,5 +1,5 @@
 /* =============================================================================
-   RAIL RUSH — a 3-lane endless runner (Three.js, no build step).
+   RAIL RUSH — a 3-lane endless runner (Three.js, bundled via Vite).
    Everything is procedural: geometry, motion, and sound. No external assets.
 
    Setting: warm desert dusk. Real-time sun shadows, two parallax mountain
@@ -8,24 +8,7 @@
 
    Tunables live in CONFIG below; see README.md for the parameter table.
    ========================================================================== */
-/* Three.js from CDN with one fallback host; surfaces failures on the boot
-   screen instead of hanging there forever. */
-async function loadThree() {
-  const hosts = [
-    'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js',
-    'https://unpkg.com/three@0.164.1/build/three.module.js',
-  ];
-  let lastError = new Error('no source attempted');
-  for (const url of hosts) {
-    try {
-      return await import(/* @vite-ignore */ url);
-    } catch (err) {
-      lastError = err;
-    }
-  }
-  throw lastError;
-}
-const THREE = await loadThree();
+import * as THREE from 'three';
 
 /* ------------------------------------------------------------------ config */
 const CONFIG = {
@@ -60,25 +43,40 @@ const CONFIG = {
 };
 
 /* ------------------------------------------------------------------ helpers */
-const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const randInt = (n) => Math.floor(Math.random() * n);
-const pick = (arr) => arr[randInt(arr.length)];
-const damp = (cur, target, lambda, dt) => cur + (target - cur) * (1 - Math.exp(-lambda * dt));
+const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+const randInt = (n: number) => Math.floor(Math.random() * n);
+const pick = <T,>(arr: T[]): T => arr[randInt(arr.length)];
+const damp = (cur: number, target: number, lambda: number, dt: number) =>
+  cur + (target - cur) * (1 - Math.exp(-lambda * dt));
 
-function weightedPick(entries) {
+function weightedPick<T extends { weight: number }>(entries: T[]): T {
   let roll = Math.random() * entries.reduce((s, e) => s + e.weight, 0);
   return entries.find((e) => (roll -= e.weight) <= 0) ?? entries[0];
 }
 
 const store = {
-  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
-  set(key, value) { try { localStorage.setItem(key, value); } catch { /* private mode */ } },
+  get(key: string): string | null {
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  set(key: string, value: string) {
+    try { localStorage.setItem(key, value); } catch { /* private mode */ }
+  },
 };
 
-const $ = (id) => document.getElementById(id);
+/* ponytail: throws instead of nullable so 200+ UI touches stay terse; the
+   ids are static HTML, so a miss is a programming error worth crashing on. */
+const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Rail Rush: missing element #${id}`);
+  return el as T;
+};
+/* Materials come back as `Material | Material[]` unions; pooled meshes here
+   always carry exactly one. */
+const matOf = (o: THREE.Object3D): THREE.MeshBasicMaterial =>
+  (o as THREE.Mesh).material as THREE.MeshBasicMaterial;
 const ui = {
   hud: $('hud'), score: $('hud-score'), coins: $('hud-coins'),
-  power: $('hud-power'), powerBar: document.querySelector('#hud-power i'),
+  power: $('hud-power'), powerBar: document.querySelector('#hud-power i') as HTMLElement,
   boot: $('screen-boot'), bootMsg: $('boot-msg'), bootTitle: $('boot-title'),
   start: $('btn-start'), controls: $('boot-controls'),
   paused: $('screen-paused'), over: $('screen-over'),
@@ -89,7 +87,7 @@ const ui = {
 /* Any boot-time crash must show up on the boot screen — never hang silently
    on "Loading track…". Runtime errors after start stay console-only. */
 let bootDone = false; // flipped once the run handoff below completes
-function surfaceBootError(message) {
+function surfaceBootError(message: string) {
   if (bootDone) return;
   ui.boot.hidden = false;
   ui.start.hidden = true;
@@ -105,14 +103,20 @@ let musicWanted = false;
 let muteLastTap = 0;
 
 class Sfx {
-  constructor() { this.ctx = null; this.muted = false; this.musicTimer = null; }
+  ctx: AudioContext | null = null;
+  muted = false;
+  musicTimer: ReturnType<typeof setInterval> | null = null;
+
   ensure() {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
+    /* ponytail: webkitAudioContext covers old iOS Safari; drop when the
+       minimum Safari version clears the unprefixed API. */
+    const w = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
+    const Ctx = w.AudioContext ?? w.webkitAudioContext;
     if (!Ctx) return;
     if (!this.ctx) this.ctx = new Ctx();
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
-  blip(freq, dur = 0.09, type = 'square', gain = 0.16, slide = 0) {
+  blip(freq: number, dur = 0.09, type: OscillatorType = 'square', gain = 0.16, slide = 0) {
     if (!this.ctx || this.muted) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -145,7 +149,7 @@ class Sfx {
     setTimeout(() => this.blip(90, 0.4, 'square', 0.2, -50), 60);
   }
   /* Simple looping bass arpeggio; lookahead-free (280ms grid is fine for ambience). */
-  syncMusic(on) {
+  syncMusic(on: boolean) {
     const want = on && !this.muted;
     if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
     if (!want || !this.ctx) return;
@@ -219,8 +223,9 @@ window.addEventListener('keyup', (e) => {
 
 /* Swipes/taps on HUD buttons and overlay screens belong to those widgets —
    never leak into the game as a jump/start. */
-const touchesUI = (el) => !!(el && el.closest && el.closest('#hud, .screen'));
-let touchStart = null;
+const touchesUI = (el: EventTarget | null): boolean =>
+  !!(el instanceof Element && el.closest('#hud, .screen'));
+let touchStart: { x: number; y: number } | null = null;
 window.addEventListener('touchstart', (e) => {
   if (touchesUI(e.target)) { touchStart = null; return; }
   touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -240,7 +245,7 @@ window.addEventListener('touchend', (e) => {
 }, { passive: true });
 
 /* ------------------------------------------------------------------ three.js */
-const canvas = $('game-canvas');
+const canvas = $<HTMLCanvasElement>('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(clamp(window.devicePixelRatio, 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -275,10 +280,14 @@ sunLight.target.position.set(0, 0, -14);
 scene.add(sunLight, sunLight.target);
 
 /* ------------------------------------------------- procedural textures */
-function canvasTexture(w, h, draw) {
+function canvasTexture(
+  w: number,
+  h: number,
+  draw: (g: CanvasRenderingContext2D, w: number, h: number) => void,
+) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
-  draw(c.getContext('2d'), w, h);
+  draw(c.getContext('2d') as CanvasRenderingContext2D, w, h);
   const tx = new THREE.CanvasTexture(c);
   tx.colorSpace = THREE.SRGBColorSpace;
   tx.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -286,7 +295,7 @@ function canvasTexture(w, h, draw) {
 }
 /* Draw `draw` nine times offset by one canvas — every layer painted through
    this joins seamlessly when tiled. */
-function wrapped(g, w, h, draw) {
+function wrapped(g: CanvasRenderingContext2D, w: number, h: number, draw: () => void) {
   for (const ox of [0, -w]) {
     for (const oy of [0, -h]) {
       g.save();
@@ -299,7 +308,7 @@ function wrapped(g, w, h, draw) {
 
 /* Multi-scale procedural terrain: large soft tone blobs + mid mottling +
    fine grain (kept for the water-tower rust). */
-function terrainTexture(base, spots, density) {
+function terrainTexture(base: string, spots: string[], density: number) {
   return canvasTexture(512, 512, (g, w, h) => {
     g.fillStyle = base;
     g.fillRect(0, 0, w, h);
@@ -370,7 +379,7 @@ function artGroundTexture() {
       const cy = Math.random() * h;
       const n = 7 + randInt(4);
       const rBase = 60 + Math.random() * 110;
-      const pts = [];
+      const pts: number[][] = [];
       for (let k = 0; k < n; k += 1) {
         const ang = (k / n) * Math.PI * 2;
         const rr = rBase * (0.55 + Math.random() * 0.7);
@@ -508,7 +517,7 @@ function artBallastTexture() {
       });
     }
 
-    const pebble = (x, y, r, rot) => {
+    const pebble = (x: number, y: number, r: number, rot: number) => {
       // Interior stones skip the wrap copies — keeps boot cost low.
       if (x > 8 && x < w - 8 && y > 8 && y < h - 8) {
         drawPebble(g, x, y, r, rot, stoneCols);
@@ -537,7 +546,7 @@ function artBallastTexture() {
   });
 }
 
-function drawPebble(g, x, y, r, rot, stoneCols) {
+function drawPebble(g: CanvasRenderingContext2D, x: number, y: number, r: number, rot: number, stoneCols: string[]) {
   g.save();
   g.translate(x, y);
   g.rotate(rot);
@@ -645,14 +654,17 @@ const tmpStarDir = new THREE.Vector3();
 }
 
 /* Shared geometry & materials (draw-call budget stays low). */
+const groundTex = artGroundTexture();
+const ballastTex = artBallastTexture();
+const rustTex = terrainTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600);
 const MAT = {
   rail: new THREE.MeshPhongMaterial({ color: 0xb8a68e, shininess: 90, specular: 0xffd9a0 }),
   sleeper: new THREE.MeshLambertMaterial({ color: 0x4a3626 }),
   ground: new THREE.MeshLambertMaterial({
-    map: artGroundTexture(),
+    map: groundTex,
   }),
   ballast: new THREE.MeshLambertMaterial({
-    map: artBallastTexture(),
+    map: ballastTex,
   }),
   hazard: new THREE.MeshLambertMaterial({ map: hazardTexture }),
   steel: new THREE.MeshLambertMaterial({ color: 0x39415a }),
@@ -673,7 +685,7 @@ const MAT = {
   }),
   shrub: [new THREE.MeshLambertMaterial({ color: 0x8a744a }), new THREE.MeshLambertMaterial({ color: 0x77643f })],
   rust: new THREE.MeshLambertMaterial({
-    map: terrainTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600),
+    map: rustTex,
   }),
   tunnelLiner: new THREE.MeshLambertMaterial({ color: 0x574e63 }),
   tunnelRib: new THREE.MeshLambertMaterial({ color: 0x3e3749 }),
@@ -707,10 +719,10 @@ const MAT = {
     blending: THREE.AdditiveBlending, depthWrite: false,
   }),
 };
-MAT.ground.map.repeat.set(29, 62);
-MAT.ballast.map.repeat.set(2, 36);
-MAT.rust.map.repeat.set(3, 1.5);
-[MAT.ground.map, MAT.ballast.map, MAT.rust.map].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+groundTex.repeat.set(29, 62);
+ballastTex.repeat.set(2, 36);
+rustTex.repeat.set(3, 1.5);
+[groundTex, ballastTex, rustTex].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
 
 /* Train liveries — body/accent materials are cloned per train so each spawn
    can be repainted. */
@@ -734,13 +746,13 @@ const GEO = {
   ring: new THREE.TorusGeometry(0.34, 0.05, 8, 26),
 };
 
-function mesh(geo, mat, sx, sy, sz) {
+function mesh(geo: THREE.BufferGeometry, mat: THREE.Material | THREE.Material[], sx: number, sy: number, sz: number): THREE.Mesh {
   const m = new THREE.Mesh(geo, mat);
   m.scale.set(sx, sy, sz);
   return m;
 }
-function shadows(root, on = true) {
-  root.traverse((o) => { if (o.isMesh) o.castShadow = on; });
+function shadows(root: THREE.Object3D, on = true) {
+  root.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = on; });
 }
 
 /* ------------------------------------------------------- static environment */
@@ -768,8 +780,14 @@ function shadows(root, on = true) {
 
 /* Scrolling scenery treadmill: fixed spacing, wraps behind the camera.
    Every layer scrolls at its own fraction of world speed for parallax. */
-function makeTreadmill(count, spacing, speedFactor, factory, jitterZ = 0) {
-  const items = [];
+function makeTreadmill(
+  count: number,
+  spacing: number,
+  speedFactor: number,
+  factory: (i: number) => THREE.Object3D,
+  jitterZ = 0,
+) {
+  const items: THREE.Object3D[] = [];
   for (let i = 0; i < count; i += 1) {
     const obj = factory(i);
     obj.position.z = CONFIG.despawnZ - i * spacing - Math.random() * jitterZ;
@@ -778,7 +796,7 @@ function makeTreadmill(count, spacing, speedFactor, factory, jitterZ = 0) {
   }
   return {
     items,
-    advance(dz) {
+    advance(dz: number) {
       const span = count * spacing;
       for (const o of items) {
         o.position.z += dz * speedFactor;
@@ -819,7 +837,7 @@ const clouds = makeTreadmill(7, 34, 0.06, () => {
   }
   g.position.set((Math.random() - 0.5) * 90, 22 + Math.random() * 14, 0);
   g.userData.drift = (Math.random() - 0.5) * 0.6;
-  g.userData.respin = (o) => { o.position.x = (Math.random() - 0.5) * 90; };
+  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() - 0.5) * 90; };
   return g;
 }, 12);
 
@@ -839,7 +857,7 @@ const cacti = makeTreadmill(10, 19, 1, () => {
     up.position.set(side * 0.55, armY + 0.3, 0);
     g.add(elbow, up);
   }
-  g.userData.respin = (o) => {
+  g.userData.respin = (o: THREE.Object3D) => {
     o.position.x = (Math.random() < 0.5 ? -1 : 1) * (7 + Math.random() * 7);
     o.rotation.y = Math.random() * Math.PI * 2;
   };
@@ -854,7 +872,7 @@ const shrubs = makeTreadmill(14, 13, 1, () => {
   bush.position.y = s * 0.25;
   const g = new THREE.Group();
   g.add(bush);
-  g.userData.respin = (o) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (5.1 + Math.random() * 1.5); };
+  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (5.1 + Math.random() * 1.5); };
   g.userData.respin(g);
   return g;
 }, 9);
@@ -869,7 +887,7 @@ const dirtPatches = makeTreadmill(18, 24, 1, () => {
   p.position.y = 0.012; // just above the ground top to avoid z-fighting
   const g = new THREE.Group();
   g.add(p);
-  g.userData.respin = (o) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 16); };
+  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 16); };
   g.userData.respin(g);
   return g;
 }, 14);
@@ -882,7 +900,7 @@ const cloudShadows = makeTreadmill(3, 90, 0.25, () => {
   q.position.y = 0.04;
   const g = new THREE.Group();
   g.add(q);
-  g.userData.respin = (o) => { o.position.x = (Math.random() - 0.5) * 40; };
+  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() - 0.5) * 40; };
   g.userData.respin(g);
   return g;
 });
@@ -949,15 +967,65 @@ let sleeperOffset = 0;
   for (let i = 0; i < SLEEPER_ROWS * 3; i += 1) {
     sleepers.setColorAt(i, c.setHex(0x4a3626).offsetHSL(0, (Math.random() - 0.5) * 0.06, (Math.random() - 0.5) * 0.09));
   }
-  sleepers.instanceColor.needsUpdate = true;
+  if (sleepers.instanceColor) sleepers.instanceColor.needsUpdate = true;
 }
 
 /* ------------------------------------------------------------------- player */
 const ROLL_PIVOT_Y = 1.05; // roll center: max tucked body radius (1.03) stays above 0
 
+// Rig is built before the state literal so every part keeps a concrete type.
+const torso = mesh(GEO.box, MAT.body, 0.62, 0.78, 0.4);
+torso.position.y = 1.05;
+
+const head = mesh(GEO.box, MAT.head, 0.44, 0.44, 0.44);
+head.position.y = 1.72;
+const capTop = mesh(GEO.box, MAT.cap, 0.48, 0.16, 0.48);
+capTop.position.y = 1.99;
+const brim = mesh(GEO.box, MAT.cap, 0.46, 0.06, 0.26);
+brim.position.set(0, 1.93, -0.32); // faces travel direction
+
+const packBody = mesh(GEO.box, MAT.pack, 0.46, 0.52, 0.2);
+packBody.position.set(0, 1.12, 0.29); // back faces the camera
+const packFlap = mesh(GEO.box, MAT.cap, 0.46, 0.14, 0.22);
+packFlap.position.set(0, 1.32, 0.29);
+
+// Fluttering scarf: plane strip trailing backward, vertices waved per frame.
+const scarfGeo = new THREE.PlaneGeometry(0.2, 1.0, 1, 7);
+scarfGeo.translate(0, 0.5, 0); // hang from the top edge
+const scarf = new THREE.Mesh(scarfGeo, MAT.scarf);
+scarf.rotation.x = Math.PI / 2; // local +y -> world +z (trails behind)
+scarf.position.set(0, 1.48, 0.2);
+scarf.frustumCulled = false;
+scarf.userData.base = Float32Array.from(scarfGeo.attributes.position.array);
+
+const limb = (mat: THREE.Material, w: number, len: number, hipX: number, hipY: number): THREE.Group => {
+  const pivot = new THREE.Group();
+  pivot.position.set(hipX, hipY, 0);
+  const seg = mesh(GEO.box, mat, w, len, w + 0.02);
+  seg.position.y = -len / 2;
+  pivot.add(seg);
+  return pivot;
+};
+const armL = limb(MAT.arms, 0.17, 0.52, -0.41, 1.38);
+const armR = limb(MAT.arms, 0.17, 0.52, 0.41, 1.38);
+const legL = limb(MAT.legs, 0.19, 0.64, -0.16, 0.66);
+const legR = limb(MAT.legs, 0.19, 0.64, 0.16, 0.66);
+
+// Counter-offset rig: tumbler sits at +C, body parts hang at -C inside it,
+// so rotating the tumbler spins the figure around its actual mid-body —
+// translating a container alone would keep the pivot at the feet.
+const tumbler = new THREE.Group();
+const bodyRig = new THREE.Group();
+bodyRig.position.y = -ROLL_PIVOT_Y;
+bodyRig.add(torso, head, capTop, brim, packBody, packFlap, scarf,
+  armL, armR, legL, legR);
+tumbler.position.y = ROLL_PIVOT_Y;
+tumbler.add(bodyRig);
+
 const player = {
   group: new THREE.Group(),
-  legL: null, legR: null, armL: null, armR: null,
+  legL, legR, armL, armR, scarf, tumbler,
+  body: bodyRig,
   lane: 1, x: 0, y: 0, vy: 0,
   sliding: 0, grounded: true,
   pendingJumpT: 0, fastFall: false, squashT: 0,
@@ -965,63 +1033,14 @@ const player = {
   laneFrom: 0, laneT: CONFIG.laneStepTime, jumpCutUsed: false,
   corpseActive: false,
 };
-{
-  const torso = mesh(GEO.box, MAT.body, 0.62, 0.78, 0.4);
-  torso.position.y = 1.05;
-
-  const head = mesh(GEO.box, MAT.head, 0.44, 0.44, 0.44);
-  head.position.y = 1.72;
-  const capTop = mesh(GEO.box, MAT.cap, 0.48, 0.16, 0.48);
-  capTop.position.y = 1.99;
-  const brim = mesh(GEO.box, MAT.cap, 0.46, 0.06, 0.26);
-  brim.position.set(0, 1.93, -0.32); // faces travel direction
-
-  const packBody = mesh(GEO.box, MAT.pack, 0.46, 0.52, 0.2);
-  packBody.position.set(0, 1.12, 0.29); // back faces the camera
-  const packFlap = mesh(GEO.box, MAT.cap, 0.46, 0.14, 0.22);
-  packFlap.position.set(0, 1.32, 0.29);
-
-  // Fluttering scarf: plane strip trailing backward, vertices waved per frame.
-  const scarfGeo = new THREE.PlaneGeometry(0.2, 1.0, 1, 7);
-  scarfGeo.translate(0, 0.5, 0); // hang from the top edge
-  player.scarf = new THREE.Mesh(scarfGeo, MAT.scarf);
-  player.scarf.rotation.x = Math.PI / 2; // local +y -> world +z (trails behind)
-  player.scarf.position.set(0, 1.48, 0.2);
-  player.scarf.frustumCulled = false;
-  player.scarf.userData.base = Float32Array.from(scarfGeo.attributes.position.array);
-
-  const limb = (mat, w, len, hipX, hipY) => {
-    const pivot = new THREE.Group();
-    pivot.position.set(hipX, hipY, 0);
-    const seg = mesh(GEO.box, mat, w, len, w + 0.02);
-    seg.position.y = -len / 2;
-    pivot.add(seg);
-    return pivot;
-  };
-  player.armL = limb(MAT.arms, 0.17, 0.52, -0.41, 1.38);
-  player.armR = limb(MAT.arms, 0.17, 0.52, 0.41, 1.38);
-  player.legL = limb(MAT.legs, 0.19, 0.64, -0.16, 0.66);
-  player.legR = limb(MAT.legs, 0.19, 0.64, 0.16, 0.66);
-
-  // Counter-offset rig: tumbler sits at +C, body parts hang at -C inside it,
-  // so rotating the tumbler spins the figure around its actual mid-body —
-  // translating a container alone would keep the pivot at the feet.
-  player.tumbler = new THREE.Group();
-  player.body = new THREE.Group();
-  player.body.position.y = -ROLL_PIVOT_Y;
-  player.body.add(torso, head, capTop, brim, packBody, packFlap, player.scarf,
-    player.armL, player.armR, player.legL, player.legR);
-  player.tumbler.position.y = ROLL_PIVOT_Y;
-  player.tumbler.add(player.body);
-  player.group.add(player.tumbler);
-  shadows(player.group);
-  scene.add(player.group);
-}
+player.group.add(player.tumbler);
+shadows(player.group);
+scene.add(player.group);
 
 /* ------------------------------------------------------------ object pools */
-class Pool {
-  constructor(n, factory) {
-    this.items = [];
+class Pool<T extends THREE.Object3D> {
+  items: T[] = [];
+  constructor(n: number, factory: () => T) {
     for (let i = 0; i < n; i += 1) {
       const obj = factory();
       obj.visible = false;
@@ -1030,10 +1049,10 @@ class Pool {
       this.items.push(obj);
     }
   }
-  get() { return this.items.find((o) => !o.userData.active) ?? null; }
-  release(item) { item.visible = false; item.userData.active = false; }
+  get(): T | null { return this.items.find((o) => !o.userData.active) ?? null; }
+  release(item: T) { item.visible = false; item.userData.active = false; }
   reset() { this.items.forEach((o) => this.release(o)); }
-  forEachActive(fn) { for (const o of this.items) if (o.userData.active) fn(o); }
+  forEachActive(fn: (o: T) => void) { for (const o of this.items) if (o.userData.active) fn(o); }
 }
 
 function makeTrain() {
@@ -1168,13 +1187,14 @@ const crates = new Pool(8, makeCrate);
 const lowBarriers = new Pool(8, makeLowBarrier);
 const highBarriers = new Pool(8, makeHighBarrier);
 
-const obstaclePools = [
+type AnyPool = Pool<THREE.Object3D>;
+const obstaclePools: { pool: AnyPool; weight: number }[] = [
   { pool: trains, weight: 0.34 },
   { pool: crates, weight: 0.26 },
   { pool: lowBarriers, weight: 0.22 },
   { pool: highBarriers, weight: 0.18 },
 ];
-const SPAWN_Z = new Map([
+const SPAWN_Z = new Map<AnyPool, number>([
   [trains, CONFIG.trainSpawnZ],
   [crates, CONFIG.spawnAheadZ],
   [lowBarriers, CONFIG.spawnAheadZ],
@@ -1212,7 +1232,7 @@ const powerups = new Pool(3, () => {
   holder.userData.phase = Math.random() * Math.PI * 2;
   holder.userData.hit = { hw: 0.6, y0: 0.3, y1: 1.8, hd: 0.6 };
   holder.userData.span = 2.2;
-  holder.userData.setKind = (kind) => {
+  holder.userData.setKind = (kind: string) => {
     holder.children[0].visible = kind === 'magnet';
     holder.children[1].visible = kind !== 'magnet';
     holder.userData.kind = kind;
@@ -1230,12 +1250,16 @@ const particles = new Pool(110, () => {
   return p;
 });
 
-function burst(x, y, z, colorHex, count = 10, spread = 4, opts = {}) {
+function burst(
+  x: number, y: number, z: number, colorHex: number,
+  count = 10, spread = 4,
+  opts: { size?: number; grav?: number; riseUp?: boolean } = {},
+) {
   const n = REDUCED_MOTION ? Math.ceil(count / 2) : count;
   for (let i = 0; i < n; i += 1) {
     const p = particles.get();
     if (!p) return;
-    p.material.color.set(colorHex);
+    matOf(p).color.set(colorHex);
     p.position.set(x, y, z);
     p.scale.setScalar(opts.size ?? 1);
     p.visible = true;
@@ -1249,10 +1273,10 @@ function burst(x, y, z, colorHex, count = 10, spread = 4, opts = {}) {
     );
   }
 }
-function smokePuff(x, y, z) {
+function smokePuff(x: number, y: number, z: number) {
   const p = particles.get();
   if (!p) return;
-  p.material.color.set(pick([0x9c8ba8, 0x8a7a96, 0xac9cb4]));
+  matOf(p).color.set(pick([0x9c8ba8, 0x8a7a96, 0xac9cb4]));
   p.position.set(x, y, z);
   p.scale.setScalar(0.7 + Math.random() * 0.5);
   p.visible = true;
@@ -1268,23 +1292,23 @@ const rings = new Pool(8, () => {
   r.userData.life = 0;
   return r;
 });
-function spawnRing(x, y, z) {
+function spawnRing(x: number, y: number, z: number) {
   const r = rings.get();
   if (!r) return;
   r.position.set(x, y, z);
   r.scale.setScalar(0.5);
-  r.material.opacity = 0.95;
+  matOf(r).opacity = 0.95;
   r.visible = true;
   r.userData.active = true;
   r.userData.life = 0.32;
 }
-function updateRings(dt) {
+function updateRings(dt: number) {
   rings.forEachActive((r) => {
     r.userData.life -= dt;
     if (r.userData.life <= 0) { rings.release(r); return; }
     const t = 1 - r.userData.life / 0.32;
     r.scale.setScalar(0.5 + t * 1.5);
-    r.material.opacity = 0.95 * (1 - t);
+    matOf(r).opacity = 0.95 * (1 - t);
   });
 }
 
@@ -1385,7 +1409,7 @@ const setPieces = {
     this.wasInsideTunnel = false;
   },
 
-  update(travel) {
+  update(travel: number) {
     if (travel >= this.nextTunnelAt) {
       const t = tunnels.get();
       if (t) {
@@ -1423,7 +1447,7 @@ const spawner = {
     this.laneBusyUntilDist = [0, 0, 0];
   },
 
-  place(pool, lane, z) {
+  place(pool: AnyPool, lane: number, z?: number) {
     const obj = pool.get();
     if (!obj) return null;
     obj.position.set(CONFIG.lanes[lane], 0, z ?? SPAWN_Z.get(pool) ?? CONFIG.spawnAheadZ);
@@ -1438,7 +1462,7 @@ const spawner = {
     return obj;
   },
 
-  update(travel) {
+  update(travel: number) {
     while (travel >= this.nextEventDist) {
       const order = [0, 1, 2].sort(() => Math.random() - 0.5);
       // Lanes whose previous obstacle (esp. a long, fast train) hasn't fully
@@ -1562,7 +1586,7 @@ const game = {
     }
   },
 
-  switchLane(dir) {
+  switchLane(dir: number) {
     const next = clamp(player.lane + dir, 0, 2);
     if (next !== player.lane) {
       // Fixed-duration step; re-targeting mid-move restarts from current x.
@@ -1638,7 +1662,7 @@ const game = {
   },
 };
 
-function loopOver(now) {
+function loopOver(now: number) {
   if (game.state !== 'over') return;
   const dt = Math.min(0.05, (now - game.lastT) / 1000 || 0.016);
   game.lastT = now;
@@ -1678,7 +1702,7 @@ canvas.addEventListener('webglcontextlost', (e) => {
 /* -------------------------------------------------------------------- loop */
 const tmpV3 = new THREE.Vector3();
 
-function advanceTrains(dt, dz) {
+function advanceTrains(dt: number, dz: number) {
   trains.forEachActive((o) => {
     o.position.z += dz * CONFIG.trainSpeedMult;
 
@@ -1701,7 +1725,7 @@ function advanceTrains(dt, dz) {
   });
 }
 
-function scrollWorld(dt) {
+function scrollWorld(dt: number) {
   const dz = game.speed * dt;
   game.distance += dz;
   game.score += dz * CONFIG.scorePerUnit;
@@ -1731,7 +1755,7 @@ function scrollWorld(dt) {
   poles.advance(dz);
   gantries.advance(dz);
 
-  const advance = (pool) => pool.forEachActive((o) => {
+  const advance = (pool: AnyPool) => pool.forEachActive((o) => {
     o.position.z += dz;
     if (o.position.z > CONFIG.despawnZ) pool.release(o);
   });
@@ -1790,7 +1814,7 @@ function scrollWorld(dt) {
     o.children[1].rotation.y += dt * 2.8;
     const pulse = 1 + Math.sin(game.distance * 3 + o.userData.phase) * 0.12;
     const halo = o.children[2];
-    halo.material.opacity = 0.22 + Math.sin(game.distance * 3 + o.userData.phase) * 0.1;
+    matOf(o.children[2]).opacity = 0.22 + Math.sin(game.distance * 3 + o.userData.phase) * 0.1;
     halo.scale.set(1.5 * pulse, 1.5 * pulse, 1);
     if (o.position.z > CONFIG.despawnZ) powerups.release(o);
   });
@@ -1807,7 +1831,7 @@ function scrollWorld(dt) {
   }
 }
 
-function updateStreaks(dt) {
+function updateStreaks(dt: number) {
   const ratio = clamp((game.speed - 18) / (CONFIG.maxSpeed - 18), 0, 1);
   const targetOpacity = ratio * 0.5;
   MAT.streak.opacity = damp(MAT.streak.opacity, targetOpacity, 6, dt);
@@ -1824,7 +1848,7 @@ function updateStreaks(dt) {
   streaks.instanceMatrix.needsUpdate = true;
 }
 
-function drawCoins(spinAngle, timeSec) {
+function drawCoins(spinAngle: number, timeSec: number) {
   for (let i = 0; i < COIN_COUNT; i += 1) {
     const c = coinState[i];
     if (!c.active) {
@@ -1843,7 +1867,7 @@ function drawCoins(spinAngle, timeSec) {
   coinMesh.instanceMatrix.needsUpdate = true;
 }
 
-function playerAABB(sweep) {
+function playerAABB(sweep: number) {
   const h = player.sliding > 0 ? CONFIG.playerSlideHeight : CONFIG.playerHeight;
   return {
     x: player.x, hw: CONFIG.playerHalfWidth,
@@ -1852,7 +1876,7 @@ function playerAABB(sweep) {
   };
 }
 
-function overlaps(obj, p) {
+function overlaps(obj: THREE.Object3D, p: { x: number; hw: number; y0: number; y1: number; hd: number }) {
   const h = obj.userData.hit;
   if (!h) return false;
   return (
@@ -1905,7 +1929,7 @@ function checkCollisions() {
 let legSwingPhase = 0;
 let runDustT = 0;
 
-function animateScarf(timeSec) {
+function animateScarf(timeSec: number) {
   const posAttr = player.scarf.geometry.attributes.position;
   const base = player.scarf.userData.base;
   for (let i = 0; i < posAttr.count; i += 1) {
@@ -1919,7 +1943,7 @@ function animateScarf(timeSec) {
   posAttr.needsUpdate = true;
 }
 
-function updatePlayer(dt) {
+function updatePlayer(dt: number): number {
   if (input.left) { input.left = false; game.switchLane(-1); }
   if (input.right) { input.right = false; game.switchLane(1); }
   if (input.jump) { input.jump = false; game.doJump(); }
@@ -2034,7 +2058,7 @@ function updatePlayer(dt) {
   return speedRatio;
 }
 
-function updateCamera(dt, speedRatio = 0) {
+function updateCamera(dt: number, speedRatio = 0) {
   // Fully locked lateral camera: the world streams past a fixed frame while
   // only the runner crosses lanes. Zero follow = zero ground slide.
   const shake = game.shakeT > 0 && !REDUCED_MOTION ? (Math.random() - 0.5) * game.shakeT * 2.2 : 0;
@@ -2050,7 +2074,7 @@ function updateCamera(dt, speedRatio = 0) {
   if (game.shakeT > 0) game.shakeT = Math.max(0, game.shakeT - dt * 2.4);
 }
 
-function updateParticles(dt) {
+function updateParticles(dt: number) {
   particles.forEachActive((p) => {
     p.userData.life -= dt;
     if (p.userData.life <= 0) { particles.release(p); return; }
@@ -2063,20 +2087,20 @@ function updateParticles(dt) {
 }
 
 /* A mid-run crash must never freeze the canvas silently again. */
-function haltWithError(err) {
+function haltWithError(err: unknown) {
   console.error('[Rail Rush]', err);
   sfx.syncMusic(false);
   game.state = 'paused';
   ui.hud.hidden = true;
   ui.power.hidden = true;
   ui.bootTitle.textContent = 'RUNTIME ERROR';
-  ui.bootMsg.textContent = String(err?.message ?? err);
+  ui.bootMsg.textContent = err instanceof Error ? err.message : String(err);
   ui.controls.hidden = true;
   ui.start.hidden = true;
   ui.boot.hidden = false;
 }
 
-function loop(now) {
+function loop(now: number) {
   if (game.state !== 'running') return;
   const dt = Math.min(0.05, (now - game.lastT) / 1000 || 0.016);
   game.lastT = now;
