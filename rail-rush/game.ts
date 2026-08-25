@@ -9,11 +9,6 @@
    Tunables live in CONFIG below; see README.md for the parameter table.
    ========================================================================== */
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* ------------------------------------------------------------------ config */
 const CONFIG = {
@@ -266,73 +261,9 @@ const scene = new THREE.Scene();
 // melts into the sky instead of ending in a visible world-edge line.
 scene.fog = new THREE.Fog(0xf2a45c, 28, 105);
 
-/* Environment map: reflection source for PBR materials (coins, rails, train
-   paint). Kept dim so the low sun stays the dominant light. */
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-pmrem.dispose();
-
 let baseFov = 66;
 const camera = new THREE.PerspectiveCamera(baseFov, window.innerWidth / window.innerHeight, 0.1, 900);
 camera.position.set(0, 4.9, 8.0); // high chase overview — updateCamera steers x/y
-
-/* Post-processing: HDR target + subtle bloom. Threshold 1.0 means only
-   super-bright pixels (coins/power-ups with emissiveIntensity > 1) glow;
-   the scene itself stays untouched. OutputPass reapplies ACES tonemapping,
-   which the composer chain otherwise skips. */
-/* ponytail: EffectComposer's default target (HalfFloat, no MSAA) — bloom's
-   blur hides aliasing, and MSAA-on-HDR proved a large mobile GPU cost. */
-const composer = new EffectComposer(renderer);
-const bloomPass = new UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2),
-  0.5,  // strength — subtle
-  0.55, // radius
-  1.0,  // threshold (linear pre-tonemap)
-);
-composer.addPass(new RenderPass(scene, camera));
-composer.addPass(bloomPass);
-composer.addPass(new OutputPass());
-
-/* Quality governor — 60fps is the contract, juice is negotiable. Frame times
-   are averaged over a ~1.5s window; past budget we step down (resolution
-   first, then drop bloom entirely). One-way ladder, never recovers: boring
-   and predictable. ponytail: add upward recovery only if devices visibly
-   oscillate between tiers. */
-const QUALITY_STEPS = [
-  { dpr: 1.5, bloom: true },
-  { dpr: 1.15, bloom: true },
-  { dpr: 1, bloom: false },
-];
-let qualityLevel = 0;
-let perfWindowDt = 0;
-let perfWindowFrames = 0;
-
-/** Single render entry point so every path goes through the same chain. */
-const renderFrame = () => composer.render();
-
-/** Feed each main-loop dt (s, clamped); degrades quality on sustained lag. */
-function watchPerf(dt: number) {
-  perfWindowDt += dt;
-  perfWindowFrames += 1;
-  if (perfWindowFrames < 90) return;
-  const avgMs = (perfWindowDt / perfWindowFrames) * 1000;
-  perfWindowDt = 0;
-  perfWindowFrames = 0;
-  if (avgMs <= 19 || qualityLevel >= QUALITY_STEPS.length - 1) return;
-  applyQuality(qualityLevel + 1);
-}
-
-function applyQuality(level: number) {
-  qualityLevel = level;
-  const step = QUALITY_STEPS[level];
-  const dpr = Math.min(step.dpr, window.devicePixelRatio);
-  renderer.setPixelRatio(dpr);
-  composer.setPixelRatio(dpr);
-  bloomPass.enabled = step.bloom;
-  onResize();
-}
-
-scene.environmentIntensity = 0.35;
 
 scene.add(new THREE.HemisphereLight(0xffb08a, 0x4a3550, 1.35));
 const sunLight = new THREE.DirectionalLight(0xffb36b, 2.5);
@@ -439,11 +370,9 @@ function terrainTexture(base: string, spots: string[], density: number) {
 /* Art-directed dusk ground: angular tone zones, wind ripples, gravel
    clusters with sun-side highlights, and branching cracks. */
 function artGroundTexture() {
-  // Cool dusk violets + one warm dust tone so sunlit patches tie into the
-  // ballast/rails instead of reading as a different world.
-  const spots = ['#6b5882', '#322844', '#4e3f63', '#66506b', '#75607a'];
+  const spots = ['#6b5882', '#322844', '#4e3f63', '#66506b'];
   return canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = '#564369';
+    g.fillStyle = '#54406b';
     g.fillRect(0, 0, w, h);
 
     // Macro zones: irregular soft-edged polygons — terrain regions, not bubbles.
@@ -572,19 +501,16 @@ function artGroundTexture() {
    each pebble gets a lit edge toward the sun and a shade edge away from it,
    which is what makes gravel read as gravel instead of noise. */
 function artBallastTexture() {
-  // Mauve-gray stones — same hue family as the dusk ground so the bed reads as
-  // part of the terrain (not a separate warm-gray strip), still lighter/warmer
-  // than the ground so the track corridor keeps its contrast.
-  const stoneCols = ['#716a74', '#4e4552', '#635b66', '#7a7079', '#585058'];
+  const stoneCols = ['#6a625c', '#463f3d', '#5d5854', '#6e6659', '#524b47'];
   return canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = '#605961';
+    g.fillStyle = '#55504e';
     g.fillRect(0, 0, w, h);
 
     // Longitudinal wear bands along the travel axis.
     for (let i = 0; i < 6; i += 1) {
       const bx = Math.random() * w;
       const bw = 30 + Math.random() * 70;
-      const col = Math.random() < 0.5 ? '#554d57' : '#6b636b';
+      const col = Math.random() < 0.5 ? '#494542' : '#5f5955';
       const a = 0.12 + Math.random() * 0.08;
       wrapped(g, w, h, () => {
         g.globalAlpha = a;
@@ -632,12 +558,12 @@ function drawPebble(g: CanvasRenderingContext2D, x: number, y: number, r: number
   g.ellipse(0, 0, r, r * 0.72, 0, 0, Math.PI * 2);
   g.fill();
   g.globalAlpha = 0.5;
-  g.strokeStyle = '#8b8290'; // lit edge
+  g.strokeStyle = '#7d756e'; // lit edge
   g.lineWidth = Math.max(0.8, r * 0.28);
   g.beginPath();
   g.arc(0, 0, r * 0.82, Math.PI * 0.9, Math.PI * 1.75);
   g.stroke();
-  g.strokeStyle = '#3a333d'; // shade edge
+  g.strokeStyle = '#332f2c'; // shade edge
   g.beginPath();
   g.arc(0, 0, r * 0.82, Math.PI * -0.05, Math.PI * 0.7);
   g.stroke();
@@ -734,6 +660,7 @@ const groundTex = artGroundTexture();
 const ballastTex = artBallastTexture();
 const rustTex = terrainTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600);
 const MAT = {
+  rail: new THREE.MeshPhongMaterial({ color: 0xb8a68e, shininess: 90, specular: 0xffd9a0 }),
   sleeper: new THREE.MeshLambertMaterial({ color: 0x4a3626 }),
   ground: new THREE.MeshLambertMaterial({
     map: groundTex,
@@ -768,10 +695,9 @@ const MAT = {
   cloud: new THREE.MeshLambertMaterial({ color: 0xffc9d6, emissive: 0x55283c }),
   mountainFar: new THREE.MeshLambertMaterial({ color: 0x472d63, fog: false }),
   mountainNear: [new THREE.MeshLambertMaterial({ color: 0x5d3a5f }), new THREE.MeshLambertMaterial({ color: 0x6e4356 })],
-  coin: new THREE.MeshStandardMaterial({ color: 0xffce5c, metalness: 1, roughness: 0.22, emissive: 0xffa53c, emissiveIntensity: 2.2 }),
-  rail: new THREE.MeshStandardMaterial({ color: 0xb8a68e, metalness: 0.9, roughness: 0.32 }),
-  magnet: new THREE.MeshStandardMaterial({ color: 0xff71ce, emissive: 0xff4fd2, emissiveIntensity: 1.6 }),
-  shoes: new THREE.MeshStandardMaterial({ color: 0x43d9ff, emissive: 0x2ec8ff, emissiveIntensity: 1.6 }),
+  coin: new THREE.MeshPhongMaterial({ color: 0xffce5c, emissive: 0x8a5a00, shininess: 80, specular: 0xfff2c0 }),
+  magnet: new THREE.MeshPhongMaterial({ color: 0xff71ce, emissive: 0x5e1747, shininess: 60 }),
+  shoes: new THREE.MeshPhongMaterial({ color: 0x43d9ff, emissive: 0x0b4c66, shininess: 70 }),
   halo: new THREE.MeshBasicMaterial({ color: 0xfff1c9, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }), // shared: all power-up rings pulse together
   body: new THREE.MeshLambertMaterial({ color: 0xe8927c }),   // runner shirt
   head: new THREE.MeshLambertMaterial({ color: 0xf3b58f }),   // skin, dusk-lit
@@ -1133,8 +1059,8 @@ class Pool<T extends THREE.Object3D> {
 
 function makeTrain() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xb5484d, metalness: 0.15, roughness: 0.45 });
-  const accentMat = new THREE.MeshStandardMaterial({ color: 0xf6e7cf, metalness: 0.15, roughness: 0.45 });
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xb5484d });
+  const accentMat = new THREE.MeshLambertMaterial({ color: 0xf6e7cf });
 
   const chassis = mesh(GEO.box, MAT.darkMetal, 1.7, 0.44, 8.8);
   chassis.position.y = 0.32;
@@ -1582,7 +1508,7 @@ const spawner = {
 
 /* --------------------------------------------------------------------- game */
 const BEST_KEY = 'railrush.best';
-const BUILD_TAG = 'perf-gov-5'; // shown on the boot screen to verify live code
+const BUILD_TAG = 'ground-tex-2'; // shown on the boot screen to verify live code
 
 const game = {
   state: 'loading' as 'loading' | 'ready' | 'running' | 'paused' | 'over',
@@ -1754,7 +1680,7 @@ function loopOver(now: number) {
     }
     updateParticles(dt);
     updateCamera(dt);
-    renderFrame();
+    renderer.render(scene, camera);
     requestAnimationFrame(loopOver);
   } catch (err) {
     haltWithError(err);
@@ -2180,7 +2106,6 @@ function loop(now: number) {
   if (game.state !== 'running') return;
   const dt = Math.min(0.05, (now - game.lastT) / 1000 || 0.016);
   game.lastT = now;
-  watchPerf(dt);
 
   try {
     game.runTime += dt;
@@ -2199,7 +2124,7 @@ function loop(now: number) {
     updateCamera(dt, speedRatio);
     drawCoins(0, now / 1000); // fixed angle: coins stay camera-facing
 
-    renderFrame();
+    renderer.render(scene, camera);
 
     ui.score.textContent = String(Math.floor(game.score));
     ui.coins.textContent = String(game.coins);
@@ -2212,7 +2137,6 @@ function loop(now: number) {
 /* -------------------------------------------------------------------- view */
 function onResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
   const portrait = window.innerHeight > window.innerWidth;
   baseFov = portrait ? 76 : 64;
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -2239,4 +2163,4 @@ ui.start.hidden = false;
 scrollWorld(0);
 drawCoins(0, 0);
 updateStreaks(0);
-renderFrame();
+renderer.render(scene, camera);
