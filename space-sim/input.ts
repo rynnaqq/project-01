@@ -3,6 +3,8 @@
  * Keyboard and touch providers both write into the same state object.
  */
 
+import { TOUCH } from './config';
+
 export interface InputState {
   forward: number; backward: number; left: number; right: number;
   up: number; down: number;
@@ -101,7 +103,7 @@ export function createTouchInput(
   const cleanups: Array<() => void> = [];
   const joy = { id: -1, ox: 0, oy: 0 };
   const look = { id: -1, lx: 0, ly: 0 };
-  const RANGE = 60; // px for full joystick deflection
+  const RANGE = TOUCH.joystickRangePx; // px for full joystick deflection
 
   const down = (e: PointerEvent): void => {
     if (e.pointerType !== 'touch') return;

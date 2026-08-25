@@ -64,6 +64,12 @@ export const DOCK = {
   corridorHalfAngleDeg: 25,
 } as const;
 
+/** Touch controls (PRD §C.6). */
+export const TOUCH = {
+  /** px of joystick drag for full deflection. */
+  joystickRangePx: 60,
+} as const;
+
 /** Mission-level limits. */
 export const MISSION = {
   oxygenSeconds: 600,
