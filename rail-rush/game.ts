@@ -473,81 +473,6 @@ function artGroundTexture() {
   });
 }
 
-/* Art-directed ballast: worn longitudinal bands plus real rounded stones —
-   each pebble gets a lit edge toward the sun and a shade edge away from it,
-   which is what makes gravel read as gravel instead of noise. */
-function artBallastTexture() {
-  // Warm dusk-tinted stones so the ballast sits in the same world as the
-  // purple flank terrain instead of reading as a different scene.
-  const stoneCols = ['#6b5a6b', '#463a4a', '#5d5060', '#71606a', '#524558'];
-  return canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = '#564a5a';
-    g.fillRect(0, 0, w, h);
-
-    // Longitudinal wear bands along the travel axis.
-    for (let i = 0; i < 6; i += 1) {
-      const bx = Math.random() * w;
-      const bw = 30 + Math.random() * 70;
-      const col = Math.random() < 0.5 ? '#494542' : '#5f5955';
-      const a = 0.12 + Math.random() * 0.08;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = a;
-        g.fillStyle = col;
-        g.fillRect(bx, 0, bw, h);
-      });
-    }
-
-    const pebble = (x: number, y: number, r: number, rot: number) => {
-      // Interior stones skip the wrap copies — keeps boot cost low.
-      if (x > 8 && x < w - 8 && y > 8 && y < h - 8) {
-        drawPebble(g, x, y, r, rot, stoneCols);
-      } else {
-        wrapped(g, w, h, () => drawPebble(g, x, y, r, rot, stoneCols));
-      }
-    };
-    for (let i = 0; i < 900; i += 1) {
-      pebble(Math.random() * w, Math.random() * h, 1 + Math.random() * 1.8, Math.random() * Math.PI);
-    }
-    for (let i = 0; i < 30; i += 1) {
-      pebble(Math.random() * w, Math.random() * h, 3 + Math.random() * 1.6, Math.random() * Math.PI);
-    }
-
-    // Sparse grain between stones.
-    for (let i = 0; i < 600; i += 1) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = 0.1 + Math.random() * 0.12;
-        g.fillStyle = pick(stoneCols);
-        g.fillRect(x, y, 1 + Math.random(), 1 + Math.random());
-      });
-    }
-    g.globalAlpha = 1;
-  });
-}
-
-function drawPebble(g: CanvasRenderingContext2D, x: number, y: number, r: number, rot: number, stoneCols: string[]) {
-  g.save();
-  g.translate(x, y);
-  g.rotate(rot);
-  g.globalAlpha = 0.9;
-  g.fillStyle = stoneCols[randInt(stoneCols.length)];
-  g.beginPath();
-  g.ellipse(0, 0, r, r * 0.72, 0, 0, Math.PI * 2);
-  g.fill();
-  g.globalAlpha = 0.5;
-  g.strokeStyle = '#8a7a8c'; // lit edge (dusk-tinted)
-  g.lineWidth = Math.max(0.8, r * 0.28);
-  g.beginPath();
-  g.arc(0, 0, r * 0.82, Math.PI * 0.9, Math.PI * 1.75);
-  g.stroke();
-  g.strokeStyle = '#2f2836'; // shade edge (dusk-tinted)
-  g.beginPath();
-  g.arc(0, 0, r * 0.82, Math.PI * -0.05, Math.PI * 0.7);
-  g.stroke();
-  g.restore();
-}
-
 const hazardTexture = canvasTexture(128, 128, (g, w, h) => {
   g.fillStyle = '#fff3dc';
   g.fillRect(0, 0, w, h);
@@ -635,7 +560,9 @@ const tmpStarDir = new THREE.Vector3();
 
 /* Shared geometry & materials (draw-call budget stays low). */
 const groundTex = artGroundTexture();
-const ballastTex = artBallastTexture();
+// ponytail: ballast shares the ground generator so rail bed and flanks read
+// as one terrain; give it back its own pebble art when art direction asks.
+const ballastTex = artGroundTexture();
 const rustTex = terrainTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600);
 const MAT = {
   rail: new THREE.MeshPhongMaterial({ color: 0xb8a68e, shininess: 90, specular: 0xffd9a0 }),
@@ -695,7 +622,9 @@ const MAT = {
   }),
 };
 groundTex.repeat.set(29, 62);
-ballastTex.repeat.set(2, 36);
+// Same world-space texture density as the ground (29 tiles / 520 units,
+// 62 tiles / 800 units) so the rail bed and flanks are one continuous surface.
+ballastTex.repeat.set(8.6 * (29 / 520), 320 * (62 / 800));
 rustTex.repeat.set(3, 1.5);
 [groundTex, ballastTex, rustTex].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
 
