@@ -64,6 +64,24 @@ export const DOCK = {
   corridorHalfAngleDeg: 25,
 } as const;
 
+/** Player rig feel (PRD §B): look, body mesh, camera clipping, brake burn. */
+export const PLAYER = {
+  /** radians of camera rotation per px of look input */
+  lookSensitivity: 0.0025,
+  /** rad/s roll speed for Q/E */
+  rollSpeed: 1.6,
+  /** pitch clamp (radians) to avoid flipping over the pole */
+  maxPitch: 1.5,
+  bodyRadius: 0.35,
+  bodyHeight: 1.4,
+  /** body sits below the camera so it doesn't block the view */
+  bodyOffsetY: -1.2,
+  minZ: 0.1,
+  maxZ: 2000,
+  /** fuel burn factor while braking (counter-thrust) */
+  brakeBurnFactor: 0.5,
+} as const;
+
 /** Touch controls (PRD §C.6). */
 export const TOUCH = {
   /** px of joystick drag for full deflection. */

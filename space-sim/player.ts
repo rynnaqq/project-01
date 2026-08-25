@@ -10,7 +10,7 @@ import {
   FreeCamera, MeshBuilder, Scene, StandardMaterial, TransformNode, Vector3,
   Color3,
 } from '@babylonjs/core';
-import { ALT, ASCENT, THRUST, gravityAt } from './config';
+import { ALT, ASCENT, PLAYER, THRUST, gravityAt } from './config';
 import { applyDamping, ascentStep, brakeVelocity, burnFuel } from './flight';
 import type { InputState } from './input';
 
@@ -31,24 +31,26 @@ export interface PlayerRig {
   dispose(): void;
 }
 
-const LOOK_SENS = 0.0025;
-const ROT_SPEED = 1.6; // rad/s for Q/E roll
+const LOOK_SENS = PLAYER.lookSensitivity;
+const ROT_SPEED = PLAYER.rollSpeed;
 
 export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
   const root = new TransformNode('player', scene);
   root.position = startPos.clone();
 
   // Simple visible capsule so the player has a body in frame.
-  const body = MeshBuilder.CreateCapsule('playerBody', { radius: 0.35, height: 1.4 }, scene);
+  const body = MeshBuilder.CreateCapsule(
+    'playerBody', { radius: PLAYER.bodyRadius, height: PLAYER.bodyHeight }, scene,
+  );
   const bodyMat = new StandardMaterial('playerMat', scene);
   bodyMat.diffuseColor = new Color3(0.9, 0.9, 0.92);
   body.material = bodyMat;
   body.parent = root;
-  body.position.y = -1.2; // below the camera so it doesn't block the view
+  body.position.y = PLAYER.bodyOffsetY;
 
   const camera = new FreeCamera('playerCam', startPos.clone(), scene);
-  camera.minZ = 0.1;
-  camera.maxZ = 2000;
+  camera.minZ = PLAYER.minZ;
+  camera.maxZ = PLAYER.maxZ;
   camera.attachControl(scene.getEngine().getRenderingCanvas(), true);
   // We drive rotation ourselves from input; disable the camera's own keys.
   camera.inputs.clear();
@@ -79,7 +81,7 @@ export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
       // Look: yaw/pitch from mouse or touch drag, roll from Q/E.
       camera.rotation.y += look.yaw * LOOK_SENS;
       camera.rotation.x += look.pitch * LOOK_SENS;
-      camera.rotation.x = Math.max(-1.5, Math.min(1.5, camera.rotation.x));
+      camera.rotation.x = Math.max(-PLAYER.maxPitch, Math.min(PLAYER.maxPitch, camera.rotation.x));
       camera.rotation.z += -input.roll * ROT_SPEED * dt;
 
       // Translation along camera axes (inertia: velocity persists, PRD §B.5).
@@ -110,7 +112,7 @@ export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
           THRUST.brakeAccel, dt,
         );
         rig.velocity.set(braked.x, braked.y, braked.z);
-        rig.fuel = burnFuel(rig.fuel, 0.5, THRUST.fuelConsumptionRate, dt);
+        rig.fuel = burnFuel(rig.fuel, PLAYER.brakeBurnFactor, THRUST.fuelConsumptionRate, dt);
       }
 
       // Damping (assist raises it for stabilization, PRD §C.5 F).
@@ -126,10 +128,11 @@ export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
 
     recenterTo(target) {
       // ponytail: brief said camera.setDirection(), which FreeCamera lacks;
-      // set Euler rotation directly instead.
+      // set Euler rotation directly. Pitch is negated: positive rotation.x
+      // pitches Babylon's FreeCamera DOWN.
       const dir = target.subtract(root.position).normalize();
       const yaw = Math.atan2(dir.x, dir.z);
-      const pitch = Math.atan2(dir.y, Math.hypot(dir.x, dir.z));
+      const pitch = -Math.atan2(dir.y, Math.hypot(dir.x, dir.z));
       camera.rotation.set(pitch, yaw, 0);
     },
 
