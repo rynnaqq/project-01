@@ -1920,8 +1920,11 @@ function checkCollisions() {
       game.coins += 1;
       game.score += CONFIG.coinScore;
       sfx.coin();
-      spawnRing(c.x, c.y, c.z);
-      burst(c.x, c.y, c.z, 0xffce5c, 5, 2.4);
+      // First-person: bursts explode right in front of the lens — skip them.
+      if (camFP.t < 0.5) {
+        spawnRing(c.x, c.y, c.z);
+        burst(c.x, c.y, c.z, 0xffce5c, 5, 2.4);
+      }
     }
   }
 
