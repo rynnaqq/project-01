@@ -1340,35 +1340,49 @@ function makeTower() {
 }
 const towers = new Pool(3, makeTower);
 
-/* Arched stone tunnel: half-torus vault ribs + skirts + portals. Decorative,
-   no collision; ceiling radius keeps full jumps safe inside. */
+/* Arched stone tunnel: one continuous half-barrel vault (no see-through
+   slots between stacked rings), walls meeting the vault legs, chunky
+   portals seated on the walls. Decorative, no collision; ceiling radius
+   keeps full jumps safe inside. */
 function makeTunnel() {
   const g = new THREE.Group();
-  const linerGeo = new THREE.TorusGeometry(4.2, 0.6, 9, 14, Math.PI);
-  const ribGeo = new THREE.TorusGeometry(4.32, 0.72, 9, 14, Math.PI);
-  for (let i = 0; i < 11; i += 1) {
-    const ribbed = i % 3 === 0;
-    const seg = new THREE.Mesh(ribbed ? ribGeo : linerGeo, ribbed ? MAT.tunnelRib : MAT.tunnelLiner);
-    seg.position.z = -i * 5;
-    g.add(seg);
+  // Barrel vault: open half-cylinder shell, axis along z, legs at y=0.
+  const linerMat = new THREE.MeshLambertMaterial({ color: 0x574e63, side: THREE.DoubleSide });
+  const vaultGeo = new THREE.CylinderGeometry(4.6, 4.6, TUNNEL_LEN, 18, 1, true);
+  vaultGeo.rotateX(Math.PI / 2); // axis Y -> Z
+  vaultGeo.rotateZ(Math.PI / 2); // right half -> upper half
+  const vault = new THREE.Mesh(vaultGeo, linerMat);
+  vault.position.z = -TUNNEL_LEN / 2;
+  g.add(vault);
+
+  // Strengthening ribs flush with the shell radius.
+  const ribGeo = new THREE.TorusGeometry(4.66, 0.24, 8, 20, Math.PI);
+  for (let i = 0; i <= 4; i += 1) {
+    const rib = new THREE.Mesh(ribGeo, MAT.tunnelRib);
+    rib.position.z = -(i * TUNNEL_LEN) / 4;
+    g.add(rib);
   }
-  for (const sx of [-4.85, 4.85]) {
-    const skirt = mesh(GEO.box, MAT.tunnelSkirt, 0.7, 2.4, TUNNEL_LEN);
-    skirt.position.set(sx, 1.2, -TUNNEL_LEN / 2);
+
+  // Side walls overlap the vault legs — no daylight slots between rings.
+  for (const sx of [-4.62, 4.62]) {
+    const skirt = mesh(GEO.box, MAT.tunnelSkirt, 0.7, 2.6, TUNNEL_LEN);
+    skirt.position.set(sx, 1.3, -TUNNEL_LEN / 2);
     g.add(skirt);
   }
-  const portalGeo = new THREE.TorusGeometry(4.55, 0.85, 10, 16, Math.PI);
+
+  // Portals: chunky arch rings straddling the walls at both mouths.
+  const portalGeo = new THREE.TorusGeometry(4.78, 0.8, 10, 22, Math.PI);
   for (const pz of [0, -TUNNEL_LEN]) {
     const portal = new THREE.Mesh(portalGeo, MAT.tunnelRib);
     portal.position.z = pz;
     g.add(portal);
   }
-  for (const lx of [-3.4, 3.4]) {
+  for (const lx of [-2.9, 2.9]) {
     const lamp = new THREE.Mesh(
       new THREE.SphereGeometry(0.16, 8, 6),
       new THREE.MeshBasicMaterial({ color: 0xffe9b8 }),
     );
-    lamp.position.set(lx, 3.4, 0.4);
+    lamp.position.set(lx, 3.2, 0.4); // inside the shell radius
     g.add(lamp);
   }
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({
