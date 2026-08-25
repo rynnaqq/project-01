@@ -9,6 +9,7 @@
    Tunables live in CONFIG below; see README.md for the parameter table.
    ========================================================================== */
 import * as THREE from 'three';
+import { createScenery } from './scenery';
 
 /* ------------------------------------------------------------------ config */
 const CONFIG = {
@@ -940,6 +941,10 @@ const gantries = makeTreadmill(5, 46, 1, () => {
   return g;
 });
 
+/* Procedural trackside buildings — houses/ruko near, tower silhouettes far.
+   Own module; recycled treadmill rows like every other scenery here. */
+const scenery = createScenery(scene);
+
 /* Wind streaks near the camera — fade in with speed. */
 const STREAK_COUNT = 22;
 const streaks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.04, 0.04, 2.6), MAT.streak, STREAK_COUNT);
@@ -1508,7 +1513,7 @@ const spawner = {
 
 /* --------------------------------------------------------------------- game */
 const BEST_KEY = 'railrush.best';
-const BUILD_TAG = 'ground-tex-2'; // shown on the boot screen to verify live code
+const BUILD_TAG = 'scenery-6'; // shown on the boot screen to verify live code
 
 const game = {
   state: 'loading' as 'loading' | 'ready' | 'running' | 'paused' | 'over',
@@ -1756,6 +1761,7 @@ function scrollWorld(dt: number) {
   cloudShadows.advance(dz);
   poles.advance(dz);
   gantries.advance(dz);
+  scenery.advance(dz);
 
   const advance = (pool: AnyPool) => pool.forEachActive((o) => {
     o.position.z += dz;
