@@ -680,11 +680,6 @@ const MAT = {
   crateFrame: new THREE.MeshLambertMaterial({ color: 0x6b4726 }),
   barrierLowLeg: new THREE.MeshLambertMaterial({ color: 0x2c2f3a }),
   cactus: new THREE.MeshLambertMaterial({ color: 0x4a7a5a }),
-  patch: [
-    new THREE.MeshLambertMaterial({ color: 0x3f3050 }),
-    new THREE.MeshLambertMaterial({ color: 0x473659 }),
-    new THREE.MeshLambertMaterial({ color: 0x38304a }),
-  ],
   cloudShadow: new THREE.MeshBasicMaterial({
     map: cloudShadowTexture, transparent: true, depthWrite: false,
   }),
@@ -881,21 +876,6 @@ const shrubs = makeTreadmill(14, 13, 1, () => {
   g.userData.respin(g);
   return g;
 }, 9);
-
-/* Dark dirt patches on the open ground flanks — scrolling reference points
-   that sell world motion against the locked camera. */
-const dirtPatches = makeTreadmill(18, 24, 1, () => {
-  const r = 2 + Math.random() * 6;
-  const p = mesh(GEO.circle, pick(MAT.patch), r, r * (0.6 + Math.random() * 0.5), 1);
-  p.rotation.x = -Math.PI / 2;
-  p.rotation.z = Math.random() * Math.PI * 2;
-  p.position.y = 0.012; // just above the ground top to avoid z-fighting
-  const g = new THREE.Group();
-  g.add(p);
-  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 16); };
-  g.userData.respin(g);
-  return g;
-}, 14);
 
 /* Soft cloud shadows drifting over the terrain — slow parallax layer. */
 const cloudShadows = makeTreadmill(3, 90, 0.25, () => {
@@ -1755,7 +1735,6 @@ function scrollWorld(dt: number) {
   clouds.items.forEach((c) => { c.position.x += c.userData.drift * dt; });
   cacti.advance(dz);
   shrubs.advance(dz);
-  dirtPatches.advance(dz);
   cloudShadows.advance(dz);
   poles.advance(dz);
   gantries.advance(dz);
