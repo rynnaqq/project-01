@@ -368,24 +368,44 @@ function terrainTexture(base: string, spots: string[], density: number) {
   });
 }
 
-/* Art-directed dusk ground: angular tone zones, wind ripples, gravel
-   clusters with sun-side highlights, and branching cracks. */
+/* Art-directed dusk ground: gentle large-scale mottling, wind ripples,
+   sun-lit gravel, branching cracks, and dense grain — all uniform so the
+   whole terrain (rail bed included) reads as one continuous surface. */
 function artGroundTexture() {
-  const spots = ['#6b5882', '#322844', '#4e3f63', '#66506b'];
-  return canvasTexture(512, 512, (g, w, h) => {
+  return canvasTexture(1024, 1024, (g, w, h) => {
+    const s = w / 512; // scale factor keeps world-space detail identical
     g.fillStyle = '#54406b';
     g.fillRect(0, 0, w, h);
 
+    // Soft macro mottling: low-alpha radial gradients add depth without
+    // ever forming the hard tone patches that read as different terrains.
+    for (let i = 0; i < 48; i += 1) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const r = (50 + Math.random() * 120) * s;
+      const col = pick(['#6b5882', '#322844', '#4e3f63']);
+      const gr = g.createRadialGradient(x, y, r * 0.15, x, y, r);
+      gr.addColorStop(0, col);
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      wrapped(g, w, h, () => {
+        g.globalAlpha = 0.05 + Math.random() * 0.07;
+        g.fillStyle = gr;
+        g.beginPath();
+        g.arc(x, y, r, 0, Math.PI * 2);
+        g.fill();
+      });
+    }
+
     // Wind ripples: long wavy strokes drifting at a slight diagonal.
-    g.filter = 'blur(1.5px)';
-    for (let i = 0; i < 38; i += 1) {
+    g.filter = `blur(${1.5 * s}px)`;
+    for (let i = 0; i < 46; i += 1) {
       const col = Math.random() < 0.5 ? '#6b5882' : '#322844';
       const a = 0.08 + Math.random() * 0.12;
-      const lw = 2 + Math.random() * 4;
+      const lw = (2 + Math.random() * 4) * s;
       const y0 = Math.random() * h;
-      const drift = (Math.random() - 0.3) * 90;
-      const amp = 4 + Math.random() * 10;
-      const span = w + 20;
+      const drift = (Math.random() - 0.3) * 90 * s;
+      const amp = (4 + Math.random() * 10) * s;
+      const span = w + 20 * s;
       const segs = 8;
       wrapped(g, w, h, () => {
         g.globalAlpha = a;
@@ -393,12 +413,12 @@ function artGroundTexture() {
         g.lineWidth = lw;
         g.lineCap = 'round';
         g.beginPath();
-        g.moveTo(-10, y0);
+        g.moveTo(-10 * s, y0);
         let py = y0;
-        for (let s = 1; s <= segs; s += 1) {
-          const x = -10 + (span / segs) * s;
-          const yy = y0 + (drift * s) / segs + (s % 2 ? amp : -amp) * 0.9;
-          g.quadraticCurveTo(x - span / segs / 2, py + (s % 2 ? -amp : amp), x, yy);
+        for (let p = 1; p <= segs; p += 1) {
+          const x = -10 * s + (span / segs) * p;
+          const yy = y0 + (drift * p) / segs + (p % 2 ? amp : -amp) * 0.9;
+          g.quadraticCurveTo(x - span / segs / 2, py + (p % 2 ? -amp : amp), x, yy);
           py = yy;
         }
         g.stroke();
@@ -406,52 +426,66 @@ function artGroundTexture() {
     }
     g.filter = 'none';
 
-    // Gravel clusters: pebbles with a sun-side highlight.
-    for (let c = 0; c < 60; c += 1) {
+    // Gravel clusters: rounded stones with a sun-side highlight and a shade
+    // edge, so they read as gravel under the low dusk light.
+    const stoneCols = ['#66506b', '#453757', '#584a66', '#6e5a72'];
+    const stone = (x: number, y: number, r: number) => {
+      wrapped(g, w, h, () => {
+        g.globalAlpha = 0.85;
+        g.fillStyle = pick(stoneCols);
+        g.beginPath();
+        g.arc(x, y, r, 0, Math.PI * 2);
+        g.fill();
+        g.globalAlpha = 0.55;
+        g.strokeStyle = '#8a76a0'; // lit edge (toward the sun)
+        g.lineWidth = Math.max(s * 0.7, r * 0.3);
+        g.beginPath();
+        g.arc(x, y, r * 0.78, Math.PI * 0.85, Math.PI * 1.7);
+        g.stroke();
+        g.strokeStyle = '#2e2440'; // shade edge
+        g.beginPath();
+        g.arc(x, y, r * 0.78, Math.PI * -0.05, Math.PI * 0.65);
+        g.stroke();
+      });
+    };
+    for (let c = 0; c < 70; c += 1) {
       const cx = Math.random() * w;
       const cy = Math.random() * h;
       const count = 4 + randInt(6);
       for (let k = 0; k < count; k += 1) {
-        const x = cx + (Math.random() - 0.5) * 46;
-        const y = cy + (Math.random() - 0.5) * 30;
-        const r = 1 + Math.random() * 2.2;
-        const base = pick(spots);
-        wrapped(g, w, h, () => {
-          g.globalAlpha = 0.5;
-          g.fillStyle = base;
-          g.beginPath();
-          g.arc(x, y, r, 0, Math.PI * 2);
-          g.fill();
-          g.globalAlpha = 0.45;
-          g.fillStyle = '#8a76a0';
-          g.beginPath();
-          g.arc(x - r * 0.35, y - r * 0.35, r * 0.45, 0, Math.PI * 2);
-          g.fill();
-        });
+        stone(
+          cx + (Math.random() - 0.5) * 46 * s,
+          cy + (Math.random() - 0.5) * 30 * s,
+          (1.2 + Math.random() * 2.4) * s,
+        );
       }
+    }
+    // Scattered singles between clusters.
+    for (let i = 0; i < 220; i += 1) {
+      stone(Math.random() * w, Math.random() * h, (1 + Math.random() * 1.8) * s);
     }
 
     // Cracks: branching random walks, cracked-earth hint.
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 14; i += 1) {
       let x = Math.random() * w;
       let y = Math.random() * h;
       let ang = Math.random() * Math.PI * 2;
       wrapped(g, w, h, () => {
-        g.globalAlpha = 0.25;
+        g.globalAlpha = 0.28;
         g.strokeStyle = '#2e2440';
-        g.lineWidth = 1.4;
+        g.lineWidth = 1.4 * s;
         g.lineCap = 'round';
         g.beginPath();
         g.moveTo(x, y);
-        for (let s = 0; s < 9; s += 1) {
+        for (let p = 0; p < 11; p += 1) {
           ang += (Math.random() - 0.5) * 0.9;
-          x += Math.cos(ang) * (6 + Math.random() * 12);
-          y += Math.sin(ang) * (6 + Math.random() * 12);
+          x += Math.cos(ang) * ((6 + Math.random() * 12) * s);
+          y += Math.sin(ang) * ((6 + Math.random() * 12) * s);
           g.lineTo(x, y);
-          if (Math.random() < 0.25) {
+          if (Math.random() < 0.3) {
             g.moveTo(x, y);
             const fa = ang + (Math.random() - 0.5) * 1.6;
-            g.lineTo(x + Math.cos(fa) * 10, y + Math.sin(fa) * 10);
+            g.lineTo(x + Math.cos(fa) * 10 * s, y + Math.sin(fa) * 10 * s);
             g.moveTo(x, y);
           }
         }
@@ -459,14 +493,14 @@ function artGroundTexture() {
       });
     }
 
-    // Light grain so close-ups stay lively under the structure.
-    for (let i = 0; i < 1200; i += 1) {
+    // Dense grain so close-ups stay lively under the structure.
+    for (let i = 0; i < 4200; i += 1) {
       const x = Math.random() * w;
       const y = Math.random() * h;
       wrapped(g, w, h, () => {
         g.globalAlpha = 0.12 + Math.random() * 0.14;
-        g.fillStyle = pick(spots);
-        g.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2);
+        g.fillStyle = pick(['#6b5882', '#322844', '#4e3f63', '#66506b']);
+        g.fillRect(x, y, (1 + Math.random() * 2) * s, (1 + Math.random() * 2) * s);
       });
     }
     g.globalAlpha = 1;
