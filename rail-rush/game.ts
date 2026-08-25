@@ -694,8 +694,6 @@ const MAT = {
   tunnelRib: new THREE.MeshLambertMaterial({ color: 0x3e3749 }),
   tunnelSkirt: new THREE.MeshLambertMaterial({ color: 0x463f52 }),
   cloud: new THREE.MeshLambertMaterial({ color: 0xffc9d6, emissive: 0x55283c }),
-  mountainFar: new THREE.MeshLambertMaterial({ color: 0x472d63, fog: false }),
-  mountainNear: [new THREE.MeshLambertMaterial({ color: 0x5d3a5f }), new THREE.MeshLambertMaterial({ color: 0x6e4356 })],
   coin: new THREE.MeshPhongMaterial({ color: 0xffce5c, emissive: 0x8a5a00, shininess: 80, specular: 0xfff2c0 }),
   magnet: new THREE.MeshPhongMaterial({ color: 0xff71ce, emissive: 0x5e1747, shininess: 60 }),
   shoes: new THREE.MeshPhongMaterial({ color: 0x43d9ff, emissive: 0x0b4c66, shininess: 70 }),
@@ -811,23 +809,6 @@ function makeTreadmill(
     },
   };
 }
-
-/* Distant mountain silhouettes — two parallax depths. */
-const mountainsFar = makeTreadmill(9, 46, 0.15, () => {
-  const h = 10 + Math.random() * 16;
-  const m = mesh(GEO.cone, MAT.mountainFar, 10 + Math.random() * 12, h, 10);
-  m.geometry = GEO.cone;
-  m.position.x = (Math.random() < 0.5 ? -1 : 1) * (18 + Math.random() * 44);
-  m.position.y = h / 2 - 2;
-  return m;
-});
-const mountainsNear = makeTreadmill(10, 34, 0.35, () => {
-  const h = 5 + Math.random() * 9;
-  const m = mesh(GEO.cone, pick(MAT.mountainNear), 6 + Math.random() * 8, h, 6);
-  m.position.x = (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 20);
-  m.position.y = h / 2 - 1;
-  return m;
-});
 
 /* Drifting dusk clouds. */
 const clouds = makeTreadmill(7, 34, 0.06, () => {
@@ -1751,8 +1732,6 @@ function scrollWorld(dt: number) {
   }
   sleepers.instanceMatrix.needsUpdate = true;
 
-  mountainsFar.advance(dz);
-  mountainsNear.advance(dz);
   clouds.advance(dz);
   clouds.items.forEach((c) => { c.position.x += c.userData.drift * dt; });
   cacti.advance(dz);
