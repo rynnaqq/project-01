@@ -296,10 +296,11 @@ function canvasTexture(
   return tx;
 }
 /* Draw `draw` nine times offset by one canvas — every layer painted through
-   this joins seamlessly when tiled. */
+   this joins seamlessly when tiled. ponytail: full 3×3 wrap costs ~2× the old
+   4-copy version at boot; drop back if boot profiling ever flags it. */
 function wrapped(g: CanvasRenderingContext2D, w: number, h: number, draw: () => void) {
-  for (const ox of [0, -w]) {
-    for (const oy of [0, -h]) {
+  for (const ox of [-w, 0, w]) {
+    for (const oy of [-h, 0, h]) {
       g.save();
       g.translate(ox, oy);
       draw();
@@ -501,9 +502,11 @@ function artGroundTexture() {
    each pebble gets a lit edge toward the sun and a shade edge away from it,
    which is what makes gravel read as gravel instead of noise. */
 function artBallastTexture() {
-  const stoneCols = ['#6a625c', '#463f3d', '#5d5854', '#6e6659', '#524b47'];
+  // Warm dusk-tinted stones so the ballast sits in the same world as the
+  // purple flank terrain instead of reading as a different scene.
+  const stoneCols = ['#6b5a6b', '#463a4a', '#5d5060', '#71606a', '#524558'];
   return canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = '#55504e';
+    g.fillStyle = '#564a5a';
     g.fillRect(0, 0, w, h);
 
     // Longitudinal wear bands along the travel axis.
@@ -558,12 +561,12 @@ function drawPebble(g: CanvasRenderingContext2D, x: number, y: number, r: number
   g.ellipse(0, 0, r, r * 0.72, 0, 0, Math.PI * 2);
   g.fill();
   g.globalAlpha = 0.5;
-  g.strokeStyle = '#7d756e'; // lit edge
+  g.strokeStyle = '#8a7a8c'; // lit edge (dusk-tinted)
   g.lineWidth = Math.max(0.8, r * 0.28);
   g.beginPath();
   g.arc(0, 0, r * 0.82, Math.PI * 0.9, Math.PI * 1.75);
   g.stroke();
-  g.strokeStyle = '#332f2c'; // shade edge
+  g.strokeStyle = '#2f2836'; // shade edge (dusk-tinted)
   g.beginPath();
   g.arc(0, 0, r * 0.82, Math.PI * -0.05, Math.PI * 0.7);
   g.stroke();
