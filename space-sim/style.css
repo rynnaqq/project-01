@@ -1,0 +1,65 @@
+/* Space Simulator shell screens. Standalone CSS — no Tailwind here. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #010108; }
+#game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
+
+.screen {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; text-align: center;
+  color: #e8ecff; font-family: system-ui, sans-serif;
+  background: rgba(1, 1, 8, 0.82);
+}
+.title { margin: 0; font-size: clamp(24px, 5vw, 42px); letter-spacing: 0.12em; }
+.subtitle { margin: 0; color: #6be1ff; letter-spacing: 0.2em; font-size: 14px; }
+.dim { color: #9aa3c7; font-size: 13px; max-width: 46ch; }
+
+.load-track { width: min(320px, 70vw); height: 10px; border: 1px solid #3a4066; border-radius: 6px; overflow: hidden; }
+.load-bar { height: 100%; width: 0%; background: #6be1ff; transition: width 0.2s; }
+
+.brief { margin: 0; padding-left: 1.2em; text-align: left; color: #cdd4f2; font-size: 15px; line-height: 1.7; }
+
+.btn-primary, .btn-ghost {
+  border-radius: 999px; padding: 12px 28px; font-weight: 700; font-size: 15px;
+  cursor: pointer; text-decoration: none; border: 2px solid #6be1ff;
+}
+.btn-primary { background: #6be1ff; color: #010108; }
+.btn-primary:hover { background: #9deaff; }
+.btn-ghost { background: transparent; color: #6be1ff; }
+.btn-ghost:hover { background: rgba(107, 225, 255, 0.12); }
+.btn-primary:focus-visible, .btn-ghost:focus-visible, .tbtn:focus-visible {
+  outline: 3px solid #ffd24d; outline-offset: 2px;
+}
+
+.stats { display: flex; gap: 28px; margin: 8px 0; }
+.stats div { display: flex; flex-direction: column; gap: 2px; }
+.stats dt { color: #9aa3c7; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
+.stats dd { margin: 0; font-size: 22px; font-variant-numeric: tabular-nums; }
+.grade { font-size: 20px; letter-spacing: 0.15em; color: #ffd24d; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+/* Touch controls: hidden unless a coarse pointer is present. */
+#touch-controls { display: none; }
+@media (pointer: coarse) {
+  #touch-controls {
+    display: flex; position: fixed; right: 12px; bottom: 12px; z-index: 5;
+    gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 60vw;
+  }
+}
+.tbtn {
+  min-width: 56px; min-height: 44px; border-radius: 12px;
+  border: 2px solid rgba(107, 225, 255, 0.7); background: rgba(1, 1, 8, 0.55);
+  color: #e8ecff; font-size: 13px; font-weight: 700; touch-action: none;
+}
+.tbtn-accent { border-color: #ffd24d; color: #ffd24d; }
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .screen::after {
+    content: 'Landscape recommended for the best experience';
+    position: absolute; bottom: 10px; color: #9aa3c7; font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .load-bar { transition: none; }
+}
