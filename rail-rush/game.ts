@@ -376,31 +376,6 @@ function artGroundTexture() {
     g.fillStyle = '#54406b';
     g.fillRect(0, 0, w, h);
 
-    // Macro zones: irregular soft-edged polygons — terrain regions, not bubbles.
-    for (let i = 0; i < 15; i += 1) {
-      const cx = Math.random() * w;
-      const cy = Math.random() * h;
-      const n = 7 + randInt(4);
-      const rBase = 60 + Math.random() * 110;
-      const pts: number[][] = [];
-      for (let k = 0; k < n; k += 1) {
-        const ang = (k / n) * Math.PI * 2;
-        const rr = rBase * (0.55 + Math.random() * 0.7);
-        pts.push([cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr]);
-      }
-      const col = pick(spots);
-      const a = 0.14 + Math.random() * 0.16;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = a;
-        g.fillStyle = col;
-        g.beginPath();
-        g.moveTo(pts[0][0], pts[0][1]);
-        for (let k = 1; k < n; k += 1) g.lineTo(pts[k][0], pts[k][1]);
-        g.closePath();
-        g.fill();
-      });
-    }
-
     // Wind ripples: long wavy strokes drifting at a slight diagonal.
     g.filter = 'blur(1.5px)';
     for (let i = 0; i < 38; i += 1) {
