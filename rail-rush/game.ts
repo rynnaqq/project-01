@@ -280,21 +280,57 @@ camera.position.set(0, 4.9, 8.0); // high chase overview — updateCamera steers
    super-bright pixels (coins/power-ups with emissiveIntensity > 1) glow;
    the scene itself stays untouched. OutputPass reapplies ACES tonemapping,
    which the composer chain otherwise skips. */
-const composerTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-  type: THREE.HalfFloatType,
-  samples: 4, // MSAA — the renderer's own antialias doesn't apply through the composer
-});
-const composer = new EffectComposer(renderer, composerTarget);
-composer.addPass(new RenderPass(scene, camera));
-composer.addPass(new UnrealBloomPass(
+/* ponytail: EffectComposer's default target (HalfFloat, no MSAA) — bloom's
+   blur hides aliasing, and MSAA-on-HDR proved a large mobile GPU cost. */
+const composer = new EffectComposer(renderer);
+const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2),
   0.5,  // strength — subtle
   0.55, // radius
   1.0,  // threshold (linear pre-tonemap)
-));
+);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
+
+/* Quality governor — 60fps is the contract, juice is negotiable. Frame times
+   are averaged over a ~1.5s window; past budget we step down (resolution
+   first, then drop bloom entirely). One-way ladder, never recovers: boring
+   and predictable. ponytail: add upward recovery only if devices visibly
+   oscillate between tiers. */
+const QUALITY_STEPS = [
+  { dpr: 1.5, bloom: true },
+  { dpr: 1.15, bloom: true },
+  { dpr: 1, bloom: false },
+];
+let qualityLevel = 0;
+let perfWindowDt = 0;
+let perfWindowFrames = 0;
+
 /** Single render entry point so every path goes through the same chain. */
 const renderFrame = () => composer.render();
+
+/** Feed each main-loop dt (s, clamped); degrades quality on sustained lag. */
+function watchPerf(dt: number) {
+  perfWindowDt += dt;
+  perfWindowFrames += 1;
+  if (perfWindowFrames < 90) return;
+  const avgMs = (perfWindowDt / perfWindowFrames) * 1000;
+  perfWindowDt = 0;
+  perfWindowFrames = 0;
+  if (avgMs <= 19 || qualityLevel >= QUALITY_STEPS.length - 1) return;
+  applyQuality(qualityLevel + 1);
+}
+
+function applyQuality(level: number) {
+  qualityLevel = level;
+  const step = QUALITY_STEPS[level];
+  const dpr = Math.min(step.dpr, window.devicePixelRatio);
+  renderer.setPixelRatio(dpr);
+  composer.setPixelRatio(dpr);
+  bloomPass.enabled = step.bloom;
+  onResize();
+}
 
 scene.environmentIntensity = 0.35;
 
@@ -1546,7 +1582,7 @@ const spawner = {
 
 /* --------------------------------------------------------------------- game */
 const BEST_KEY = 'railrush.best';
-const BUILD_TAG = 'pbr-bloom-4'; // shown on the boot screen to verify live code
+const BUILD_TAG = 'perf-gov-5'; // shown on the boot screen to verify live code
 
 const game = {
   state: 'loading' as 'loading' | 'ready' | 'running' | 'paused' | 'over',
@@ -2144,6 +2180,7 @@ function loop(now: number) {
   if (game.state !== 'running') return;
   const dt = Math.min(0.05, (now - game.lastT) / 1000 || 0.016);
   game.lastT = now;
+  watchPerf(dt);
 
   try {
     game.runTime += dt;
