@@ -1403,12 +1403,14 @@ const setPieces = {
   nextTowerAt: 170,
   towerSide: 1,
   wasInsideTunnel: false,
+  fpZone: false, // tunnel near/ahead — camera should be first-person
 
   reset() {
     this.nextTunnelAt = 320;
     this.nextTowerAt = 170;
     this.towerSide = 1;
     this.wasInsideTunnel = false;
+    this.fpZone = false;
   },
 
   update(travel: number) {
@@ -1557,6 +1559,8 @@ const game = {
     setPieces.reset();
     legSwingPhase = 0;
     runDustT = 0;
+    camFP.t = 0;
+    player.body.visible = true;
 
     ui.boot.hidden = true;
     ui.over.hidden = true;
@@ -1786,6 +1790,15 @@ function scrollWorld(dt: number) {
   });
   if (insideTunnel && !setPieces.wasInsideTunnel) sfx.tunnel();
   setPieces.wasInsideTunnel = insideTunnel;
+
+  // First-person camera zone: from just before the entrance portal until the
+  // exit portal passes behind the camera. The chase cam sits above the vault,
+  // so it cannot see obstacles inside the tunnel.
+  setPieces.fpZone = false;
+  tunnels.forEachActive((tn) => {
+    const exitZ = tn.position.z - TUNNEL_LEN;
+    if (tn.position.z > -26 && exitZ < CONFIG.despawnZ + 4) setPieces.fpZone = true;
+  });
 
   // Tumbleweeds: world-scrolled drift with a lateral push and a roll.
   tumbleweedTimer -= dt;
@@ -2059,19 +2072,43 @@ function updatePlayer(dt: number): number {
   return speedRatio;
 }
 
+/* 0 = third-person chase, 1 = first-person inside a tunnel. Damped so the
+   dive/rise stays smooth even when the zone flips mid-blend. */
+const camFP = { t: 0 };
+
 function updateCamera(dt: number, speedRatio = 0) {
-  // Fully locked lateral camera: the world streams past a fixed frame while
-  // only the runner crosses lanes. Zero follow = zero ground slide.
+  // Third person: fully locked lateral camera — the world streams past a
+  // fixed frame while only the runner crosses lanes.
   const shake = game.shakeT > 0 && !REDUCED_MOTION ? (Math.random() - 0.5) * game.shakeT * 2.2 : 0;
-  camera.position.x = 0;
-  camera.position.y = 4.9 + Math.sin(game.distance * 1.4) * 0.04 + shake;
-  camera.lookAt(0, 1.3, -10);
-  // FOV kick sells acceleration.
-  const targetFov = baseFov + speedRatio * 7;
+  // First person: just over the runner's cap, seeing what they see — the
+  // chase cam sits above the tunnel vault and cannot read obstacles inside.
+  camFP.t = damp(camFP.t, setPieces.fpZone ? 1 : 0, 3.4, dt);
+  const f = camFP.t * camFP.t * (3 - 2 * camFP.t); // smoothstep ease
+
+  const tpX = 0;
+  const tpY = 4.9 + Math.sin(game.distance * 1.4) * 0.04 + shake;
+  const fpX = clamp(player.x * 0.92, -2.0, 2.0);
+  const fpY = player.y + 2.02 + shake * 0.4;
+  camera.position.x = tpX + (fpX - tpX) * f;
+  camera.position.y = tpY + (fpY - tpY) * f;
+  camera.position.z = 8 + (1.45 - 8) * f;
+
+  tmpV3.set(
+    0 + (fpX - 0) * f,
+    1.3 + (player.y + 1.55 - 1.3) * f,
+    -10,
+  );
+  camera.lookAt(tmpV3);
+
+  // FOV kick sells acceleration; first person adds a touch of claustrophobia.
+  const targetFov = baseFov + speedRatio * 7 + f * 4;
   if (Math.abs(camera.fov - targetFov) > 0.01) {
     camera.fov = damp(camera.fov, targetFov, 4, dt);
     camera.updateProjectionMatrix();
   }
+  // Body fades out only once the camera is essentially at the head —
+  // otherwise the cap/backpack fills the frame mid-transition.
+  player.body.visible = camFP.t < 0.85;
   if (game.shakeT > 0) game.shakeT = Math.max(0, game.shakeT - dt * 2.4);
 }
 
