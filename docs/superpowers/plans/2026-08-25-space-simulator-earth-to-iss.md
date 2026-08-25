@@ -533,7 +533,8 @@ export function approachState(i: DockInput): ApproachState {
   const tooFast = i.relSpeedMps > DOCK.relSpeedMps;
   const nearAndFast = i.distanceM < DOCK.distanceM * 3 && i.relSpeedMps > DOCK.relSpeedMps * 2;
   if (nearAndFast) return 'CRITICAL';
-  if (tooFast || i.alignmentDeg > DOCK.alignmentDeg * 3) return 'CAUTION';
+  // Misalignment only matters once you're close; far away you're just cruising.
+  if (tooFast || (i.distanceM < 50 && i.alignmentDeg > DOCK.alignmentDeg * 3)) return 'CAUTION';
   return 'SAFE';
 }
 
@@ -634,10 +635,10 @@ describe('burnFuel', () => {
 });
 
 describe('ascentStep', () => {
-  it('climbs when thrust exceeds gravity', () => {
+  it('climbs when thrust exceeds gravity (clamped at maxVy)', () => {
     const s = ascentStep(30, 0, 1, 9.8, 26, 14, 1);
-    expect(s.vy).toBeCloseTo(16.2);
-    expect(s.y).toBeCloseTo(46.2);
+    expect(s.vy).toBe(14); // 26 - 9.8 = 16.2, clamped to maxVy 14
+    expect(s.y).toBeCloseTo(44);
   });
   it('falls back with no thrust', () => {
     const s = ascentStep(40, 5, 0, 9.8, 26, 14, 1);
@@ -1854,6 +1855,8 @@ async function boot(): Promise<void> {
         if (reachedOrbit) {
           mission.setPhase(MissionPhase.Orbit);
           hud.setHint('Orbit reached. Zero-G: thrust persists — tap R to brake.');
+        } else if (player.root.position.y < ALT.SURFACE_Y - 0.5) {
+          failMission('Fell back to Earth — keep thrusting');
         }
       } else {
         player.updateOrbit(input, look, dt);
