@@ -74,6 +74,21 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
    always carry exactly one. */
 const matOf = (o: THREE.Object3D): THREE.MeshBasicMaterial =>
   (o as THREE.Mesh).material as THREE.MeshBasicMaterial;
+/* Any boot-time crash must show up on the boot screen — never hang silently
+   on "Loading track…". Runtime errors after start stay console-only.
+   Handlers go up first so a missing-element typo in `ui` is surfaced too. */
+let bootDone = false; // flipped once the run handoff below completes
+function surfaceBootError(message: string) {
+  if (bootDone) return;
+  $('screen-boot').hidden = false;
+  $('btn-start').hidden = true;
+  $('boot-controls').hidden = true;
+  const msg = $('boot-msg');
+  msg.textContent = `Failed to start: ${message}`;
+}
+window.addEventListener('error', (e) => surfaceBootError(e.message || 'unknown error'));
+window.addEventListener('unhandledrejection', (e) => surfaceBootError(String(e.reason ?? 'unknown failure')));
+
 const ui = {
   hud: $('hud'), score: $('hud-score'), coins: $('hud-coins'),
   power: $('hud-power'), powerBar: document.querySelector('#hud-power i') as HTMLElement,
@@ -83,19 +98,6 @@ const ui = {
   overScore: $('over-score'), overCoins: $('over-coins'), overBest: $('over-best'),
   newBest: $('over-newbest'), flash: $('flash'),
 };
-
-/* Any boot-time crash must show up on the boot screen — never hang silently
-   on "Loading track…". Runtime errors after start stay console-only. */
-let bootDone = false; // flipped once the run handoff below completes
-function surfaceBootError(message: string) {
-  if (bootDone) return;
-  ui.boot.hidden = false;
-  ui.start.hidden = true;
-  ui.controls.hidden = true;
-  ui.bootMsg.textContent = `Failed to start: ${message}`;
-}
-window.addEventListener('error', (e) => surfaceBootError(e.message || 'unknown error'));
-window.addEventListener('unhandledrejection', (e) => surfaceBootError(String(e.reason ?? 'unknown failure')));
 
 /* --------------------------------------------------------------------- sfx */
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1509,7 +1511,7 @@ const BEST_KEY = 'railrush.best';
 const BUILD_TAG = 'ground-tex-2'; // shown on the boot screen to verify live code
 
 const game = {
-  state: 'loading', // loading | ready | running | paused | over
+  state: 'loading' as 'loading' | 'ready' | 'running' | 'paused' | 'over',
   speed: CONFIG.baseSpeed,
   distance: 0,
   score: 0,
