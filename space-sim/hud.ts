@@ -84,6 +84,8 @@ export function createHud(scene: Scene): Hud {
 
   // ISS target marker.
   const marker = new TextBlock('marker', '◈ ISS');
+  marker.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+  marker.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
   marker.color = '#6be1ff';
   marker.fontSize = 16;
   marker.isVisible = false;
