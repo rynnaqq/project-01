@@ -5,8 +5,8 @@
  * transition (PRD §B.2): sky darkens, stars fade in, clouds/atmosphere fade.
  */
 import {
-  Color3, Color4, DynamicTexture, Mesh, MeshBuilder, Scene, StandardMaterial,
-  TransformNode, Vector3,
+  Color3, Color4, DynamicTexture, HemisphericLight, Mesh, MeshBuilder, Scene,
+  StandardMaterial, TransformNode, Vector3,
 } from '@babylonjs/core';
 import { ALT } from './config';
 
@@ -47,6 +47,14 @@ function starTexture(scene: Scene): DynamicTexture {
 
 export function createWorld(scene: Scene): World {
   const nodes: TransformNode[] = [];
+  const disposables: Array<{ dispose(): void }> = nodes;
+
+  // Sun + ambient. Without a light every diffuse material renders pitch black.
+  const sun = new HemisphericLight('sun', new Vector3(0.4, 1, 0.2), scene);
+  sun.intensity = 1.1;
+  sun.diffuse = new Color3(1, 0.98, 0.92);
+  sun.groundColor = new Color3(0.12, 0.13, 0.18); // faint space bounce so dark sides stay readable
+  disposables.push(sun);
 
   // Starfield: giant inverted sphere. Starts invisible (we're in atmosphere).
   const stars = MeshBuilder.CreateSphere('stars', { diameter: 900, sideOrientation: Mesh.BACKSIDE }, scene);
@@ -122,7 +130,7 @@ export function createWorld(scene: Scene): World {
       clouds.rotation.y += dt * 0.01;
     },
     dispose(): void {
-      nodes.forEach((n) => n.dispose());
+      disposables.forEach((n) => n.dispose());
     },
   };
 }
