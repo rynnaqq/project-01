@@ -65,6 +65,7 @@ export function createKeyboardInput(
   let dragging = false;
   let lastX = 0; let lastY = 0;
   const pdown = (e: PointerEvent): void => {
+    if (e.pointerType !== 'mouse') return; // touch pointers belong to createTouchInput
     dragging = true; lastX = e.clientX; lastY = e.clientY;
     canvas.setPointerCapture(e.pointerId);
   };

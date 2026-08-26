@@ -246,6 +246,20 @@ async function boot(): Promise<void> {
         const t = Math.min(1, Math.max(0,
           (player.root.position.y - ALT.SURFACE_Y) / (ALT.ORBIT_Y - ALT.SURFACE_Y)));
         world.setAscentProgress(t);
+
+        // HUD ~10 Hz (PRD §C.4) with ascent telemetry; no docking fields yet.
+        hudAccum += dt;
+        if (hudAccum >= 0.1) {
+          hudAccum = 0;
+          mission.update({
+            altitudeKm: displayAltitudeKm(player.root.position.y),
+            speedMps: unitsToMeters(player.velocity.length()),
+            fuel: player.fuel,
+          });
+          // ponytail: HUD signature requires approach args; SAFE/false are the
+          // neutral ascent values until the orbit branch starts feeding real ones.
+          hud.update(mission.state, 'SAFE', false);
+        }
         if (!karmanAnnounced && displayAltitudeKm(player.root.position.y) >= ALT.KARMAN_LINE_KM) {
           karmanAnnounced = true;
           hud.setHint('Kármán line crossed — welcome to space');
@@ -304,7 +318,9 @@ async function boot(): Promise<void> {
             scene.getTransformMatrix(), player.camera.viewport.toGlobal(w, h));
           const behind = Vector3.Dot(portPos.subtract(player.root.position),
             player.camera.getDirection(Vector3.Forward())) < 0;
-          hud.setMarker(behind ? null : proj.x - w / 2, behind ? null : h / 2 - proj.y);
+          // Marker is anchored LEFT/TOP (measures from top-left edge),
+          // so it takes raw screen coords, y flipped to top-origin.
+          hud.setMarker(behind ? null : proj.x, behind ? null : h - proj.y);
         }
       }
 
