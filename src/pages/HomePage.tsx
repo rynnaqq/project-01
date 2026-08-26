@@ -200,37 +200,6 @@ export default function HomePage() {
         </Reveal>
       </section>
 
-      {/* Space Simulator — standalone 3D mission */}
-      <section className="flex flex-col gap-6">
-        <Reveal>
-          <a
-            href="/space-sim/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="slab lift group relative flex flex-col items-start gap-5 overflow-hidden bg-arcade-ink p-8 shadow-pop sm:flex-row sm:items-center sm:justify-between sm:p-10"
-          >
-            <Sparkle className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rotate-12 text-white/15" />
-            <HalfRing className="pointer-events-none absolute bottom-3 right-8 hidden h-6 w-24 text-white/25 sm:block" />
-            <div className="relative">
-              <p className="sticker bg-arcade-sea px-3 py-0.5 text-[10px] text-arcade-ink">
-                3D · Babylon.js · single player
-              </p>
-              <h2 className="mt-3 font-display text-xl uppercase tracking-wide text-white sm:text-2xl">
-                Space Simulator: Earth → ISS
-              </h2>
-              <p className="mt-1 max-w-md text-sm font-medium text-[#e6ecff]">
-                Launch through the atmosphere, float in zero-G, and dock with
-                the International Space Station.
-              </p>
-            </div>
-            <span className="lift relative inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-sea px-6 py-3 font-bold text-arcade-ink shadow-pop transition-colors group-hover:bg-[#8ff0e0]">
-              Start mission
-              <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" aria-hidden />
-            </span>
-          </a>
-        </Reveal>
-      </section>
-
       {/* How it works */}
       <section className="flex flex-col gap-6">
         <h2 className="font-display text-xl uppercase tracking-wide sm:text-2xl">How it works</h2>

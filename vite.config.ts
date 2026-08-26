@@ -10,7 +10,6 @@ export default defineConfig({
         main: 'index.html',
         // key keeps the nested path so output lands at dist/rail-rush/index.html
         'rail-rush/index': 'rail-rush/index.html',
-        'space-sim/index': 'space-sim/index.html',
       },
     },
   },
