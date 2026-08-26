@@ -10,6 +10,13 @@
 <body>
   <canvas id="game-canvas"></canvas>
 
+  <!-- Cutscene overlay: countdown number / LIFTOFF / shot titles -->
+  <div id="cutscene-overlay" hidden>
+    <div id="cutscene-count" aria-live="assertive"></div>
+    <div id="cutscene-title" aria-hidden="true"></div>
+    <button id="btn-skip" type="button">SKIP ▸</button>
+  </div>
+
   <!-- Touch controls (shown on coarse pointers via CSS) -->
   <div id="touch-controls" aria-hidden="true">
     <button id="btn-up" type="button" class="tbtn">▲</button>

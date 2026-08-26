@@ -6,7 +6,7 @@
 import { THRUST } from './config';
 
 export enum MissionPhase {
-  Loading, Briefing, Ascent, Orbit, Approach, Docking, Complete, Failed,
+  Loading, Briefing, Cutscene, Ascent, Orbit, Approach, Docking, Complete, Failed,
 }
 
 export interface MissionState {

@@ -10,6 +10,10 @@ export interface AudioManager {
   setThrust(level: number): void;
   /** Approach-state warning blip (SAFE passes through silently). */
   warn(state: 'CAUTION' | 'CRITICAL' | 'DOCKING_READY'): void;
+  /** Short countdown beep (pitch rises on the final tick / liftoff). */
+  beep(final?: boolean): void;
+  /** Continuous engine rumble, 0..1 intensity (cutscene ignition). */
+  setRumble(level: number): void;
   /** Docking confirmation chime. */
   dock(): void;
   setPaused(paused: boolean): void;
@@ -20,7 +24,10 @@ export function createAudio(): AudioManager {
   const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctx) {
     // No WebAudio (very old browser): silent no-op keeps the game running (§E.1).
-    return { setThrust() {}, warn() {}, dock() {}, setPaused() {}, dispose() {} };
+    return {
+      setThrust() {}, warn() {}, beep() {}, dock() {},
+      setRumble() {}, setPaused() {}, dispose() {},
+    };
   }
   const ctx = new Ctx();
   const master = ctx.createGain();
@@ -45,7 +52,30 @@ export function createAudio(): AudioManager {
 
   let lastWarnAt = 0;
 
+  // Rumble: second noise voice, lower cutoff, for cutscene engine burn.
+  const rumbleFilter = ctx.createBiquadFilter();
+  rumbleFilter.type = 'lowpass';
+  rumbleFilter.frequency.value = 120;
+  const rumbleGain = ctx.createGain();
+  rumbleGain.gain.value = 0;
+  const rumbleSrc = ctx.createBufferSource();
+  rumbleSrc.buffer = buf;
+  rumbleSrc.loop = true;
+  rumbleSrc.connect(rumbleFilter).connect(rumbleGain).connect(master);
+  rumbleSrc.start();
+
   return {
+    beep(final = false) {
+      if (ctx.state !== 'running') return;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.frequency.value = final ? 880 : 440;
+      g.gain.setValueAtTime(0.18, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (final ? 0.5 : 0.12));
+      osc.connect(g).connect(master);
+      osc.start();
+      osc.stop(ctx.currentTime + (final ? 0.52 : 0.14));
+    },
     setThrust(level) {
       if (ctx.state !== 'running') return;
       noiseGain.gain.setTargetAtTime(level * 0.35, ctx.currentTime, 0.60);
@@ -79,6 +109,10 @@ export function createAudio(): AudioManager {
         osc.start(t0);
         osc.stop(t0 + 0.32);
       });
+    },
+    setRumble(level) {
+      if (ctx.state !== 'running') return;
+      rumbleGain.gain.setTargetAtTime(level * 0.5, ctx.currentTime, 0.15);
     },
     setPaused(paused) {
       if (paused) ctx.suspend().catch(() => {});

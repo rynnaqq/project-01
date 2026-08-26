@@ -4,7 +4,8 @@
  * kinematic fallback), phase dispatch, pause, adaptive quality, and the
  * HTML shell screens. All gameplay math lives in the other modules.
  */
-import { Engine, Matrix, Scene, Vector3 } from '@babylonjs/core';
+import { Camera, Engine, Matrix, Scene, Vector3 } from '@babylonjs/core';
+import { createCutscene, type Cutscene } from './cutscene';
 import { ALT, DOCK, MISSION, PLAYER, displayAltitudeKm, metersToUnits, unitsToMeters } from './config';
 import { Mission, MissionPhase, track } from './state';
 import {
@@ -192,11 +193,43 @@ async function boot(): Promise<void> {
     show('screen-briefing', true);
   }
 
-  $('btn-start').addEventListener('click', () => {
-    show('screen-briefing', false);
+  // ---------- intro cutscene (plays after START, before gameplay) ----------
+  const overlay = $('cutscene-overlay');
+  const countEl = $('cutscene-count');
+  const titleEl = $('cutscene-title');
+  let cutscene: Cutscene | null = null;
+  let savedCam: Camera | null = null;
+
+  function startCutscene(): void {
+    mission.setPhase(MissionPhase.Cutscene);
+    track('cutscene_start');
+    overlay.hidden = false;
+    hud.dispose(); // HUD stays out of the cinematic
+    savedCam = scene.activeCamera;
+    cutscene = createCutscene(scene, iss);
+    scene.activeCamera = cutscene.camera;
+    audio?.setRumble(0);
+  }
+
+  function endCutscene(): void {
+    cutscene?.dispose();
+    cutscene = null;
+    overlay.hidden = true;
+    countEl.textContent = '';
+    titleEl.textContent = '';
+    if (savedCam) { scene.activeCamera = savedCam; savedCam = null; }
     mission.setPhase(MissionPhase.Ascent);
     track('mission_start');
     hud.setHint(isTouch ? 'Hold the joystick to thrust — reach orbit!' : 'Hold W to thrust — reach orbit!');
+  }
+
+  $('btn-skip').addEventListener('click', () => {
+    if (cutscene) endCutscene();
+  });
+
+  $('btn-start').addEventListener('click', () => {
+    show('screen-briefing', false);
+    startCutscene();
     if (!audio) audio = createAudio();
   });
   $('btn-resume').addEventListener('click', togglePause);
@@ -243,6 +276,23 @@ async function boot(): Promise<void> {
 
     const st = mission.state;
     const playing = !st.paused && st.phase >= MissionPhase.Ascent && st.phase <= MissionPhase.Docking;
+
+    if (st.phase === MissionPhase.Cutscene && cutscene) {
+      const alive = cutscene.update(dt);
+      const c = cutscene.countdown;
+      if (c === null) { countEl.textContent = ''; }
+      else if (c === 0) {
+        countEl.textContent = 'LIFTOFF';
+        countEl.classList.add('liftoff');
+        audio?.beep(true);
+      } else {
+        countEl.textContent = String(c);
+        audio?.beep();
+      }
+      // Rumble ramps with the ignition shot (starts at t=12, lasts 3 s).
+      audio?.setRumble(Math.min(1, Math.max(0, (cutscene.elapsed - 12) / 3)));
+      if (!alive) endCutscene();
+    }
 
     if (playing) {
       audio?.setThrust(player.thrustLevel);

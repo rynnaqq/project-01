@@ -39,6 +39,35 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #010108; }
 .grade { font-size: 20px; letter-spacing: 0.15em; color: #ffd24d; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
+/* Cutscene overlay */
+#cutscene-overlay {
+  position: fixed; inset: 0; z-index: 8; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  pointer-events: none; font-family: system-ui, sans-serif;
+}
+#cutscene-overlay[hidden] { display: none; }
+#cutscene-count {
+  font-size: clamp(72px, 18vw, 180px); font-weight: 800; color: #e8ecff;
+  text-shadow: 0 0 24px rgba(107, 225, 255, 0.55); letter-spacing: 0.05em;
+}
+#cutscene-count.liftoff {
+  font-size: clamp(40px, 9vw, 90px); color: #ffd24d;
+  text-shadow: 0 0 30px rgba(255, 210, 77, 0.7);
+}
+#cutscene-title {
+  margin-top: 10px; font-size: clamp(14px, 2.5vw, 20px);
+  letter-spacing: 0.35em; color: #6be1ff; text-transform: uppercase;
+}
+#btn-skip {
+  position: absolute; right: 16px; bottom: 16px; pointer-events: auto;
+  background: transparent; border: none; cursor: pointer;
+  color: #9aa3c7; font-size: 13px; letter-spacing: 0.15em; padding: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #cutscene-count { transition: none; }
+}
+
 /* Touch controls: hidden unless a coarse pointer is present. */
 #touch-controls { display: none; }
 .keys-only { display: block; }
