@@ -4,9 +4,8 @@
  * kinematic fallback), phase dispatch, pause, adaptive quality, and the
  * HTML shell screens. All gameplay math lives in the other modules.
  */
-import { Engine, HavokPlugin, Matrix, Scene, Vector3 } from '@babylonjs/core';
-import HavokPhysics from '@babylonjs/havok';
-import { ALT, DOCK, MISSION, displayAltitudeKm, metersToUnits, unitsToMeters } from './config';
+import { Engine, Matrix, Scene, Vector3 } from '@babylonjs/core';
+import { ALT, DOCK, MISSION, PLAYER, displayAltitudeKm, metersToUnits, unitsToMeters } from './config';
 import { Mission, MissionPhase, track } from './state';
 import {
   approachState, canDock, dockingAccuracy, rating, type DockInput,
@@ -19,6 +18,7 @@ import { createWorld } from './world';
 import { createIss } from './iss';
 import { createPlayer } from './player';
 import { createHud } from './hud';
+import { createAudio } from './audio';
 
 // ---------- DOM helpers ----------
 const $ = (id: string): HTMLElement => {
@@ -54,26 +54,17 @@ async function boot(): Promise<void> {
   setProgress(20, 'Engine ready');
 
   const scene = new Scene(engine);
-
-  // Havok is optional: collision is nice-to-have, the loop must run without it.
-  let physicsOn = false;
-  try {
-    const hk = await HavokPhysics();
-    scene.enablePhysics(new Vector3(0, 0, 0), new HavokPlugin(false, hk)); // ponytail: dynamic-import form didn't typecheck against havok 1.3.14; static import per brief's noted fallback (costs tree-shaking only)
-    physicsOn = true;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('Havok unavailable — running kinematic (no collision).', err);
-  }
-  setProgress(40, physicsOn ? 'Physics ready' : 'Physics skipped');
+  // ponytail: Havok dropped — no physics bodies existed, it was a dead ~1.5 MB
+  // WASM download (§A.6 first-playable/memory targets). Collision is handled by
+  // the ISS keep-out check below; add Havok back when rigid bodies are needed.
 
   const mission = new Mission();
   const world = createWorld(scene);
-  setProgress(60, 'World built');
+  setProgress(50, 'World built');
 
-  const issPos = new Vector3(40, ALT.ORBIT_Y + 8, 40);
+  const issPos = new Vector3(40, ALT.ORBIT_Y + 0.8, 40);
   const iss = createIss(scene, issPos);
-  setProgress(75, 'ISS on station');
+  setProgress(65, 'ISS on station');
 
   const startPos = new Vector3(0, ALT.SURFACE_Y + 1, 0);
   const player = createPlayer(scene, startPos);
@@ -82,6 +73,8 @@ async function boot(): Promise<void> {
   scene.activeCamera = player.camera;
   const hud = createHud(scene);
   setProgress(90, 'Systems check');
+  // Audio starts on the START click (user gesture — §D.17 autoplay rules).
+  let audio: ReturnType<typeof createAudio> | null = null;
 
   const input = emptyInput();
   const look = { yaw: 0, pitch: 0 };
@@ -108,6 +101,7 @@ async function boot(): Promise<void> {
     const next = !mission.state.paused;
     mission.setPaused(next);
     show('screen-paused', next);
+    audio?.setPaused(next);
   }
 
   function recenter(): void {
@@ -153,6 +147,7 @@ async function boot(): Promise<void> {
     const accuracy = dockingAccuracy(di);
     const fuelPct = player.fuel;
     const grade = rating(accuracy, fuelPct);
+    audio?.dock();
     mission.setPhase(MissionPhase.Complete);
     track('docking_success', { dockingAccuracy: accuracy, fuelRemaining: Math.round(fuelPct) });
     $('result-title').textContent = 'MISSION COMPLETE';
@@ -190,6 +185,9 @@ async function boot(): Promise<void> {
     player.fuel = 100;
     player.camera.rotation.set(0, 0, 0);
     world.setAscentProgress(0);
+    karmanAnnounced = false;
+    fuelWarned = false;
+    player.thrustLevel = 0;
     show('screen-result', false);
     show('screen-briefing', true);
   }
@@ -198,9 +196,17 @@ async function boot(): Promise<void> {
     show('screen-briefing', false);
     mission.setPhase(MissionPhase.Ascent);
     track('mission_start');
-    hud.setHint('Hold W to thrust — reach orbit!');
+    hud.setHint(isTouch ? 'Hold the joystick to thrust — reach orbit!' : 'Hold W to thrust — reach orbit!');
+    if (!audio) audio = createAudio();
   });
   $('btn-resume').addEventListener('click', togglePause);
+  const sensInput = $('look-sensitivity') as HTMLInputElement;
+  const sensOut = $('sens-out');
+  sensInput.addEventListener('input', () => {
+    const pct = Number(sensInput.value);
+    player.lookSensitivity = PLAYER.lookSensitivity * (pct / 100);
+    sensOut.textContent = `${pct}%`;
+  });
   $('btn-replay').addEventListener('click', restart);
   $('btn-exit').addEventListener('click', () => {
     track('mission_exit');
@@ -216,6 +222,7 @@ async function boot(): Promise<void> {
   window.addEventListener('pagehide', () => {
     track('mission_exit');
     disposers.forEach((d) => d());
+    audio?.dispose();
   });
 
   // ---------- render loop ----------
@@ -238,6 +245,7 @@ async function boot(): Promise<void> {
     const playing = !st.paused && st.phase >= MissionPhase.Ascent && st.phase <= MissionPhase.Docking;
 
     if (playing) {
+      audio?.setThrust(player.thrustLevel);
       mission.update({ missionTimeS: st.missionTimeS + dt });
       mission.update({ oxygen: Math.max(0, st.oxygen - (100 / MISSION.oxygenSeconds) * dt) });
 
@@ -275,6 +283,8 @@ async function boot(): Promise<void> {
         world.rotate(dt);
 
         const di = dockInput();
+        const as = approachState(di);
+        if (as !== 'SAFE') audio?.warn(as);
         // Phase promotion by proximity.
         if (st.phase === MissionPhase.Orbit && di.distanceM < 150) {
           mission.setPhase(MissionPhase.Approach);
@@ -308,7 +318,7 @@ async function boot(): Promise<void> {
             distanceToISSm: di.distanceM,
             alignmentDeg: di.alignmentDeg,
           });
-          hud.update(mission.state, approachState(di), canDock(di));
+          hud.update(mission.state, as, canDock(di));
 
           // Project the ISS marker to screen space.
           const w = engine.getRenderWidth();
@@ -329,6 +339,7 @@ async function boot(): Promise<void> {
         track('thruster_depleted');
       }
     }
+    if (!playing) audio?.setThrust(0); // hiss must not outlive thrust (§D.17)
 
     // Adaptive quality (PRD §D.19): sustained low FPS → step render scale down.
     fpsAccum += dt; fpsSamples += 1;

@@ -22,6 +22,10 @@ export interface PlayerRig {
   velocity: Vector3;
   fuel: number;
   assist: boolean;
+  /** 0..1 thrust magnitude this frame (drives audio). */
+  thrustLevel: number;
+  /** Configurable look sensitivity multiplier base (§E.7), radians per px. */
+  lookSensitivity: number;
   /** Phase 1: climb. Returns true once the orbit threshold is crossed. */
   updateAscent(input: InputState, dt: number): boolean;
   /** Phases 2–3: 6-DOF. */
@@ -31,7 +35,6 @@ export interface PlayerRig {
   dispose(): void;
 }
 
-const LOOK_SENS = PLAYER.lookSensitivity;
 const ROT_SPEED = PLAYER.rollSpeed;
 
 export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
@@ -61,9 +64,12 @@ export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
     velocity: Vector3.Zero(),
     fuel: THRUST.fuelCapacity,
     assist: false,
+    thrustLevel: 0,
+    lookSensitivity: PLAYER.lookSensitivity,
 
     updateAscent(input, dt) {
       const thrust01 = input.forward > 0 ? 1 : 0;
+      rig.thrustLevel = thrust01;
       const step = ascentStep(
         root.position.y, rig.velocity.y, thrust01,
         gravityAt(root.position.y), ASCENT.thrustAccel, ASCENT.maxVy, dt,
@@ -79,8 +85,8 @@ export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
 
     updateOrbit(input, look, dt) {
       // Look: yaw/pitch from mouse or touch drag, roll from Q/E.
-      camera.rotation.y += look.yaw * LOOK_SENS;
-      camera.rotation.x += look.pitch * LOOK_SENS;
+      camera.rotation.y += look.yaw * rig.lookSensitivity;
+      camera.rotation.x += look.pitch * rig.lookSensitivity;
       camera.rotation.x = Math.max(-PLAYER.maxPitch, Math.min(PLAYER.maxPitch, camera.rotation.x));
       camera.rotation.z += -input.roll * ROT_SPEED * dt;
 
@@ -103,6 +109,7 @@ export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
         Math.abs(input.forward) + Math.abs(input.backward)
         + Math.abs(input.left) + Math.abs(input.right)
         + Math.abs(input.up) + Math.abs(input.down));
+      rig.thrustLevel = thrustMag;
       rig.fuel = burnFuel(rig.fuel, thrustMag, THRUST.fuelConsumptionRate, dt);
 
       // Brake (R): counter-thrust toward zero velocity.
@@ -112,6 +119,7 @@ export function createPlayer(scene: Scene, startPos: Vector3): PlayerRig {
           THRUST.brakeAccel, dt,
         );
         rig.velocity.set(braked.x, braked.y, braked.z);
+        rig.thrustLevel = Math.max(rig.thrustLevel, PLAYER.brakeBurnFactor);
         rig.fuel = burnFuel(rig.fuel, PLAYER.brakeBurnFactor, THRUST.fuelConsumptionRate, dt);
       }
 

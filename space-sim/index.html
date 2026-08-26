@@ -38,13 +38,16 @@
       <li>Find the ISS, slow to &lt; 0.5 m/s, align with the port.</li>
       <li>Press <b>Enter</b> (or DOCK) when the HUD says DOCK NOW.</li>
     </ul>
-    <p class="dim">WASD move · Space/Shift up/down · Q/E roll · mouse drag to look · F assist · C recenter · Esc pause</p>
+    <p class="dim keys-only">WASD move · Space/Shift up/down · Q/E roll · mouse drag to look · F assist · C recenter · Esc pause</p>
+    <p class="dim touch-only">Drag the left side of the screen to move, right side to look. Use the on-screen buttons for up/down thrust, brake and dock.</p>
     <button id="btn-start" type="button" class="btn-primary">START MISSION</button>
   </div>
 
   <!-- Paused -->
   <div id="screen-paused" class="screen" hidden>
     <h2 class="title">PAUSED</h2>
+    <label for="look-sensitivity">Look sensitivity: <output id="sens-out" for="look-sensitivity">100%</output></label>
+    <input id="look-sensitivity" type="range" min="25" max="300" value="100" />
     <button id="btn-resume" type="button" class="btn-primary">RESUME</button>
   </div>
 

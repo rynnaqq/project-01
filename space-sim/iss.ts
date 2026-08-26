@@ -16,9 +16,14 @@ export interface IssRig {
   dispose(): void;
 }
 
+/** Rig is authored at unit scale; this shrinks it so meters match §B.10 thresholds
+ * (truss ≈ 90 m, port ring ≈ 1.6 m) under the 1 unit = 100 m world scale (PRD §D.8). */
+const ISS_SCALE = 0.04;
+
 export function createIss(scene: Scene, position: Vector3): IssRig {
   const root = new TransformNode('iss', scene);
   root.position = position;
+  root.scaling.setAll(ISS_SCALE);
 
   const hullMat = new StandardMaterial('issHull', scene);
   hullMat.diffuseColor = new Color3(0.75, 0.75, 0.78);

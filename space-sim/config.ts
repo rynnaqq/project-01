@@ -76,7 +76,7 @@ export const PLAYER = {
   bodyHeight: 1.4,
   /** body sits below the camera so it doesn't block the view */
   bodyOffsetY: -1.2,
-  minZ: 0.1,
+  minZ: 0.05, // near plane must sit inside the 5 m docking threshold at unit scale (0.05 = 5 m)
   maxZ: 2000,
   /** fuel burn factor while braking (counter-thrust) */
   brakeBurnFactor: 0.5,
