@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { Quaternion } from '@babylonjs/core/Maths/math.vector';
+import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { ZeroGController } from './zeroG';
 import type { InputState } from './docking';
+import type { BoxCollider } from './collision';
 
 const idle: InputState = {
   moveX: 0,
@@ -63,5 +64,20 @@ describe('ZeroGController', () => {
       b.update(dt, { ...idle, moveZ });
     }
     expect(a.position.equals(b.position)).toBe(true);
+  });
+
+  it('resolves collisions against box colliders', () => {
+    const z = new ZeroGController({ dragRate: 0 });
+    z.position.set(0, 0, 0);
+    const wall: BoxCollider = {
+      center: new Vector3(0, 0, 1),
+      halfExtents: new Vector3(5, 5, 0.2),
+    };
+    // Move forward into the wall
+    for (let i = 0; i < 20; i++) {
+      z.update(dt, { ...idle, moveZ: 1 }, [wall]);
+    }
+    // Player should be prevented from moving past the wall front boundary
+    expect(z.position.z).toBeLessThan(0.8);
   });
 });

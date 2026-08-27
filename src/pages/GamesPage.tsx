@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioProvider';
 import { filterGames, type GameFilter } from '../lib/gameFilters';
 import {
@@ -52,6 +52,33 @@ export default function GamesPage() {
           Pick a game, then create or join a room to play.
         </p>
       </div>
+
+      {/* Featured 3D Simulation Banner */}
+      <Reveal index={0}>
+        <div className="slab relative overflow-hidden bg-gradient-to-r from-slate-900 via-sky-950 to-indigo-950 p-6 text-white shadow-pop border-[3px] border-arcade-ink">
+          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <span className="inline-block w-fit rounded-full bg-sky-400 px-3 py-0.5 text-xs font-black uppercase text-slate-900 tracking-wider">
+                FEATURED 3D SIMULATION
+              </span>
+              <h2 className="font-display text-xl sm:text-2xl text-white">
+                Space Simulator: Earth to ISS Journey
+              </h2>
+              <p className="text-sm text-sky-200 max-w-xl">
+                Experience dynamic launch countdowns, multi-stage ascent, orbital manual docking alignment, and zero-G Cupola ISS exploration in WebGL 3D!
+              </p>
+            </div>
+            <Magnetic>
+              <Link
+                to="/space-simulator"
+                className="lift inline-flex items-center justify-center gap-2 rounded-full border-[3px] border-white bg-sky-400 px-6 py-2.5 font-bold text-slate-900 shadow-pop transition-colors hover:bg-sky-300 shrink-0"
+              >
+                Launch Mission 🚀
+              </Link>
+            </Magnetic>
+          </div>
+        </div>
+      </Reveal>
 
       <div className="slab flex flex-col gap-4 p-4 shadow-pop sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <FilterGroup

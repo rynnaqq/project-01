@@ -45,6 +45,14 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-4">
             <Magnetic>
               <Link
+                to="/space-simulator"
+                className="lift block rounded-full border-[3px] border-arcade-ink bg-sky-400 px-7 py-3 font-bold text-arcade-ink shadow-pop transition-colors hover:bg-sky-300"
+              >
+                🚀 Space Simulator (3D)
+              </Link>
+            </Magnetic>
+            <Magnetic>
+              <Link
                 to={session ? '/lobby' : '/auth'}
                 className="lift block rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-7 py-3 font-bold text-arcade-ink shadow-pop transition-colors hover:bg-[#ff8ad8]"
               >
