@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Engine } from '@babylonjs/core/Engines/engine';
 import { WebGPUEngine } from '@babylonjs/core/Engines/webgpuEngine';
+import '@babylonjs/core/Engines/WebGPU/Extensions/engine.dynamicTexture';
+import '@babylonjs/core/Engines/Extensions/engine.dynamicTexture';
 import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
