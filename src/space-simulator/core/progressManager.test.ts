@@ -1,65 +1,49 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { ProgressManager, type SimpleStorage } from './progressManager';
-
-class MemoryStorage implements SimpleStorage {
-  private map = new Map<string, string>();
-  getItem(key: string): string | null {
-    return this.map.get(key) ?? null;
-  }
-  setItem(key: string, value: string): void {
-    this.map.set(key, value);
-  }
-  removeItem(key: string): void {
-    this.map.delete(key);
-  }
-  clear(): void {
-    this.map.clear();
-  }
-}
+import { describe, expect, it } from 'vitest';
+import { ProgressManager } from './progressManager';
 
 describe('ProgressManager', () => {
-  let storage: MemoryStorage;
-
-  beforeEach(() => {
-    storage = new MemoryStorage();
-  });
 
   it('starts with default launch progress', () => {
-    const pm = new ProgressManager(storage);
-    const p = pm.get();
+    const pm = new ProgressManager();
+    const p = pm.getProgress();
     expect(p.lastCheckpoint).toBe('CHECKPOINT_LAUNCH');
-    expect(p.dockingCompleted).toBe(false);
-    expect(p.issExplorationCompleted).toBe(false);
+    expect(p.missionCompleted).toBe(false);
+    expect(p.checkpointsUnlocked).toContain('CHECKPOINT_LAUNCH');
   });
 
   it('updates checkpoint and persists completion flags', () => {
-    const pm = new ProgressManager(storage);
-    pm.setCheckpoint('CHECKPOINT_DOCKED');
-    expect(pm.get().lastCheckpoint).toBe('CHECKPOINT_DOCKED');
-    expect(pm.get().dockingCompleted).toBe(true);
+    const pm = new ProgressManager();
+    pm.reachCheckpoint('CHECKPOINT_DOCKING');
+    expect(pm.getProgress().lastCheckpoint).toBe('CHECKPOINT_DOCKING');
+    expect(pm.getProgress().checkpointsUnlocked).toContain('CHECKPOINT_DOCKING');
 
-    pm.setCheckpoint('CHECKPOINT_CUPOLA');
-    expect(pm.get().cupolaViewed).toBe(true);
-    expect(pm.get().issExplorationCompleted).toBe(true);
+    pm.reachCheckpoint('CHECKPOINT_ISS');
+    expect(pm.getProgress().lastCheckpoint).toBe('CHECKPOINT_ISS');
+    expect(pm.getProgress().checkpointsUnlocked).toContain('CHECKPOINT_ISS');
+    expect(pm.getProgress().missionCompleted).toBe(true);
 
-    const pm2 = new ProgressManager(storage);
-    expect(pm2.get().cupolaViewed).toBe(true);
-    expect(pm2.get().dockingCompleted).toBe(true);
+    const pm2 = new ProgressManager();
+    expect(pm2.getProgress().checkpointsUnlocked).toContain('CHECKPOINT_ISS');
+    expect(pm2.getProgress().missionCompleted).toBe(true);
   });
 
   it('resets progress cleanly', () => {
-    const pm = new ProgressManager(storage);
-    pm.setCheckpoint('CHECKPOINT_DOCKED');
-    pm.reset();
-    expect(pm.get().dockingCompleted).toBe(false);
-    expect(pm.get().lastCheckpoint).toBe('CHECKPOINT_LAUNCH');
+    const pm = new ProgressManager();
+    pm.reachCheckpoint('CHECKPOINT_DOCKING');
+    pm.resetProgress();
+    expect(pm.getProgress().checkpointsUnlocked).toEqual(['CHECKPOINT_LAUNCH']);
+    expect(pm.getProgress().lastCheckpoint).toBe('CHECKPOINT_LAUNCH');
+    expect(pm.getProgress().missionCompleted).toBe(false);
   });
 
-  it('accumulates flight time', () => {
-    const pm = new ProgressManager(storage);
-    pm.addFlightTime(15);
-    expect(pm.get().flightTimeSec).toBe(15);
-    pm.addFlightTime(30);
-    expect(pm.get().flightTimeSec).toBe(45);
+  it('records docking score', () => {
+    const pm = new ProgressManager();
+    pm.recordDockingScore(45.5, 12.3);
+    expect(pm.getProgress().dockingBestTimeS).toBe(45.5);
+    expect(pm.getProgress().dockingBestFuel).toBe(12.3);
+
+    pm.recordDockingScore(38.2, 15.0);
+    expect(pm.getProgress().dockingBestTimeS).toBe(38.2); // better time
+    expect(pm.getProgress().dockingBestFuel).toBe(12.3); // keep best fuel
   });
 });

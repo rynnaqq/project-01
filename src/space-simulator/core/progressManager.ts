@@ -1,98 +1,99 @@
-export type CheckpointId =
+export type CheckpointId = 
   | 'CHECKPOINT_LAUNCH'
+  | 'CHECKPOINT_ASCENT'
   | 'CHECKPOINT_ORBIT'
-  | 'CHECKPOINT_DOCKED'
-  | 'CHECKPOINT_ISS'
-  | 'CHECKPOINT_CUPOLA';
+  | 'CHECKPOINT_DOCKING'
+  | 'CHECKPOINT_ISS';
 
 export interface MissionProgress {
-  lastCheckpoint: CheckpointId;
-  dockingCompleted: boolean;
-  issExplorationCompleted: boolean;
-  cupolaViewed: boolean;
-  flightTimeSec: number;
+  lastCheckpoint: CheckpointId | null;
+  checkpointsUnlocked: CheckpointId[];
+  dockingBestTimeS: number | null;
+  dockingBestFuel: number | null;
+  missionCompleted: boolean;
 }
 
-export interface SimpleStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem?(key: string): void;
-  clear?(): void;
-}
-
-const STORAGE_KEY = 'space_sim_mission_progress_v1';
-
-const DEFAULT_PROGRESS: MissionProgress = {
-  lastCheckpoint: 'CHECKPOINT_LAUNCH',
-  dockingCompleted: false,
-  issExplorationCompleted: false,
-  cupolaViewed: false,
-  flightTimeSec: 0,
-};
+const STORAGE_KEY = 'space_simulator_progress_v2';
 
 export class ProgressManager {
   private progress: MissionProgress;
-  private readonly storage: SimpleStorage | null;
+  private onProgressUpdate?: (progress: MissionProgress) => void;
 
-  constructor(storage?: SimpleStorage) {
-    if (storage) {
-      this.storage = storage;
-    } else if (typeof window !== 'undefined' && window.localStorage) {
-      this.storage = window.localStorage;
-    } else {
-      this.storage = null;
-    }
-    this.progress = this.load();
+  constructor(onProgressUpdate?: (progress: MissionProgress) => void) {
+    this.onProgressUpdate = onProgressUpdate;
+    this.progress = this.loadProgress();
   }
 
-  load(): MissionProgress {
+  private loadProgress(): MissionProgress {
     try {
-      if (!this.storage) {
-        return { ...DEFAULT_PROGRESS };
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (data) {
+        return JSON.parse(data);
       }
-      const raw = this.storage.getItem(STORAGE_KEY);
-      if (!raw) return { ...DEFAULT_PROGRESS };
-      return { ...DEFAULT_PROGRESS, ...JSON.parse(raw) };
-    } catch {
-      return { ...DEFAULT_PROGRESS };
+    } catch (e) {
+      console.warn('Failed to load mission progress', e);
     }
+    
+    // Default initial progress
+    return {
+      lastCheckpoint: 'CHECKPOINT_LAUNCH',
+      checkpointsUnlocked: ['CHECKPOINT_LAUNCH'],
+      dockingBestTimeS: null,
+      dockingBestFuel: null,
+      missionCompleted: false,
+    };
   }
 
-  save(): void {
+  private saveProgress(): void {
     try {
-      if (this.storage) {
-        this.storage.setItem(STORAGE_KEY, JSON.stringify(this.progress));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.progress));
+      if (this.onProgressUpdate) {
+        this.onProgressUpdate({ ...this.progress });
       }
-    } catch {
-      // ignore storage errors
+    } catch (e) {
+      console.warn('Failed to save mission progress', e);
     }
   }
 
-  get(): Readonly<MissionProgress> {
-    return this.progress;
+  public getProgress(): MissionProgress {
+    return { ...this.progress };
   }
 
-  setCheckpoint(checkpoint: CheckpointId): void {
-    this.progress.lastCheckpoint = checkpoint;
-    if (checkpoint === 'CHECKPOINT_DOCKED') {
-      this.progress.dockingCompleted = true;
-    } else if (checkpoint === 'CHECKPOINT_ISS' || checkpoint === 'CHECKPOINT_CUPOLA') {
-      this.progress.dockingCompleted = true;
-      this.progress.issExplorationCompleted = true;
-      if (checkpoint === 'CHECKPOINT_CUPOLA') {
-        this.progress.cupolaViewed = true;
-      }
+  public reachCheckpoint(id: CheckpointId): void {
+    this.progress.lastCheckpoint = id;
+    if (!this.progress.checkpointsUnlocked.includes(id)) {
+      this.progress.checkpointsUnlocked.push(id);
     }
-    this.save();
+    // Completing ISS exploration marks the mission complete
+    if (id === 'CHECKPOINT_ISS') {
+      this.progress.missionCompleted = true;
+    }
+    this.saveProgress();
   }
 
-  addFlightTime(dtSec: number): void {
-    this.progress.flightTimeSec += dtSec;
-    this.save();
+  public completeMission(): void {
+    this.progress.missionCompleted = true;
+    this.saveProgress();
   }
 
-  reset(): void {
-    this.progress = { ...DEFAULT_PROGRESS };
-    this.save();
+  public recordDockingScore(timeS: number, fuelUsed: number): void {
+    if (this.progress.dockingBestTimeS === null || timeS < this.progress.dockingBestTimeS) {
+      this.progress.dockingBestTimeS = timeS;
+    }
+    if (this.progress.dockingBestFuel === null || fuelUsed < this.progress.dockingBestFuel) {
+      this.progress.dockingBestFuel = fuelUsed;
+    }
+    this.saveProgress();
+  }
+
+  public resetProgress(): void {
+    this.progress = {
+      lastCheckpoint: 'CHECKPOINT_LAUNCH',
+      checkpointsUnlocked: ['CHECKPOINT_LAUNCH'],
+      dockingBestTimeS: null,
+      dockingBestFuel: null,
+      missionCompleted: false,
+    };
+    this.saveProgress();
   }
 }

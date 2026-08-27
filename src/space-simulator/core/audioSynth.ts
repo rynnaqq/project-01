@@ -148,10 +148,30 @@ export class AudioSynthesizer {
 
     this.captionCallback?.('[AUDIO] Main Engine Ignition Sequence Start...');
 
-    setTimeout(() => {
-      this.mixer.setVoiceActive(false);
-      this.updateGains();
-    }, 2500);
+    // Ducking stays on until the ignition tail finishes — schedule the
+    // duck release against the AudioContext clock instead of setTimeout to
+    // keep it in lockstep with the rendered audio.
+    const endT = this.ctx.currentTime + 2.5;
+    const revert = () => {
+      if (this.mixer.isVoiceActive()) {
+        this.mixer.setVoiceActive(false);
+        this.updateGains();
+      }
+    };
+    // Schedule via a silent source that fires exactly at endT.
+    const releaseOsc = this.ctx.createOscillator();
+    const releaseGain = this.ctx.createGain();
+    releaseGain.gain.setValueAtTime(0.0001, endT);
+    releaseOsc.connect(releaseGain);
+    releaseGain.connect(this.ctx.destination);
+    releaseOsc.start(endT);
+    releaseOsc.onended = () => {
+      revert();
+      releaseOsc.disconnect();
+    };
+    // Fallback in case onended isn't supported.
+    const endMs = (endT - this.ctx.currentTime) * 1000;
+    window.setTimeout(revert, endMs);
   }
 
   startEngineRumble(): void {

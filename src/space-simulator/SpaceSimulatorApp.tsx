@@ -48,7 +48,7 @@ export default function SpaceSimulatorApp() {
   const [cupolaActive, setCupolaActive] = useState(false);
 
   const progressMgrRef = useRef(new ProgressManager());
-  const [progress, setProgress] = useState(progressMgrRef.current.get());
+  const [progress, setProgress] = useState(progressMgrRef.current.getProgress());
 
   // Callbacks passed to 3D engine loop
   const engineActionsRef = useRef<{
@@ -175,8 +175,8 @@ export default function SpaceSimulatorApp() {
           if (!canTransition(fsm, 'START_MISSION')) return;
           syncFsm(transition(fsm, 'START_MISSION'));
           disposeAllScenes();
-          progressMgrRef.current.setCheckpoint('CHECKPOINT_LAUNCH');
-          setProgress(progressMgrRef.current.get());
+          progressMgrRef.current.reachCheckpoint('CHECKPOINT_LAUNCH');
+          setProgress(progressMgrRef.current.getProgress());
 
           launchPad = buildLaunchPadScene(scene);
           particles.createLaunchPadEffects(launchPad.rocketRoot);
@@ -245,8 +245,8 @@ export default function SpaceSimulatorApp() {
           disposeAllScenes();
           synth.stopEngineRumble();
           synth.startSpaceAmbience();
-          progressMgrRef.current.setCheckpoint('CHECKPOINT_ORBIT');
-          setProgress(progressMgrRef.current.get());
+          progressMgrRef.current.reachCheckpoint('CHECKPOINT_ORBIT');
+          setProgress(progressMgrRef.current.getProgress());
 
           orbitScene = buildOrbitScene(scene);
           camera.position.set(22, 10, -55);
@@ -279,8 +279,8 @@ export default function SpaceSimulatorApp() {
           disposeAllScenes();
           synth.stopSpaceAmbience();
           synth.startInteriorAmbience();
-          progressMgrRef.current.setCheckpoint('CHECKPOINT_DOCKED');
-          setProgress(progressMgrRef.current.get());
+          progressMgrRef.current.reachCheckpoint('CHECKPOINT_ISS');
+          setProgress(progressMgrRef.current.getProgress());
 
           issInterior = buildISSInteriorScene(scene);
           zeroGCtrl = new ZeroGController();
@@ -300,8 +300,8 @@ export default function SpaceSimulatorApp() {
           syncFsm(transition(fsm, 'OBJECTIVES_COMPLETE'));
           synth.stopInteriorAmbience();
           synth.playRadioChime();
-          progressMgrRef.current.setCheckpoint('CHECKPOINT_CUPOLA');
-          setProgress(progressMgrRef.current.get());
+          progressMgrRef.current.reachCheckpoint('CHECKPOINT_ISS');
+          setProgress(progressMgrRef.current.getProgress());
 
           hud.hideAction();
           hud.hideInteractPrompt();
@@ -331,7 +331,7 @@ export default function SpaceSimulatorApp() {
           eng.setHardwareScalingLevel(1 / quality.renderScale);
           const dt = Math.min(eng.getDeltaTime() / 1000, 0.05);
 
-          progressMgrRef.current.addFlightTime(dt);
+          progressMgrRef.current
           cameraDirector.update(dt, camera);
 
           if (orbitScene) {
@@ -523,7 +523,7 @@ export default function SpaceSimulatorApp() {
           },
           resumeCheckpoint: (cp: CheckpointId) => {
             if (cp === 'CHECKPOINT_ORBIT') enterOrbitApproach();
-            else if (cp === 'CHECKPOINT_DOCKED' || cp === 'CHECKPOINT_ISS' || cp === 'CHECKPOINT_CUPOLA') enterISSInterior();
+            else if (cp === 'CHECKPOINT_ISS') enterISSInterior();
             else enterLaunchPad();
           },
           skipAscent,
@@ -633,9 +633,10 @@ export default function SpaceSimulatorApp() {
         progress={progress}
         cupolaActive={cupolaActive}
         onStartMission={() => engineActionsRef.current?.startMission()}
-        onResumeCheckpoint={() =>
-          engineActionsRef.current?.resumeCheckpoint(progress.lastCheckpoint)
-        }
+        onResumeCheckpoint={() => {
+          const cp = progress.lastCheckpoint;
+          if (cp) engineActionsRef.current?.resumeCheckpoint(cp);
+        }}
         onSetQualityTier={(tier) => engineActionsRef.current?.setQualityTier(tier)}
         onToggleReducedMotion={() =>
           engineActionsRef.current?.setReducedMotion(!reducedMotion)

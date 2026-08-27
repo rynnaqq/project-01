@@ -32,6 +32,10 @@ export class AudioMixer {
     this.voiceActive = active;
   }
 
+  isVoiceActive(): boolean {
+    return this.voiceActive;
+  }
+
   getGains(): BusGains {
     if (!this.voiceActive) {
       return { ...this.baseGains };
