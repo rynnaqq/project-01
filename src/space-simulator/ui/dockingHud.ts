@@ -12,9 +12,11 @@ import {
 
 export class DockingHUD {
   private readonly texture: AdvancedDynamicTexture;
+  private readonly title: TextBlock;
   private readonly readout: TextBlock;
   private readonly status: TextBlock;
   private readonly message: TextBlock;
+  private readonly countdown: TextBlock;
   private readonly actionButton: Button;
 
   constructor(scene: Scene) {
@@ -24,16 +26,16 @@ export class DockingHUD {
       scene,
     );
 
-    const title = new TextBlock('dock-title');
-    title.text = 'ISS DOCKING';
-    title.color = 'white';
-    title.fontSize = 22;
-    title.fontFamily = 'monospace';
-    title.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    title.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    title.paddingRight = '28px';
-    title.paddingTop = '48px';
-    this.texture.addControl(title);
+    this.title = new TextBlock('dock-title');
+    this.title.text = 'SPACE SIMULATOR';
+    this.title.color = 'white';
+    this.title.fontSize = 22;
+    this.title.fontFamily = 'monospace';
+    this.title.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    this.title.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    this.title.paddingRight = '28px';
+    this.title.paddingTop = '48px';
+    this.texture.addControl(this.title);
 
     this.readout = new TextBlock('dock-readout');
     this.readout.color = '#cbd5e1';
@@ -55,9 +57,17 @@ export class DockingHUD {
     this.status.paddingTop = '240px';
     this.texture.addControl(this.status);
 
+    this.countdown = new TextBlock('center-countdown');
+    this.countdown.color = '#38bdf8';
+    this.countdown.fontSize = 72;
+    this.countdown.fontFamily = 'monospace';
+    this.countdown.resizeToFit = true;
+    this.countdown.isVisible = false;
+    this.texture.addControl(this.countdown);
+
     this.message = new TextBlock('center-message');
     this.message.color = 'white';
-    this.message.fontSize = 26;
+    this.message.fontSize = 24;
     this.message.fontFamily = 'monospace';
     this.message.textWrapping = true;
     this.message.resizeToFit = true;
@@ -68,7 +78,7 @@ export class DockingHUD {
       'action-button',
       '',
     );
-    this.actionButton.width = '260px';
+    this.actionButton.width = '280px';
     this.actionButton.height = '56px';
     this.actionButton.cornerRadius = 8;
     this.actionButton.color = 'white';
@@ -78,6 +88,28 @@ export class DockingHUD {
     this.actionButton.paddingBottom = '64px';
     this.actionButton.isVisible = false;
     this.texture.addControl(this.actionButton);
+  }
+
+  setTitle(title: string): void {
+    this.title.text = title;
+  }
+
+  setReadout(text: string): void {
+    this.readout.text = text;
+  }
+
+  setStatus(text: string, color = '#cbd5e1'): void {
+    this.status.text = text;
+    this.status.color = color;
+  }
+
+  showCountdown(value: string | number): void {
+    this.countdown.text = String(value);
+    this.countdown.isVisible = true;
+  }
+
+  hideCountdown(): void {
+    this.countdown.isVisible = false;
   }
 
   onAction(label: string, handler: () => void): void {
@@ -103,6 +135,7 @@ export class DockingHUD {
   }
 
   update(s: DockingState): void {
+    this.title.text = 'ISS DOCKING';
     const deg = (v: number) =>
       `${v >= 0 ? '+' : ''}${v.toFixed(1)}°`;
     this.readout.text =
