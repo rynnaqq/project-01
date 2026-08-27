@@ -169,18 +169,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Rail Rush — standalone 3D game */}
-      <section className="flex flex-col gap-6">
-        <Reveal>
+      {/* Rail Rush & Space Simulator — standalone 3D games */}
+      <section className="grid gap-6 sm:grid-cols-2">
+        <Reveal index={0}>
           <a
             href="/rail-rush/"
             target="_blank"
             rel="noopener noreferrer"
-            className="slab lift group relative flex flex-col items-start gap-5 overflow-hidden bg-arcade-peri p-8 shadow-pop sm:flex-row sm:items-center sm:justify-between sm:p-10"
+            className="slab lift group relative flex h-full flex-col items-start gap-5 overflow-hidden bg-arcade-peri p-8 shadow-pop"
           >
             <TriShape className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rotate-12 text-white/15" />
             <Squiggle className="pointer-events-none absolute bottom-3 right-8 hidden h-6 w-24 text-white/25 sm:block" />
-            <div className="relative">
+            <div className="relative flex-1">
               <p className="sticker bg-arcade-sun px-3 py-0.5 text-[10px] text-arcade-ink">
                 3D · runs in your browser
               </p>
@@ -192,8 +192,33 @@ export default function HomePage() {
                 power-ups, and outrun the schedule.
               </p>
             </div>
-            <span className="lift relative inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-6 py-3 font-bold text-arcade-ink shadow-pop transition-colors group-hover:bg-[#ff8ad8]">
+            <span className="lift relative mt-auto inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-6 py-3 font-bold text-arcade-ink shadow-pop transition-colors group-hover:bg-[#ff8ad8]">
               Play now
+              <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" aria-hidden />
+            </span>
+          </a>
+        </Reveal>
+        
+        <Reveal index={1}>
+          <a
+            href="/space-simulator"
+            className="slab lift group relative flex h-full flex-col items-start gap-5 overflow-hidden bg-arcade-ink p-8 shadow-pop"
+          >
+            <Sparkle className="pointer-events-none absolute -right-2 -top-2 h-20 w-20 text-white/15 animate-spin-slow" />
+            <DotCluster className="pointer-events-none absolute bottom-5 right-6 hidden h-12 w-12 text-white/20 sm:block" />
+            <div className="relative flex-1">
+              <p className="sticker bg-arcade-pop px-3 py-0.5 text-[10px] text-arcade-ink">
+                3D · Babylon.js
+              </p>
+              <h2 className="mt-3 font-display text-xl uppercase tracking-wide text-white sm:text-2xl">
+                Space Simulator
+              </h2>
+              <p className="mt-1 max-w-md text-sm font-medium text-gray-300">
+                Earth to ISS Journey. Launch, manage orbital trajectory, and manually dock your capsule in zero gravity.
+              </p>
+            </div>
+            <span className="lift relative mt-auto inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-sea px-6 py-3 font-bold text-arcade-ink shadow-pop transition-colors group-hover:bg-[#40e0d0]">
+              Commence launch
               <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" aria-hidden />
             </span>
           </a>
