@@ -54,10 +54,12 @@ export class AscentScene {
     this.earthEnv = buildEarthEnvironment(scene);
     this.rocket = buildRocket(scene);
 
-    // Particle exhaust
+    // Particle exhaust & supersonic shock diamonds
     this.particles = new ParticleManager(scene);
     this.flamePS = this.particles.createEngineFlame(this.rocket.exhaustPoint);
     this.flamePS.start();
+    const machPS = this.particles.createMachDiamonds(this.rocket.exhaustPoint);
+    machPS.start();
 
     // Camera Rigs
     this.groundCam = this.cameraDirector.createAscentGroundCamera();

@@ -71,15 +71,16 @@ export class CameraDirector {
   createLaunchCamera(): ArcRotateCamera {
     const cam = new ArcRotateCamera(
       'launch-arc-cam',
-      Math.PI / 4,
-      Math.PI / 2.5,
-      65,
-      new Vector3(0, 24, 0),
+      Math.PI / 3.8,
+      Math.PI / 2.6,
+      72,
+      new Vector3(0, 26, 0),
       this.scene
     );
     cam.lowerRadiusLimit = 15;
-    cam.upperRadiusLimit = 120;
+    cam.upperRadiusLimit = 180;
     cam.wheelDeltaPercentage = 0.01;
+    cam.fov = 0.85;
     return cam;
   }
 
@@ -87,26 +88,29 @@ export class CameraDirector {
   createAscentGroundCamera(): UniversalCamera {
     const cam = new UniversalCamera(
       'ascent-ground-cam',
-      new Vector3(-40, 5, -80),
+      new Vector3(-60, 6, -95),
       this.scene
     );
+    cam.fov = 0.85;
     cam.setTarget(new Vector3(0, 25, 0));
     return cam;
   }
 
-  /** Create Booster Onboard Camera */
+  /** Create Booster Onboard Camera (Looking down along booster at engines and Earth) */
   createBoosterCamera(boosterNode: TransformNode): UniversalCamera {
-    const cam = new UniversalCamera('booster-pov-cam', new Vector3(2.2, 22, 2.2), this.scene);
+    const cam = new UniversalCamera('booster-pov-cam', new Vector3(2.1, 10.0, 0), this.scene);
     cam.parent = boosterNode;
-    cam.setTarget(new Vector3(0, -10, 0)); // Look down toward Earth
+    cam.fov = 1.1; // Wide action cam
+    cam.setTarget(new Vector3(1.2, -18.0, 0)); // Downward along booster hull toward engines
     return cam;
   }
 
-  /** Create Cockpit Helmet POV Camera */
+  /** Create Cockpit Helmet POV Camera (Inside Dragon capsule facing out windshield) */
   createCockpitCamera(capsuleNode: TransformNode): UniversalCamera {
-    const cam = new UniversalCamera('cockpit-pov-cam', new Vector3(0, 47, 0.5), this.scene);
+    const cam = new UniversalCamera('cockpit-pov-cam', new Vector3(0, 0.4, 0.65), this.scene);
     cam.parent = capsuleNode;
-    cam.setTarget(new Vector3(0, 48, 8)); // Forward through windshield
+    cam.fov = 1.0;
+    cam.setTarget(new Vector3(0, 1.2, 6.0)); // Forward and upward through capsule windshield
     return cam;
   }
 
@@ -115,15 +119,17 @@ export class CameraDirector {
     const cam = new UniversalCamera('iss-zero-g-cam', new Vector3(0, 0, -10), this.scene);
     cam.minZ = 0.1;
     cam.maxZ = 3000;
+    cam.fov = 0.95;
     cam.setTarget(new Vector3(0, 0, 10));
     return cam;
   }
 
   /** Create Orbital & Docking View Camera */
   createDockingCamera(): UniversalCamera {
-    const cam = new UniversalCamera('docking-cam', new Vector3(0, 0, -45), this.scene);
+    const cam = new UniversalCamera('docking-cam', new Vector3(0, 1.2, -4.5), this.scene);
     cam.minZ = 0.1;
     cam.maxZ = 5000;
+    cam.fov = 0.9;
     cam.setTarget(new Vector3(0, -1.8, 10.5)); // Look at ISS docking port
     return cam;
   }

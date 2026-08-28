@@ -100,12 +100,15 @@ export class LaunchPadScene {
     if (this.isIgnited) return;
     this.isIgnited = true;
 
-    // Start engine fire particles
+    // Start engine fire & supersonic Mach diamond particles
     this.flamePS = this.particles.createEngineFlame(this.rocket.exhaustPoint);
     this.flamePS.start();
 
+    const machPS = this.particles.createMachDiamonds(this.rocket.exhaustPoint);
+    machPS.start();
+
     // Start launch smoke
-    const smokePS = this.particles.createLaunchSmoke(this.rocket.exhaustPoint.position);
+    const smokePS = this.particles.createLaunchSmoke(this.rocket.exhaustPoint);
     smokePS.start();
 
     // Audio & Camera Shake

@@ -267,7 +267,7 @@ export function buildRocket(scene: Scene): RocketModel {
 }
 
 // ==========================================
-// 2. HIGH-DETAIL LAUNCH PAD & SERVICE TOWER
+// 2. KENNEDY SPACE CENTER LC-39A LAUNCH COMPLEX
 // ==========================================
 export function buildLaunchPad(scene: Scene): LaunchPadModel {
   const root = new TransformNode('launch-pad-root', scene);
@@ -294,110 +294,250 @@ export function buildLaunchPad(scene: Scene): LaunchPadModel {
   yellowCraneMat.metallic = 0.6;
   yellowCraneMat.roughness = 0.35;
 
+  const whiteTankMat = new PBRMaterial('pad-white-cryo-tank', scene);
+  whiteTankMat.albedoColor = new Color3(0.92, 0.94, 0.96);
+  whiteTankMat.metallic = 0.4;
+  whiteTankMat.roughness = 0.28;
+
+  const floodlightMat = new PBRMaterial('pad-floodlight-emissive', scene);
+  floodlightMat.emissiveColor = new Color3(1.0, 0.98, 0.9);
+  floodlightMat.albedoColor = new Color3(1, 1, 1);
+
+  const waterMat = new PBRMaterial('cape-ocean-water-mat', scene);
+  waterMat.albedoColor = new Color3(0.08, 0.25, 0.42);
+  waterMat.metallic = 0.1;
+  waterMat.roughness = 0.08;
+
   // ----------------------------------------------------
-  // Heavy Concrete Launch Platform & Blast Trench
+  // 1. Heavy Concrete Launch Mount & Flame Trench
   // ----------------------------------------------------
-  const platform = MeshBuilder.CreateBox('launch-platform', { width: 44, depth: 44, height: 4.5 }, scene);
-  platform.position.y = 2.25;
+  const platform = MeshBuilder.CreateBox('launch-platform', { width: 48, depth: 48, height: 4.8 }, scene);
+  platform.position.y = 2.4;
   platform.material = concreteMat;
   platform.parent = root;
 
-  // Deep Flame Blast Trench
-  const trench = MeshBuilder.CreateBox('blast-trench', { width: 14, depth: 48, height: 6 }, scene);
+  // Dual Angled Flame Deflector Trench
+  const trench = MeshBuilder.CreateBox('blast-trench', { width: 15, depth: 52, height: 6.5 }, scene);
   trench.position.set(0, 1.8, 0);
   trench.material = darkSteelMat;
   trench.parent = root;
 
-  // Water Deluge Sound Suppression Manifolds (4 large industrial pipes)
-  for (const dx of [-6.5, 6.5]) {
-    const waterPipe = MeshBuilder.CreateCylinder(`water-pipe-${dx}`, { height: 38, diameter: 0.9, tessellation: 20 }, scene);
+  // Flame Deflector Wedge in Trench Center
+  const deflectorWedge = MeshBuilder.CreateCylinder('flame-deflector-wedge', { height: 14, diameterTop: 0.2, diameterBottom: 8, tessellation: 4 }, scene);
+  deflectorWedge.rotation.z = Math.PI / 2;
+  deflectorWedge.position.set(0, 0.5, 0);
+  deflectorWedge.material = darkSteelMat;
+  deflectorWedge.parent = root;
+
+  // Water Deluge Sound Suppression Manifolds (4 industrial feed pipes)
+  for (const dx of [-7.0, 7.0]) {
+    const waterPipe = MeshBuilder.CreateCylinder(`water-pipe-${dx}`, { height: 44, diameter: 1.1, tessellation: 24 }, scene);
     waterPipe.rotation.x = Math.PI / 2;
-    waterPipe.position.set(dx, 4.8, 0);
+    waterPipe.position.set(dx, 5.0, 0);
     waterPipe.material = steelMat;
     waterPipe.parent = root;
   }
 
   // ----------------------------------------------------
-  // 4x Hydraulic Hold-Down Clamps with Release Latches
+  // 2. 4x Hydraulic Hold-Down Clamps with Release Latches
   // ----------------------------------------------------
   for (let i = 0; i < 4; i++) {
     const angle = (i * Math.PI) / 2 + Math.PI / 4;
     const clampRoot = new TransformNode(`clamp-assembly-${i}`, scene);
-    clampRoot.position.set(Math.cos(angle) * 3.4, 4.5, Math.sin(angle) * 3.4);
+    clampRoot.position.set(Math.cos(angle) * 3.5, 4.8, Math.sin(angle) * 3.5);
     clampRoot.rotation.y = angle;
     clampRoot.parent = root;
 
-    // Main Clamp Body
-    const clampPillar = MeshBuilder.CreateBox(`clamp-pillar-${i}`, { width: 1.6, depth: 1.8, height: 4.2 }, scene);
-    clampPillar.position.y = 1.5;
+    const clampPillar = MeshBuilder.CreateBox(`clamp-pillar-${i}`, { width: 1.8, depth: 2.0, height: 4.5 }, scene);
+    clampPillar.position.y = 1.6;
     clampPillar.material = darkSteelMat;
     clampPillar.parent = clampRoot;
 
-    // Articulated Hold-Down Claw
-    const claw = MeshBuilder.CreateBox(`clamp-claw-${i}`, { width: 0.9, depth: 1.2, height: 1.0 }, scene);
-    claw.position.set(0, 3.4, -0.6);
+    const claw = MeshBuilder.CreateBox(`clamp-claw-${i}`, { width: 1.0, depth: 1.4, height: 1.1 }, scene);
+    claw.position.set(0, 3.6, -0.7);
     claw.material = yellowCraneMat;
     claw.parent = clampRoot;
   }
 
   // ----------------------------------------------------
-  // 3D Lattice Umbilical Service Tower (Height 68m)
+  // 3. 3D Lattice Umbilical Service Tower (Height 72m)
   // ----------------------------------------------------
-  const tower = MeshBuilder.CreateBox('umbilical-tower', { width: 6.2, depth: 6.2, height: 68 }, scene);
-  tower.position.set(-10.5, 36, 0);
+  const tower = MeshBuilder.CreateBox('umbilical-tower', { width: 6.8, depth: 6.8, height: 72 }, scene);
+  tower.position.set(-11.5, 38, 0);
   tower.material = steelMat;
   tower.parent = root;
 
   // Internal Cross-Lattice Framework Bracing on Tower
-  for (let ty = 6; ty <= 60; ty += 9) {
-    const walkway = MeshBuilder.CreateBox(`tower-walkway-${ty}`, { width: 7.2, depth: 7.2, height: 0.4 }, scene);
-    walkway.position.set(0, ty - 34, 0);
+  for (let ty = 8; ty <= 64; ty += 8) {
+    const walkway = MeshBuilder.CreateBox(`tower-walkway-${ty}`, { width: 8.0, depth: 8.0, height: 0.4 }, scene);
+    walkway.position.set(0, ty - 36, 0);
     walkway.material = darkSteelMat;
     walkway.parent = tower;
 
-    // Diagonal Cross Brace Rods
-    const brace1 = MeshBuilder.CreateCylinder(`brace-1-${ty}`, { height: 10.5, diameter: 0.15, tessellation: 12 }, scene);
+    const brace1 = MeshBuilder.CreateCylinder(`brace-1-${ty}`, { height: 11.2, diameter: 0.16, tessellation: 12 }, scene);
     brace1.rotation.z = Math.PI / 4;
-    brace1.position.set(0, ty - 34 + 4.5, 3.1);
+    brace1.position.set(0, ty - 36 + 4.0, 3.4);
     brace1.material = steelMat;
     brace1.parent = tower;
   }
 
   // Cryogenic Propellant Pipe Line Runs (LOX & RP-1 conduits running up tower)
-  const loxPipe = MeshBuilder.CreateCylinder('lox-cryo-pipe', { height: 64, diameter: 0.55, tessellation: 16 }, scene);
-  loxPipe.position.set(2.8, 0, -2.8);
-  loxPipe.material = steelMat;
+  const loxPipe = MeshBuilder.CreateCylinder('lox-cryo-pipe', { height: 68, diameter: 0.6, tessellation: 16 }, scene);
+  loxPipe.position.set(3.1, 0, -3.1);
+  loxPipe.material = whiteTankMat;
   loxPipe.parent = tower;
 
   // Lightning Protection Mast on top of tower
-  const lightningRod = MeshBuilder.CreateCylinder('lightning-rod', { height: 14, diameterTop: 0.05, diameterBottom: 0.6, tessellation: 16 }, scene);
-  lightningRod.position.set(0, 41, 0);
+  const lightningRod = MeshBuilder.CreateCylinder('lightning-rod', { height: 16, diameterTop: 0.05, diameterBottom: 0.65, tessellation: 16 }, scene);
+  lightningRod.position.set(0, 44, 0);
   lightningRod.material = steelMat;
   lightningRod.parent = tower;
 
   // ----------------------------------------------------
-  // Articulated Crew Access Arm & White Room
+  // 4. Articulated Crew Access Arm & White Room
   // ----------------------------------------------------
   const armPivot = new TransformNode('crew-arm-pivot', scene);
-  armPivot.position.set(-10.5, 52, 0);
+  armPivot.position.set(-11.5, 53, 0);
   armPivot.parent = root;
 
-  const serviceArm = MeshBuilder.CreateBox('service-arm', { width: 10.5, depth: 2.8, height: 3.2 }, scene);
-  serviceArm.position.set(5.25, 0, 0);
+  const serviceArm = MeshBuilder.CreateBox('service-arm', { width: 11.5, depth: 3.0, height: 3.4 }, scene);
+  serviceArm.position.set(5.75, 0, 0);
   serviceArm.material = steelMat;
   serviceArm.parent = armPivot;
 
-  // Enclosed White Room at arm end
-  const whiteRoom = MeshBuilder.CreateBox('white-room', { width: 3.8, depth: 3.4, height: 3.6 }, scene);
-  whiteRoom.position.set(4.8, 0, 0);
+  const whiteRoom = MeshBuilder.CreateBox('white-room', { width: 4.2, depth: 3.6, height: 3.8 }, scene);
+  whiteRoom.position.set(5.2, 0, 0);
   whiteRoom.material = yellowCraneMat;
   whiteRoom.parent = serviceArm;
 
-  // Wide ground terrain
-  const terrain = MeshBuilder.CreateGround('ground-terrain', { width: 600, height: 600, subdivisions: 6 }, scene);
+  // ----------------------------------------------------
+  // 5. KSC Sound Suppression Water Deluge Tower (45m)
+  // ----------------------------------------------------
+  const waterTowerRoot = new TransformNode('ksc-water-tower', scene);
+  waterTowerRoot.position.set(38, 0, -38);
+  waterTowerRoot.parent = root;
+
+  // 4 Steel Pylon Legs
+  for (let l = 0; l < 4; l++) {
+    const lAngle = (l * Math.PI) / 2 + Math.PI / 4;
+    const leg = MeshBuilder.CreateCylinder(`wt-leg-${l}`, { height: 38, diameter: 0.8, tessellation: 16 }, scene);
+    leg.position.set(Math.cos(lAngle) * 5.5, 19, Math.sin(lAngle) * 5.5);
+    leg.material = steelMat;
+    leg.parent = waterTowerRoot;
+  }
+
+  // Elevated Cylindrical Water Reservoir Tank
+  const waterTank = MeshBuilder.CreateCylinder('wt-tank', { height: 12, diameter: 11, tessellation: 32 }, scene);
+  waterTank.position.set(0, 44, 0);
+  waterTank.material = whiteTankMat;
+  waterTank.parent = waterTowerRoot;
+
+  const tankRoof = MeshBuilder.CreateCylinder('wt-roof', { height: 3.5, diameterTop: 0.5, diameterBottom: 11.5, tessellation: 32 }, scene);
+  tankRoof.position.set(0, 51.5, 0);
+  tankRoof.material = darkSteelMat;
+  tankRoof.parent = waterTowerRoot;
+
+  // High-Flow Deluge Water Supply Pipe leading to Pad
+  const delugePipe = MeshBuilder.CreateCylinder('wt-deluge-supply-pipe', { height: 48, diameter: 1.4, tessellation: 20 }, scene);
+  delugePipe.rotation.z = Math.PI / 2.3;
+  delugePipe.position.set(-18, 18, 18);
+  delugePipe.material = steelMat;
+  delugePipe.parent = waterTowerRoot;
+
+  // ----------------------------------------------------
+  // 6. 4x KSC Lightning Protection Towers (75m Pylons)
+  // ----------------------------------------------------
+  const pylonPositions = [
+    [-45, -45],
+    [45, -45],
+    [-45, 45],
+    [45, 45],
+  ];
+
+  for (let p = 0; p < pylonPositions.length; p++) {
+    const [px, pz] = pylonPositions[p];
+    const pylon = MeshBuilder.CreateCylinder(`lightning-pylon-${p}`, { height: 75, diameterTop: 0.6, diameterBottom: 4.5, tessellation: 16 }, scene);
+    pylon.position.set(px, 37.5, pz);
+    pylon.material = steelMat;
+    pylon.parent = root;
+
+    const pylonMast = MeshBuilder.CreateCylinder(`lightning-pylon-mast-${p}`, { height: 15, diameterTop: 0.05, diameterBottom: 0.5, tessellation: 12 }, scene);
+    pylonMast.position.set(px, 82.5, pz);
+    pylonMast.material = whiteTankMat;
+    pylonMast.parent = root;
+  }
+
+  // ----------------------------------------------------
+  // 7. Cryogenic Propellant Storage Farm (LOX & Methane Spheres)
+  // ----------------------------------------------------
+  const loxSphere = MeshBuilder.CreateSphere('lox-cryo-sphere', { diameter: 14, segments: 24 }, scene);
+  loxSphere.position.set(-42, 7.5, 25);
+  loxSphere.material = whiteTankMat;
+  loxSphere.parent = root;
+
+  const methaneSphere = MeshBuilder.CreateSphere('methane-cryo-sphere', { diameter: 12, segments: 24 }, scene);
+  methaneSphere.position.set(-42, 6.5, 42);
+  methaneSphere.material = whiteTankMat;
+  methaneSphere.parent = root;
+
+  // Cryo Pipe Bridge Rack connecting fuel farm to pad
+  const pipeBridge = MeshBuilder.CreateBox('cryo-pipe-bridge', { width: 32, depth: 2.2, height: 1.2 }, scene);
+  pipeBridge.position.set(-26, 4.0, 25);
+  pipeBridge.material = steelMat;
+  pipeBridge.parent = root;
+
+  // ----------------------------------------------------
+  // 8. Transporter-Erector Rail Tracks
+  // ----------------------------------------------------
+  for (const trackX of [-4.5, 4.5]) {
+    const rail = MeshBuilder.CreateBox(`te-rail-${trackX}`, { width: 0.4, depth: 95, height: 0.35 }, scene);
+    rail.position.set(trackX, 4.95, -25);
+    rail.material = steelMat;
+    rail.parent = root;
+  }
+
+  // ----------------------------------------------------
+  // 9. High-Intensity Stadium Floodlight Banks (4x Pylons)
+  // ----------------------------------------------------
+  const floodlightOffsets = [
+    [-24, 22, -28],
+    [24, 22, -28],
+    [-24, 22, 28],
+    [24, 22, 28],
+  ];
+
+  for (let f = 0; f < floodlightOffsets.length; f++) {
+    const [fx, fy, fz] = floodlightOffsets[f];
+    const pole = MeshBuilder.CreateCylinder(`flood-pole-${f}`, { height: fy, diameter: 0.5, tessellation: 12 }, scene);
+    pole.position.set(fx, fy / 2, fz);
+    pole.material = steelMat;
+    pole.parent = root;
+
+    const bank = MeshBuilder.CreateBox(`flood-bank-${f}`, { width: 3.2, height: 1.8, depth: 0.6 }, scene);
+    bank.position.set(fx, fy, fz);
+    bank.material = darkSteelMat;
+    bank.parent = root;
+
+    const bulbFace = MeshBuilder.CreatePlane(`flood-bulbs-${f}`, { width: 2.8, height: 1.4 }, scene);
+    bulbFace.position.set(fx, fy, fz + (fz < 0 ? 0.35 : -0.35));
+    bulbFace.rotation.y = fz < 0 ? 0 : Math.PI;
+    bulbFace.material = floodlightMat;
+    bulbFace.parent = root;
+  }
+
+  // ----------------------------------------------------
+  // 10. Cape Canaveral Terrain & Atlantic Coast Horizon
+  // ----------------------------------------------------
+  const terrain = MeshBuilder.CreateGround('ground-terrain', { width: 800, height: 800, subdivisions: 8 }, scene);
   terrain.position.y = 0;
   terrain.material = concreteMat;
   terrain.parent = root;
+
+  // Atlantic Coast Ocean Blue Water Plane bordering Cape Canaveral
+  const ocean = MeshBuilder.CreateGround('cape-ocean-horizon', { width: 1200, height: 600, subdivisions: 4 }, scene);
+  ocean.position.set(0, -0.2, 700);
+  ocean.material = waterMat;
+  ocean.parent = root;
 
   return { root, tower, platform, serviceArm };
 }
