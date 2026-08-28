@@ -35,6 +35,7 @@ export class OrbitDockingScene {
   private isDockingLocked = false;
   private hasAnnouncedMid = false;
   private hasAnnouncedSoft = false;
+  private hasTriggeredSuccess = false;
   private lockTimer = 0;
 
   constructor(
@@ -137,8 +138,9 @@ export class OrbitDockingScene {
   }
 
   skip(): void {
-    if (this.isDockingLocked) return;
+    if (this.hasTriggeredSuccess) return;
     this.isDockingLocked = true;
+    this.hasTriggeredSuccess = true;
     this.audio.playDockingLatch();
     this.onDockingSuccess();
   }
@@ -146,7 +148,9 @@ export class OrbitDockingScene {
   update(dt: number): void {
     if (this.isDockingLocked) {
       this.lockTimer += dt;
-      if (this.lockTimer > 1.8) {
+      this.cameraDirector.update();
+      if (this.lockTimer > 1.2 && !this.hasTriggeredSuccess) {
+        this.hasTriggeredSuccess = true;
         this.onDockingSuccess();
       }
       return;

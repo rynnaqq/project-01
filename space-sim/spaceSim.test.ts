@@ -64,6 +64,20 @@ describe('Space Simulator — State Machine', () => {
     expect(gsm.state).toBe('DOCKING');
   });
 
+  it('allows automated docking direct transition from ORBIT to ISS_EXPLORATION', () => {
+    gsm.transition('LAUNCH_PAD');
+    gsm.transition('ASCENT');
+    gsm.transition('ORBIT');
+    expect(gsm.transition('ISS_EXPLORATION')).toBe(true);
+    expect(gsm.state).toBe('ISS_EXPLORATION');
+  });
+
+  it('allows replay from MISSION_COMPLETE to LAUNCH_PAD', () => {
+    gsm.transition('MISSION_COMPLETE');
+    expect(gsm.transition('LAUNCH_PAD')).toBe(true);
+    expect(gsm.state).toBe('LAUNCH_PAD');
+  });
+
   it('throws on illegal transitions', () => {
     gsm.transition('LAUNCH_PAD');
     expect(() => gsm.transition('ISS_EXPLORATION')).toThrow(/Illegal transition/);
