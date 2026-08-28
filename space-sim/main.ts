@@ -107,6 +107,8 @@ class SpaceSimulatorApp {
         this.launchScene.skipToAscent();
       } else if (this.gsm.state === 'ASCENT' && this.ascentScene) {
         this.ascentScene.skip();
+      } else if ((this.gsm.state === 'ORBIT' || this.gsm.state === 'DOCKING') && this.dockingScene) {
+        this.dockingScene.skip();
       }
     };
 
@@ -233,7 +235,7 @@ class SpaceSimulatorApp {
     } else if (this.ascentScene) {
       this.ascentScene.update(dt);
     } else if (this.dockingScene) {
-      this.dockingScene.update(dt, this.input.state);
+      this.dockingScene.update(dt);
     } else if (this.issScene) {
       this.issScene.update(dt, this.input.state);
     }

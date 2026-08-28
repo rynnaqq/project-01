@@ -103,8 +103,11 @@ export class HUDManager {
       <!-- Docking 6-DOF HUD -->
       <div id="hud-docking" class="hud-layer hidden pointer-events-none">
         <div class="hud-top-bar pointer-events-auto">
-          <div class="mission-title">ISS APPROACH & DOCKING</div>
-          <div id="dock-status-badge" class="dock-badge correcting">CORRECTING</div>
+          <div class="mission-title">AUTOMATED DOCKING SEQUENCE</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div id="dock-status-badge" class="dock-badge correcting">CORRECTING</div>
+            <button id="btn-docking-skip" class="btn-hud-sm">SKIP ⏩</button>
+          </div>
         </div>
 
         <!-- Center Crosshair & Alignment Ring -->
@@ -122,7 +125,7 @@ export class HUDManager {
           <div class="tele-row"><span>REL SPEED</span><b id="dock-speed">0.60 m/s</b></div>
           <div class="tele-row"><span>YAW / PITCH</span><b id="dock-angles">-6.0° / +4.5°</b></div>
           <div class="dock-instructions">
-            <b>CONTROLS:</b> [W/S] Fwd/Bck &bull; [A/D] Strafe &bull; [Q/E] Up/Down &bull; [Ctrl] Brake &bull; Mouse Look
+            <b>AUTONOMOUS GUIDANCE:</b> Flight computer is aligning and dampening relative velocity for soft capture.
           </div>
         </div>
       </div>
@@ -229,6 +232,10 @@ export class HUDManager {
     });
 
     document.getElementById('btn-ascent-skip')?.addEventListener('click', () => {
+      this.onSkipCutscene?.();
+    });
+
+    document.getElementById('btn-docking-skip')?.addEventListener('click', () => {
       this.onSkipCutscene?.();
     });
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { NullEngine, Scene } from '@babylonjs/core';
 import { GameStateMachine, type GameState } from './core/state';
 import { Countdown } from './core/countdown';
 import { sampleAscent, maxQ, ASCENT_DURATION_S } from './gameplay/trajectory';
@@ -16,6 +17,13 @@ import {
   type Store,
 } from './core/progress';
 import { detectTier, getProfile, PROFILES } from './core/quality';
+import {
+  buildRocket,
+  buildLaunchPad,
+  buildEarthEnvironment,
+  buildISS,
+  buildISSInterior,
+} from './rendering/proceduralModels';
 
 describe('Space Simulator — State Machine', () => {
   let gsm: GameStateMachine;
@@ -364,3 +372,114 @@ describe('Space Simulator — Progress & Quality', () => {
     expect(detectTier()).toBeDefined();
   });
 });
+
+describe('Space Simulator — Procedural 3D Models & Assets', () => {
+  let engine: NullEngine;
+  let scene: Scene;
+
+  beforeEach(() => {
+    if (typeof OffscreenCanvas === 'undefined') {
+      class MockCanvas {
+        width: number;
+        height: number;
+        constructor(w = 512, h = 512) {
+          this.width = w;
+          this.height = h;
+        }
+        getContext() {
+          return {
+            createRadialGradient: () => ({ addColorStop: () => {} }),
+            createLinearGradient: () => ({ addColorStop: () => {} }),
+            fillRect: () => {},
+            beginPath: () => {},
+            moveTo: () => {},
+            lineTo: () => {},
+            arc: () => {},
+            fill: () => {},
+            stroke: () => {},
+            closePath: () => {},
+            clearRect: () => {},
+            strokeRect: () => {},
+            fillText: () => {},
+            measureText: () => ({ width: 10 }),
+            set strokeStyle(_v: any) {},
+            set fillStyle(_v: any) {},
+            set lineWidth(_v: any) {},
+            set font(_v: any) {},
+          };
+        }
+      }
+      (globalThis as any).OffscreenCanvas = MockCanvas;
+      (globalThis as any).HTMLCanvasElement = MockCanvas;
+      if (typeof document !== 'undefined') {
+        const origCreate = document.createElement.bind(document);
+        document.createElement = ((tag: string, options?: any) => {
+          if (tag.toLowerCase() === 'canvas') return new MockCanvas() as any;
+          return origCreate(tag, options);
+        }) as any;
+      }
+    }
+
+    engine = new NullEngine();
+    scene = new Scene(engine);
+  });
+
+  it('builds ultra high-fidelity multi-stage rocket with all stages and exhaust point', () => {
+    const rocket = buildRocket(scene);
+    expect(rocket.root).toBeDefined();
+    expect(rocket.stage1).toBeDefined();
+    expect(rocket.stage2).toBeDefined();
+    expect(rocket.capsule).toBeDefined();
+    expect(rocket.exhaustPoint).toBeDefined();
+    expect(rocket.stage1.parent).toBe(rocket.root);
+    expect(rocket.stage2.parent).toBe(rocket.root);
+    expect(rocket.capsule.parent).toBe(rocket.root);
+  });
+
+  it('builds high-detail launch pad and umbilical tower assembly', () => {
+    const pad = buildLaunchPad(scene);
+    expect(pad.root).toBeDefined();
+    expect(pad.tower).toBeDefined();
+    expect(pad.platform).toBeDefined();
+    expect(pad.serviceArm).toBeDefined();
+    expect(pad.tower.parent).toBe(pad.root);
+    expect(pad.platform.parent).toBe(pad.root);
+  });
+
+  it('builds photorealistic Earth, dynamic clouds, atmosphere, and starfield', () => {
+    const env = buildEarthEnvironment(scene);
+    expect(env.root).toBeDefined();
+    expect(env.earth).toBeDefined();
+    expect(env.atmosphere).toBeDefined();
+    expect(env.starfield).toBeDefined();
+    expect(env.earth.parent).toBe(env.root);
+    expect(env.atmosphere.parent).toBe(env.root);
+    expect(env.starfield.parent).toBe(env.root);
+  });
+
+  it('builds modular photorealistic ISS exterior with solar panels, modules, and docking port', () => {
+    const iss = buildISS(scene);
+    expect(iss.root).toBeDefined();
+    expect(iss.truss).toBeDefined();
+    expect(iss.solarPanels.length).toBeGreaterThanOrEqual(8);
+    expect(iss.modules).toBeDefined();
+    expect(iss.cupola).toBeDefined();
+    expect(iss.dockingPort).toBeDefined();
+    expect(iss.dockingPort.parent).toBe(iss.root);
+  });
+
+  it('builds immersive ISS interior with hull, colliders, and interactive stations', () => {
+    const interior = buildISSInterior(scene);
+    expect(interior.root).toBeDefined();
+    expect(interior.hull).toBeDefined();
+    expect(interior.colliders.length).toBeGreaterThan(0);
+    expect(interior.interactables.length).toBe(3);
+    expect(interior.cupolaTarget).toBeDefined();
+
+    const ids = interior.interactables.map((i) => i.id);
+    expect(ids).toContain('life-support-console');
+    expect(ids).toContain('science-glovebox');
+    expect(ids).toContain('cupola-earth-view');
+  });
+});
+
