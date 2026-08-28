@@ -45,14 +45,6 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-4">
             <Magnetic>
               <Link
-                to="/space-simulator"
-                className="lift block rounded-full border-[3px] border-arcade-ink bg-sky-400 px-7 py-3 font-bold text-arcade-ink shadow-pop transition-colors hover:bg-sky-300"
-              >
-                🚀 Space Simulator (3D)
-              </Link>
-            </Magnetic>
-            <Magnetic>
-              <Link
                 to={session ? '/lobby' : '/auth'}
                 className="lift block rounded-full border-[3px] border-arcade-ink bg-arcade-accent px-7 py-3 font-bold text-arcade-ink shadow-pop transition-colors hover:bg-[#ff8ad8]"
               >
@@ -206,33 +198,34 @@ export default function HomePage() {
             </span>
           </a>
         </Reveal>
-        
+
         <Reveal index={1}>
           <a
-            href="/space-simulator"
+            href="/space-sim/"
+            target="_blank"
+            rel="noopener noreferrer"
             className="slab lift group relative flex h-full flex-col items-start gap-5 overflow-hidden bg-arcade-ink p-8 shadow-pop"
           >
-            <Sparkle className="pointer-events-none absolute -right-2 -top-2 h-20 w-20 text-white/15 animate-spin-slow" />
-            <DotCluster className="pointer-events-none absolute bottom-5 right-6 hidden h-12 w-12 text-white/20 sm:block" />
+            <Sparkle className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rotate-12 text-arcade-neon/20" />
+            <DotCluster className="pointer-events-none absolute bottom-3 right-8 hidden h-6 w-24 text-arcade-accent/20 sm:block" />
             <div className="relative flex-1">
-              <p className="sticker bg-arcade-pop px-3 py-0.5 text-[10px] text-arcade-ink">
-                3D · Babylon.js
+              <p className="sticker bg-arcade-neon px-3 py-0.5 text-[10px] text-arcade-ink">
+                3D · WebGPU / WebGL2
               </p>
               <h2 className="mt-3 font-display text-xl uppercase tracking-wide text-white sm:text-2xl">
                 Space Simulator
               </h2>
-              <p className="mt-1 max-w-md text-sm font-medium text-gray-300">
-                Earth to ISS Journey. Launch, manage orbital trajectory, and manually dock your capsule in zero gravity.
+              <p className="mt-1 max-w-md text-sm font-medium text-stone-300">
+                Earth to ISS Journey. Launch a rocket, navigate orbit, dock with the space station, and explore zero-G in first person.
               </p>
             </div>
-            <span className="lift relative mt-auto inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-sea px-6 py-3 font-bold text-arcade-ink shadow-pop transition-colors group-hover:bg-[#40e0d0]">
-              Commence launch
+            <span className="lift relative mt-auto inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-neon px-6 py-3 font-bold text-arcade-ink shadow-pop transition-colors group-hover:bg-[#34d399]">
+              Launch Mission
               <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" aria-hidden />
             </span>
           </a>
         </Reveal>
       </section>
-
       {/* How it works */}
       <section className="flex flex-col gap-6">
         <h2 className="font-display text-xl uppercase tracking-wide sm:text-2xl">How it works</h2>

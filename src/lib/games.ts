@@ -1,7 +1,7 @@
 /** Central mini-game catalog and taxonomy (shared by the hub and engine). */
 
 export type GameMode = 'Solo' | '1v1' | 'Party';
-export type GameCategory = 'Puzzle' | 'Speed' | 'Trivia';
+export type GameCategory = 'Puzzle' | 'Speed' | 'Trivia' | 'Simulation';
 
 export type GameDefinition = {
   key: string;
@@ -50,6 +50,20 @@ export const GAMES: GameDefinition[] = [
       'Accuracy matters. Mistakes slow you down.',
     ],
   },
+  {
+    key: 'space-simulator',
+    title: 'Space Simulator',
+    tagline: 'Journey from Earth to the ISS in this interactive 3D experience.',
+    category: 'Simulation',
+    modes: ['Solo'],
+    mechanics: [
+      'Launch sequence with Web Audio-synthesized mission control.',
+      'Cinematic rocket ascent through atmosphere.',
+      '6-axis docking minigame with real alignment scoring.',
+      'Zero-G ISS interior exploration with flashlight and Cupola view.',
+      'Mobile-friendly virtual joysticks on touch devices.',
+    ],
+  },
 ];
 
 /** Look up a game definition by key. */
@@ -58,4 +72,4 @@ export function getGame(key: string): GameDefinition | undefined {
 }
 
 export const ALL_MODES: GameMode[] = ['Solo', '1v1', 'Party'];
-export const ALL_CATEGORIES: GameCategory[] = ['Puzzle', 'Speed', 'Trivia'];
+export const ALL_CATEGORIES: GameCategory[] = ['Puzzle', 'Speed', 'Trivia', 'Simulation'];

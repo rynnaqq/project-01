@@ -17,6 +17,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "rail-rush"],
+  "include": ["src", "rail-rush", "space-sim"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
