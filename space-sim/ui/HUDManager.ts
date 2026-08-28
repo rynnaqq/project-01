@@ -30,6 +30,7 @@ export class HUDManager {
   onInitiateLaunch?: () => void;
   onSkipCutscene?: () => void;
   onRetryDocking?: () => void;
+  onCycleCamera?: () => void;
   onToggleFlashlight?: () => void;
   onQualityChange?: (tier: QualityTier) => void;
   onVolumeChange?: (bus: string, vol: number) => void;
@@ -78,17 +79,20 @@ export class HUDManager {
         </div>
 
         <div class="launch-center-box pointer-events-auto">
-          <div class="countdown-label">COUNTDOWN TO LIFTOFF</div>
-          <div id="lbl-countdown-val" class="countdown-timer">T-10</div>
-          <button id="btn-initiate-launch" class="btn btn-launch">🔥 INITIATE LAUNCH</button>
+          <div class="countdown-display" id="lbl-countdown">T-10</div>
+          <div class="sub-status" id="lbl-launch-sub">STANDBY FOR AUTO SEQUENCE</div>
+          <button id="btn-initiate-launch" class="btn btn-launch">🔥 IGNITION & LIFTOFF</button>
         </div>
       </div>
 
-      <!-- Ascent Telemetry HUD -->
+      <!-- Ascent HUD -->
       <div id="hud-ascent" class="hud-layer hidden pointer-events-none">
         <div class="hud-top-bar pointer-events-auto">
           <div class="mission-title">ASCENT TRAJECTORY</div>
-          <button id="btn-ascent-skip" class="btn-hud-sm">SKIP ⏩</button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="btn-ascent-camera" class="btn-hud-sm">🎥 CAM [C]</button>
+            <button id="btn-ascent-skip" class="btn-hud-sm">SKIP ⏩</button>
+          </div>
         </div>
 
         <div class="telemetry-panel">
@@ -229,6 +233,10 @@ export class HUDManager {
 
     document.getElementById('btn-launch-skip')?.addEventListener('click', () => {
       this.onSkipCutscene?.();
+    });
+
+    document.getElementById('btn-ascent-camera')?.addEventListener('click', () => {
+      this.onCycleCamera?.();
     });
 
     document.getElementById('btn-ascent-skip')?.addEventListener('click', () => {

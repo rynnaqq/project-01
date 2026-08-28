@@ -96,6 +96,16 @@ export function buildRocket(scene: Scene): RocketModel {
   engineNozzleMat.metallic = 0.98;
   engineNozzleMat.roughness = 0.15;
 
+  const engineThroatMat = new PBRMaterial('rocket-throat-emissive', scene);
+  engineThroatMat.emissiveColor = new Color3(1.0, 0.65, 0.12);
+  engineThroatMat.albedoColor = new Color3(1.0, 0.8, 0.2);
+
+  const windowGlassMat = new PBRMaterial('capsule-window-glass', scene);
+  windowGlassMat.albedoColor = new Color3(0.05, 0.15, 0.28);
+  windowGlassMat.metallic = 0.9;
+  windowGlassMat.roughness = 0.05;
+  windowGlassMat.emissiveColor = new Color3(0.1, 0.35, 0.55);
+
   const heatShieldMat = new PBRMaterial('rocket-heatshield-mat', scene);
   heatShieldMat.albedoColor = new Color3(0.05, 0.05, 0.06);
   heatShieldMat.metallic = 0.2;
@@ -166,11 +176,16 @@ export function buildRocket(scene: Scene): RocketModel {
   exhaustPoint.position.y = 0;
   exhaustPoint.parent = root;
 
-  // Center Merlin Engine Nozzle
+  // Center Merlin Engine Nozzle & Glowing Heat Throat
   const centerEngine = MeshBuilder.CreateCylinder('nozzle-center', { height: 1.8, diameterTop: 0.7, diameterBottom: 1.5, tessellation: 28 }, scene);
   centerEngine.position.y = 0.9;
   centerEngine.material = engineNozzleMat;
   centerEngine.parent = stage1;
+
+  const centerThroat = MeshBuilder.CreateCylinder('throat-center', { height: 0.3, diameter: 0.65, tessellation: 20 }, scene);
+  centerThroat.position.y = 0.2;
+  centerThroat.material = engineThroatMat;
+  centerThroat.parent = centerEngine;
 
   // 8 Perimeter Octaweb Engines
   for (let i = 0; i < 8; i++) {
@@ -179,6 +194,11 @@ export function buildRocket(scene: Scene): RocketModel {
     eng.position.set(Math.cos(angle) * 1.15, 0.75, Math.sin(angle) * 1.15);
     eng.material = engineNozzleMat;
     eng.parent = stage1;
+
+    const throat = MeshBuilder.CreateCylinder(`throat-ring-${i}`, { height: 0.25, diameter: 0.5, tessellation: 16 }, scene);
+    throat.position.y = 0.15;
+    throat.material = engineThroatMat;
+    throat.parent = eng;
 
     // Turbopump exhaust manifold pipe
     const manifold = MeshBuilder.CreateCylinder(`manifold-${i}`, { height: 0.8, diameter: 0.12, tessellation: 12 }, scene);
@@ -195,6 +215,15 @@ export function buildRocket(scene: Scene): RocketModel {
   interstage.material = carbonMat;
   interstage.parent = root;
 
+  // 4 Pneumatic Staging Pusher Rods
+  for (let p = 0; p < 4; p++) {
+    const pAngle = (p * Math.PI) / 2;
+    const pusher = MeshBuilder.CreateCylinder(`pusher-rod-${p}`, { height: 2.2, diameter: 0.15, tessellation: 12 }, scene);
+    pusher.position.set(Math.cos(pAngle) * 1.4, 30.0, Math.sin(pAngle) * 1.4);
+    pusher.material = titaniumMat;
+    pusher.parent = root;
+  }
+
   // ----------------------------------------------------
   // Stage 2 (Upper Stage & Vacuum Engine)
   // ----------------------------------------------------
@@ -203,11 +232,16 @@ export function buildRocket(scene: Scene): RocketModel {
   stage2.material = whiteFuselageMat;
   stage2.parent = root;
 
-  // Large Vacuum Engine Nozzle (Expansion ratio bell)
+  // Large Vacuum Engine Nozzle (Expansion ratio bell with stiffening rings)
   const vacNozzle = MeshBuilder.CreateCylinder('nozzle-vac', { height: 2.8, diameterTop: 0.9, diameterBottom: 2.4, tessellation: 32 }, scene);
   vacNozzle.position.y = -6.2;
   vacNozzle.material = engineNozzleMat;
   vacNozzle.parent = stage2;
+
+  const vacThroat = MeshBuilder.CreateCylinder('throat-vac', { height: 0.4, diameter: 0.85, tessellation: 20 }, scene);
+  vacThroat.position.y = -5.0;
+  vacThroat.material = engineThroatMat;
+  vacThroat.parent = stage2;
 
   // 4x Cold-gas RCS thruster pods on Stage 2
   for (let i = 0; i < 4; i++) {
@@ -247,6 +281,21 @@ export function buildRocket(scene: Scene): RocketModel {
   capsule.material = whiteFuselageMat;
   capsule.parent = root;
 
+  // Forward & Side Windows on Capsule
+  const forwardWindow = MeshBuilder.CreatePlane('capsule-window-fwd', { width: 0.85, height: 0.55 }, scene);
+  forwardWindow.position.set(0, 0.4, 1.25);
+  forwardWindow.rotation.x = Math.PI / 4;
+  forwardWindow.material = windowGlassMat;
+  forwardWindow.parent = capsule;
+
+  for (const sAngle of [-Math.PI / 3, Math.PI / 3]) {
+    const sideWindow = MeshBuilder.CreatePlane(`capsule-window-side-${sAngle}`, { width: 0.5, height: 0.45 }, scene);
+    sideWindow.position.set(Math.sin(sAngle) * 1.3, 0.3, Math.cos(sAngle) * 1.1);
+    sideWindow.rotation.y = sAngle;
+    sideWindow.material = windowGlassMat;
+    sideWindow.parent = capsule;
+  }
+
   // SuperDraco Emergency Abort Thruster Pods (4 embedded in capsule hull)
   for (let i = 0; i < 4; i++) {
     const angle = (i * Math.PI) / 2 + Math.PI / 4;
@@ -257,7 +306,7 @@ export function buildRocket(scene: Scene): RocketModel {
     pod.parent = capsule;
   }
 
-  // Nosecone Docking Hatch Cap
+  // Nosecone Docking Hatch Cap & Optical Target Cross
   const noseCap = MeshBuilder.CreateSphere('capsule-nose-cap', { diameter: 0.82, segments: 24 }, scene);
   noseCap.position.y = 2.1;
   noseCap.material = titaniumMat;

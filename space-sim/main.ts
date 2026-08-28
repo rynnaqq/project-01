@@ -112,6 +112,20 @@ class SpaceSimulatorApp {
       }
     };
 
+    this.hud.onCycleCamera = () => {
+      if (this.ascentScene) {
+        this.ascentScene.cycleCamera();
+      }
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyC') {
+        if (this.ascentScene) {
+          this.ascentScene.cycleCamera();
+        }
+      }
+    });
+
     this.hud.onQualityChange = (tier) => {
       this.tier = tier;
     };

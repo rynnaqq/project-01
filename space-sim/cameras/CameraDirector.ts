@@ -1,6 +1,6 @@
 /**
- * Cinematic Camera Director & Shake System (PRD §4.3, §4.4, §6).
- * Handles shot orchestration, smooth transitions, and deterministic camera shakes.
+ * Cinematic Camera Director & Multi-Angle Rigs (PRD §4.3, §4.4, §6).
+ * Handles shot orchestration, smooth tracking transitions, and deterministic camera shakes.
  */
 
 import {
@@ -11,6 +11,15 @@ import {
   Vector3,
   TransformNode,
 } from '@babylonjs/core';
+
+export type CameraViewMode =
+  | 'GROUND_TRACKING'
+  | 'GANTRY_TOWER'
+  | 'CINEMATIC_CHASE'
+  | 'BOOSTER_ACTION'
+  | 'COCKPIT_HELMET'
+  | 'STAGE_SEPARATION'
+  | 'ORBITAL_HORIZON';
 
 export class CameraDirector {
   private shakeAmplitude = 0;
@@ -67,54 +76,93 @@ export class CameraDirector {
     this.shakeAmplitude *= this.shakeDecay;
   }
 
-  /** Create Launch Pad Arc Rotate Camera */
+  /** 1. Launch Pad Interactive Orbital Camera */
   createLaunchCamera(): ArcRotateCamera {
     const cam = new ArcRotateCamera(
       'launch-arc-cam',
       Math.PI / 3.8,
       Math.PI / 2.6,
-      72,
+      74,
       new Vector3(0, 26, 0),
       this.scene
     );
     cam.lowerRadiusLimit = 15;
-    cam.upperRadiusLimit = 180;
+    cam.upperRadiusLimit = 220;
     cam.wheelDeltaPercentage = 0.01;
     cam.fov = 0.85;
     return cam;
   }
 
-  /** Create Ascent Tracking Camera */
+  /** 2. Umbilical Tower High-Angle Gantry Camera */
+  createGantryTowerCamera(): UniversalCamera {
+    const cam = new UniversalCamera(
+      'gantry-tower-cam',
+      new Vector3(-12, 54, 3.5),
+      this.scene
+    );
+    cam.fov = 1.05;
+    cam.setTarget(new Vector3(0, 48, 0)); // Look right at Dragon capsule hatch
+    return cam;
+  }
+
+  /** 3. Telephoto Ground Tracking Camera */
   createAscentGroundCamera(): UniversalCamera {
     const cam = new UniversalCamera(
       'ascent-ground-cam',
-      new Vector3(-60, 6, -95),
+      new Vector3(-68, 6, -115),
       this.scene
     );
-    cam.fov = 0.85;
+    cam.fov = 0.82;
     cam.setTarget(new Vector3(0, 25, 0));
     return cam;
   }
 
-  /** Create Booster Onboard Camera (Looking down along booster at engines and Earth) */
-  createBoosterCamera(boosterNode: TransformNode): UniversalCamera {
-    const cam = new UniversalCamera('booster-pov-cam', new Vector3(2.1, 10.0, 0), this.scene);
-    cam.parent = boosterNode;
-    cam.fov = 1.1; // Wide action cam
-    cam.setTarget(new Vector3(1.2, -18.0, 0)); // Downward along booster hull toward engines
-    return cam;
-  }
-
-  /** Create Cockpit Helmet POV Camera (Inside Dragon capsule facing out windshield) */
-  createCockpitCamera(capsuleNode: TransformNode): UniversalCamera {
-    const cam = new UniversalCamera('cockpit-pov-cam', new Vector3(0, 0.4, 0.65), this.scene);
-    cam.parent = capsuleNode;
+  /** 4. Dramatic 45-Degree Low-Angle Cinematic Chase Cam */
+  createCinematicChaseCamera(rocketRoot: TransformNode): UniversalCamera {
+    const cam = new UniversalCamera('cinematic-chase-cam', new Vector3(-24, -12, -32), this.scene);
+    cam.parent = rocketRoot;
     cam.fov = 1.0;
-    cam.setTarget(new Vector3(0, 1.2, 6.0)); // Forward and upward through capsule windshield
+    cam.setTarget(new Vector3(0, 28, 0)); // Low angle looking up at rising rocket
     return cam;
   }
 
-  /** Create First-Person Zero-G Camera for ISS Interior */
+  /** 5. Booster Grid Fin / Octaweb Downward Action Cam */
+  createBoosterCamera(boosterNode: TransformNode): UniversalCamera {
+    const cam = new UniversalCamera('booster-pov-cam', new Vector3(2.15, 10.5, 0), this.scene);
+    cam.parent = boosterNode;
+    cam.fov = 1.15; // Extreme wide action lens
+    cam.setTarget(new Vector3(1.1, -18.0, 0)); // Downward along booster hull toward flaming Octaweb
+    return cam;
+  }
+
+  /** 6. Pressurized Dragon Capsule Cockpit Helmet POV */
+  createCockpitCamera(capsuleNode: TransformNode): UniversalCamera {
+    const cam = new UniversalCamera('cockpit-pov-cam', new Vector3(0, 0.45, 0.7), this.scene);
+    cam.parent = capsuleNode;
+    cam.fov = 0.98;
+    cam.setTarget(new Vector3(0, 1.4, 6.5)); // Forward & upward through windshield toward space
+    return cam;
+  }
+
+  /** 7. Interstage Separation & Vacuum Ignition Cam */
+  createStageSeparationCamera(rocketRoot: TransformNode): UniversalCamera {
+    const cam = new UniversalCamera('separation-cam', new Vector3(-18, 38, -26), this.scene);
+    cam.parent = rocketRoot;
+    cam.fov = 0.95;
+    cam.setTarget(new Vector3(0, 36, 0)); // Focus on interstage pusher mechanism
+    return cam;
+  }
+
+  /** 8. Wide Orbit Silhouette & Earth Horizon Cam */
+  createOrbitalHorizonCamera(rocketRoot: TransformNode): UniversalCamera {
+    const cam = new UniversalCamera('orbital-horizon-cam', new Vector3(45, 15, -60), this.scene);
+    cam.parent = rocketRoot;
+    cam.fov = 0.88;
+    cam.setTarget(new Vector3(0, 30, 0)); // Wide scenic shot with glowing Earth in backdrop
+    return cam;
+  }
+
+  /** 9. First-Person Zero-G Camera for ISS Interior */
   createISSInteriorCamera(): UniversalCamera {
     const cam = new UniversalCamera('iss-zero-g-cam', new Vector3(0, 0, -10), this.scene);
     cam.minZ = 0.1;
@@ -124,7 +172,7 @@ export class CameraDirector {
     return cam;
   }
 
-  /** Create Orbital & Docking View Camera */
+  /** 10. Orbital & Docking View Camera */
   createDockingCamera(): UniversalCamera {
     const cam = new UniversalCamera('docking-cam', new Vector3(0, 1.2, -4.5), this.scene);
     cam.minZ = 0.1;

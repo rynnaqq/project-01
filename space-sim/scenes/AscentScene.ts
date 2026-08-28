@@ -1,6 +1,6 @@
 /**
  * Scene 2 — Rocket Ascent & Cinematic Camera Director (PRD §6).
- * Manages deterministic trajectory, staging separation, 4 cinematic camera shots,
+ * Manages deterministic trajectory, staging separation, multiple cinematic camera shots,
  * live telemetry updates, and atmospheric effects.
  */
 
@@ -25,9 +25,16 @@ export class AscentScene {
   earthEnv: ReturnType<typeof buildEarthEnvironment>;
 
   private groundCam: UniversalCamera;
+  private gantryCam: UniversalCamera;
+  private chaseCam: UniversalCamera;
   private boosterCam: UniversalCamera;
   private cockpitCam: UniversalCamera;
   private separationCam: UniversalCamera;
+  private orbitalCam: UniversalCamera;
+
+  private cameras: UniversalCamera[] = [];
+  private currentCamIndex = 0;
+  private manualCameraOverride = false;
 
   private elapsedTime = 0;
   private isSeparated = false;
@@ -44,11 +51,11 @@ export class AscentScene {
   ) {
     // Lighting
     const hemiLight = new HemisphericLight('ascent-hemi-light', new Vector3(0, 1, 0), scene);
-    hemiLight.intensity = 0.4;
+    hemiLight.intensity = 0.45;
     hemiLight.groundColor = new Color3(0.05, 0.05, 0.1);
 
     const sunLight = new DirectionalLight('ascent-sun-light', new Vector3(-0.7, -0.6, -0.4), scene);
-    sunLight.intensity = 2.0;
+    sunLight.intensity = 2.2;
 
     // 3D Models
     this.earthEnv = buildEarthEnvironment(scene);
@@ -61,19 +68,39 @@ export class AscentScene {
     const machPS = this.particles.createMachDiamonds(this.rocket.exhaustPoint);
     machPS.start();
 
-    // Camera Rigs
+    // Setup 7 Multi-Angle Cinematic Camera Rigs
     this.groundCam = this.cameraDirector.createAscentGroundCamera();
+    this.gantryCam = this.cameraDirector.createGantryTowerCamera();
+    this.chaseCam = this.cameraDirector.createCinematicChaseCamera(this.rocket.root);
     this.boosterCam = this.cameraDirector.createBoosterCamera(this.rocket.stage1);
     this.cockpitCam = this.cameraDirector.createCockpitCamera(this.rocket.capsule);
-    this.separationCam = new UniversalCamera('separation-cam', new Vector3(-25, 40, -35), scene);
-    this.separationCam.setTarget(new Vector3(0, 36, 0));
+    this.separationCam = this.cameraDirector.createStageSeparationCamera(this.rocket.root);
+    this.orbitalCam = this.cameraDirector.createOrbitalHorizonCamera(this.rocket.root);
+
+    this.cameras = [
+      this.groundCam,
+      this.chaseCam,
+      this.boosterCam,
+      this.cockpitCam,
+      this.separationCam,
+      this.orbitalCam,
+      this.gantryCam,
+    ];
 
     // Start with Ground Tracking Shot
     this.cameraDirector.setActiveCamera(this.groundCam);
 
-    // Sound
+    // Sound & Radio
     this.audio.startRocketRumble(1.0);
     this.audio.playRadioTransmission('Flight: Vehicle is supersonic. Trajectory nominal.');
+  }
+
+  /** Manually cycle through available camera POVs */
+  cycleCamera(): void {
+    this.manualCameraOverride = true;
+    this.currentCamIndex = (this.currentCamIndex + 1) % this.cameras.length;
+    const nextCam = this.cameras[this.currentCamIndex];
+    this.cameraDirector.setActiveCamera(nextCam);
   }
 
   skip(): void {
@@ -97,40 +124,50 @@ export class AscentScene {
       this.cameraDirector.shake(0.25 * this.currentTelemetry.dynamicPressure, 0.2);
     }
 
-    // Camera shot switcher timeline for 60-second flight (PRD §4.4)
-    if (this.elapsedTime < 16) {
-      // Shot 1: Ground Tracking Shot (KSC Launch Pad & Tower view)
-      this.groundCam.setTarget(this.rocket.root.position);
-      if (this.cameraDirector.getActiveCamera() !== this.groundCam) {
-        this.cameraDirector.setActiveCamera(this.groundCam);
-      }
-    } else if (this.elapsedTime < 32) {
-      // Shot 2: Booster POV (Looking down at Cape Canaveral & Atlantic Ocean)
-      if (this.cameraDirector.getActiveCamera() !== this.boosterCam) {
-        this.cameraDirector.setActiveCamera(this.boosterCam);
-        this.audio.playRadioTransmission('Flight: Passing Max-Q. Aerodynamic pressure nominal.');
-      }
-    } else if (this.elapsedTime < 45) {
-      // Shot 3: Cockpit Helmet POV (Earth horizon curvature & dark space)
-      if (this.cameraDirector.getActiveCamera() !== this.cockpitCam) {
-        this.cameraDirector.setActiveCamera(this.cockpitCam);
-        this.audio.playRadioTransmission('Capcom: Stage 1 Main Engine Cutoff (MECO) in 5 seconds.');
-      }
-    } else {
-      // Shot 4: Stage Separation & Orbital Insertion (45s - 60s)
-      if (this.cameraDirector.getActiveCamera() !== this.separationCam) {
-        this.cameraDirector.setActiveCamera(this.separationCam);
-        this.separationCam.parent = this.rocket.root;
-      }
+    // Always keep Ground camera targeting the ascending rocket
+    this.groundCam.setTarget(this.rocket.root.position);
 
-      // Execute Staging Jettison at ~45s
+    // Automatic Director's Cut Camera Switcher Timeline (if not manually overridden)
+    if (!this.manualCameraOverride) {
+      if (this.elapsedTime < 12) {
+        // Shot 1: Ground Tracking Shot (KSC Launch Pad & Tower view)
+        if (this.cameraDirector.getActiveCamera() !== this.groundCam) {
+          this.cameraDirector.setActiveCamera(this.groundCam);
+        }
+      } else if (this.elapsedTime < 24) {
+        // Shot 2: Cinematic Low-Angle 45-degree Chase Cam
+        if (this.cameraDirector.getActiveCamera() !== this.chaseCam) {
+          this.cameraDirector.setActiveCamera(this.chaseCam);
+        }
+      } else if (this.elapsedTime < 38) {
+        // Shot 3: Booster Action Cam (Downward fiery view of Florida & Atlantic)
+        if (this.cameraDirector.getActiveCamera() !== this.boosterCam) {
+          this.cameraDirector.setActiveCamera(this.boosterCam);
+          this.audio.playRadioTransmission('Flight: Passing Max-Q. Aerodynamic pressure nominal.');
+        }
+      } else if (this.elapsedTime < 48) {
+        // Shot 4: Astronaut Cockpit Helmet POV (Atmospheric curve & starry black sky)
+        if (this.cameraDirector.getActiveCamera() !== this.cockpitCam) {
+          this.cameraDirector.setActiveCamera(this.cockpitCam);
+          this.audio.playRadioTransmission('Capcom: Stage 1 MECO in 5 seconds. Guidance nominal.');
+        }
+      } else {
+        // Shot 5: Staging Separation & Vacuum Engine Burn (48s - 60s)
+        if (this.cameraDirector.getActiveCamera() !== this.separationCam) {
+          this.cameraDirector.setActiveCamera(this.separationCam);
+        }
+      }
+    }
+
+    // Execute Staging Separation at ~48s
+    if (this.elapsedTime >= 48) {
       if (!this.isSeparated) {
         this.isSeparated = true;
         this.audio.playRadioTransmission('Stage separation confirmed. Second stage vacuum engine ignition.');
         this.cameraDirector.shake(0.5, 1.5);
       }
 
-      // Booster drifts backwards away from stage 2
+      // Booster drifts backwards away from Stage 2
       this.rocket.stage1.position.y -= 8 * dt;
       this.rocket.stage1.rotation.x += 0.15 * dt;
     }
