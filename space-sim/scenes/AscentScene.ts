@@ -97,47 +97,47 @@ export class AscentScene {
       this.cameraDirector.shake(0.25 * this.currentTelemetry.dynamicPressure, 0.2);
     }
 
-    // Camera shot switcher timeline (PRD §4.4)
-    if (this.elapsedTime < 10) {
-      // Shot 1: Ground Tracking Shot
+    // Camera shot switcher timeline for 60-second flight (PRD §4.4)
+    if (this.elapsedTime < 16) {
+      // Shot 1: Ground Tracking Shot (KSC Launch Pad & Tower view)
       this.groundCam.setTarget(this.rocket.root.position);
       if (this.cameraDirector.getActiveCamera() !== this.groundCam) {
         this.cameraDirector.setActiveCamera(this.groundCam);
       }
-    } else if (this.elapsedTime < 22) {
-      // Shot 2: Booster POV (Looking down at receding Earth)
+    } else if (this.elapsedTime < 32) {
+      // Shot 2: Booster POV (Looking down at Cape Canaveral & Atlantic Ocean)
       if (this.cameraDirector.getActiveCamera() !== this.boosterCam) {
         this.cameraDirector.setActiveCamera(this.boosterCam);
-        this.audio.playRadioTransmission('Passing Max-Q: Maximum aerodynamic pressure.');
+        this.audio.playRadioTransmission('Flight: Passing Max-Q. Aerodynamic pressure nominal.');
       }
-    } else if (this.elapsedTime < 30) {
-      // Shot 3: Cockpit Helmet POV
+    } else if (this.elapsedTime < 45) {
+      // Shot 3: Cockpit Helmet POV (Earth horizon curvature & dark space)
       if (this.cameraDirector.getActiveCamera() !== this.cockpitCam) {
         this.cameraDirector.setActiveCamera(this.cockpitCam);
-        this.audio.playRadioTransmission('Stage 1 Main Engine Cutoff (MECO) in 5 seconds.');
+        this.audio.playRadioTransmission('Capcom: Stage 1 Main Engine Cutoff (MECO) in 5 seconds.');
       }
     } else {
-      // Shot 4: Stage Separation & Orbital Insertion
+      // Shot 4: Stage Separation & Orbital Insertion (45s - 60s)
       if (this.cameraDirector.getActiveCamera() !== this.separationCam) {
         this.cameraDirector.setActiveCamera(this.separationCam);
         this.separationCam.parent = this.rocket.root;
       }
 
-      // Execute Staging Jettison at ~30s
+      // Execute Staging Jettison at ~45s
       if (!this.isSeparated) {
         this.isSeparated = true;
-        this.audio.playRadioTransmission('Stage separation confirmed. Second stage engine ignition.');
+        this.audio.playRadioTransmission('Stage separation confirmed. Second stage vacuum engine ignition.');
         this.cameraDirector.shake(0.5, 1.5);
       }
 
       // Booster drifts backwards away from stage 2
       this.rocket.stage1.position.y -= 8 * dt;
-      this.rocket.stage1.rotation.x += 0.2 * dt;
+      this.rocket.stage1.rotation.x += 0.15 * dt;
     }
 
     this.cameraDirector.update();
 
-    // Check Ascent Completion
+    // Check Ascent Completion at 60s
     if (this.elapsedTime >= ASCENT_DURATION_S) {
       this.skip();
     }

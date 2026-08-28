@@ -526,16 +526,77 @@ export function buildLaunchPad(scene: Scene): LaunchPadModel {
   }
 
   // ----------------------------------------------------
-  // 10. Cape Canaveral Terrain & Atlantic Coast Horizon
+  // 10. Transporter-Erector (T/E) Strongback Truss Spine
   // ----------------------------------------------------
-  const terrain = MeshBuilder.CreateGround('ground-terrain', { width: 800, height: 800, subdivisions: 8 }, scene);
+  const strongback = MeshBuilder.CreateBox('te-strongback-spine', { width: 3.2, depth: 3.4, height: 52 }, scene);
+  strongback.position.set(0, 27.5, 2.6);
+  strongback.material = darkSteelMat;
+  strongback.parent = root;
+
+  // Umbilical Reacting Arms grasping rocket stages
+  for (const uy of [18, 32, 44]) {
+    const uArm = MeshBuilder.CreateBox(`umbilical-arm-${uy}`, { width: 4.4, depth: 1.8, height: 1.2 }, scene);
+    uArm.position.set(0, uy, 1.8);
+    uArm.material = steelMat;
+    uArm.parent = strongback;
+  }
+
+  // ----------------------------------------------------
+  // 11. KSC Dual River-Gravel Crawlerway Tracks
+  // ----------------------------------------------------
+  const gravelMat = new PBRMaterial('ksc-crawlerway-gravel', scene);
+  gravelMat.albedoColor = new Color3(0.68, 0.52, 0.35); // Alabama river rock brown
+  gravelMat.metallic = 0.05;
+  gravelMat.roughness = 0.95;
+
+  for (const cwX of [-12, 12]) {
+    const crawlerTrack = MeshBuilder.CreateGround(`ksc-crawlerway-${cwX}`, { width: 14, height: 650, subdivisions: 4 }, scene);
+    crawlerTrack.position.set(cwX, 0.05, -340);
+    crawlerTrack.material = gravelMat;
+    crawlerTrack.parent = root;
+  }
+
+  // ----------------------------------------------------
+  // 12. Vehicle Assembly Building (VAB) & HIF Hangar
+  // ----------------------------------------------------
+  const vabRoot = new TransformNode('vab-facility-root', scene);
+  vabRoot.position.set(120, 0, -380);
+  vabRoot.parent = root;
+
+  const vabMat = new PBRMaterial('vab-facade-mat', scene);
+  vabMat.albedoColor = new Color3(0.85, 0.88, 0.92);
+  vabMat.metallic = 0.3;
+  vabMat.roughness = 0.5;
+
+  // Iconic VAB Main High Bay Cube (Scaled for horizon perspective)
+  const vabCube = MeshBuilder.CreateBox('vab-main-cube', { width: 75, depth: 75, height: 85 }, scene);
+  vabCube.position.y = 42.5;
+  vabCube.material = vabMat;
+  vabCube.parent = vabRoot;
+
+  // VAB High Bay Vertical Doors
+  const vabDoor = MeshBuilder.CreateBox('vab-highbay-door', { width: 24, depth: 2, height: 68 }, scene);
+  vabDoor.position.set(0, 34, 38);
+  vabDoor.material = darkSteelMat;
+  vabDoor.parent = vabRoot;
+
+  // Horizontal Integration Facility (HIF Hangar near Pad)
+  const hifHangar = MeshBuilder.CreateBox('hif-processing-hangar', { width: 34, depth: 95, height: 18 }, scene);
+  hifHangar.position.set(-65, 9, -240);
+  hifHangar.material = vabMat;
+  hifHangar.parent = root;
+
+  // ----------------------------------------------------
+  // 13. Cape Canaveral Terrain & Atlantic Coast Horizon
+  // ----------------------------------------------------
+  const terrain = MeshBuilder.CreateGround('ground-terrain', { width: 900, height: 900, subdivisions: 8 }, scene);
   terrain.position.y = 0;
   terrain.material = concreteMat;
   terrain.parent = root;
 
   // Atlantic Coast Ocean Blue Water Plane bordering Cape Canaveral
-  const ocean = MeshBuilder.CreateGround('cape-ocean-horizon', { width: 1200, height: 600, subdivisions: 4 }, scene);
-  ocean.position.set(0, -0.2, 700);
+  const ocean = MeshBuilder.CreateGround('cape-ocean-horizon', { width: 1400, height: 700, subdivisions: 4 }, scene);
+  ocean.position.set(0, -0.2, 750);
   ocean.material = waterMat;
   ocean.parent = root;
 

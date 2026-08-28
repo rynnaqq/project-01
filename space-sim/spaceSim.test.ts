@@ -172,22 +172,22 @@ describe('Space Simulator — Ascent Trajectory', () => {
     expect(t5.velocity).toBeGreaterThan(0);
   });
 
-  it('executes gravity turn and reaches orbital criteria at t=42s', () => {
-    const t42 = sampleAscent(ASCENT_DURATION_S);
-    expect(t42.altitude).toBeCloseTo(400_000, -2);
-    expect(t42.velocity).toBeCloseTo(7660, -1);
-    expect(t42.pitch).toBeCloseTo(90, 0);
-    expect(t42.stage).toBe(2);
+  it('executes gravity turn and reaches orbital criteria at t=60s', () => {
+    const t60 = sampleAscent(ASCENT_DURATION_S);
+    expect(t60.altitude).toBeCloseTo(400_000, -2);
+    expect(t60.velocity).toBeCloseTo(7660, -1);
+    expect(t60.pitch).toBeCloseTo(90, 0);
+    expect(t60.stage).toBe(2);
   });
 
-  it('calculates Max-Q dynamic pressure bell curve peaking near ~20s', () => {
+  it('calculates Max-Q dynamic pressure bell curve peaking near ~25s', () => {
     const q10 = maxQ(10);
-    const q20 = maxQ(20);
-    const q35 = maxQ(35);
+    const q25 = maxQ(25);
+    const q45 = maxQ(45);
 
-    expect(q20).toBeGreaterThan(q10);
-    expect(q20).toBeGreaterThan(q35);
-    expect(q20).toBeCloseTo(1.0, 1);
+    expect(q25).toBeGreaterThan(q10);
+    expect(q25).toBeGreaterThan(q45);
+    expect(q25).toBeCloseTo(1.0, 1);
   });
 });
 

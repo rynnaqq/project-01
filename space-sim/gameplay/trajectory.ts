@@ -18,7 +18,7 @@ export interface AscentSample {
   dynamicPressure: number;
 }
 
-export const ASCENT_DURATION_S = 42;
+export const ASCENT_DURATION_S = 60;
 
 /**
  * Sample the ascent at time t (seconds). Deterministic so the cinematic
@@ -34,13 +34,13 @@ export function sampleAscent(t: number): AscentSample {
   // Velocity: eases up to orbital ~7660 m/s.
   const velocity = 7660 * Math.pow(u, 1.35);
 
-  // Pitch program: hold vertical ~8s, gravity turn through ascent.
-  const turnStart = 8 / ASCENT_DURATION_S;
+  // Pitch program: hold vertical ~12s, smooth gravity turn through ascent.
+  const turnStart = 12 / ASCENT_DURATION_S;
   const pitch =
     u < turnStart ? 0 : 90 * Math.pow(Math.min(1, (u - turnStart) / (1 - turnStart)), 0.8);
 
-  // Stage separation at ~70% of ascent (~29.4s).
-  const stage: 1 | 2 = u < 0.7 ? 1 : 2;
+  // Stage separation at ~72% of ascent (~43.2s).
+  const stage: 1 | 2 = u < 0.72 ? 1 : 2;
 
   const dynP = maxQ(clamped);
 
@@ -48,7 +48,7 @@ export function sampleAscent(t: number): AscentSample {
 }
 
 export function maxQ(t: number): number {
-  // Dynamic-pressure bell peaking around t≈20s (scaled to our 42s).
-  const u = Math.max(0, t) / 20;
-  return Math.exp(-((u - 1) ** 2) / 0.4);
+  // Dynamic-pressure bell peaking around t≈25s (scaled to 60s).
+  const u = Math.max(0, t) / 25;
+  return Math.exp(-((u - 1) ** 2) / 0.45);
 }
