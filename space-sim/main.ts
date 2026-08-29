@@ -97,6 +97,9 @@ async function boot(): Promise<World> {
   const { createIssExterior } = await import("./iss/exterior");
   const iss = createIssExterior(scene, assets);
   targetProviders.iss = () => iss.root;
+  // Docking rig: drives sls.orionNode down the ISS docking axis from ISS_REVEAL on.
+  const { DockingSequence } = await import("./iss/docking");
+  const docking = new DockingSequence(sls.orionNode, iss.dockingPort);
   const shotLibrary = new ShotLibrary({ scene, targetProviders });
 
   setProgress(0.8, "Configuring cinematic pipeline...");
@@ -136,7 +139,7 @@ async function boot(): Promise<World> {
   const director = new CinematicDirector(shotLibrary, scene, new TransitionLayer(document.getElementById("ui-layer")!));
   const { createMissionRuntime } = await import("./mission/runtime");
   const uiNoop: UiSinks = { onComms: () => {}, onHud: () => {}, onState: () => {} };
-  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, ui: uiNoop });
+  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, issRoot: iss.root, docking, ui: uiNoop });
   if (import.meta.env.DEV) {
     // Dev QA gates: ?skip=COUNTDOWN (or any MISSION_STATE) fast-forwards the mission;
     // ?view=iss aims the boot camera at the ISS for exterior visual checks.
