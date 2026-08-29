@@ -10,6 +10,9 @@ import { SkyController } from "./effects/sky";
 import { createStarfield } from "./world/space";
 import { createEarth, type Earth } from "./world/earth/earth";
 import type { MobileLauncher } from "./world/ksc/launcher";
+import type { FlightModel } from "./vehicles/flight";
+import type { ExhaustSystem } from "./effects/exhaust";
+import type { GroundSmoke } from "./effects/smoke";
 import { ShotLibrary } from "./cinema/shots";
 import type { SlsStack } from "./vehicles/sls";
 
@@ -25,7 +28,8 @@ const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(
 
 interface World {
   tier: QualityTier; sky: SkyController; earth: Earth; ml: MobileLauncher;
-  sls: SlsStack; shotLibrary: ShotLibrary;
+  sls: SlsStack; flight: FlightModel; exhaust: ExhaustSystem; smoke: GroundSmoke;
+  shotLibrary: ShotLibrary;
   crewQuarters: () => TransformNode | null;
 }
 
@@ -108,6 +112,16 @@ async function boot(): Promise<World> {
     ssao.radius = 1.2;
   }
 
+  setProgress(0.9, "Loading flight systems...");
+  await nextFrame();
+  const { FlightModel } = await import("./vehicles/flight");
+  const flight = new FlightModel(sls);
+  const { ExhaustSystem } = await import("./effects/exhaust");
+  const exhaust = new ExhaustSystem(scene, sls.enginesNode, caps.maxParticles, caps.gpuParticles);
+  exhaust.plumeLight.parent = sls.enginesNode;
+  const { GroundSmoke } = await import("./effects/smoke");
+  const smoke = new GroundSmoke(scene, new Vector3(0, 16, -70), caps.maxParticles, caps.gpuParticles);
+
   setProgress(0.95, "MISSION SYSTEM READY");
   await nextFrame();
   engine.runRenderLoop(() => {
@@ -121,7 +135,7 @@ async function boot(): Promise<World> {
   await new Promise((r) => setTimeout(r, 400));
   document.getElementById("loading-screen")!.classList.add("hidden");
   return {
-    tier, sky, earth, ml, sls, shotLibrary,
+    tier, sky, earth, ml, sls, flight, exhaust, smoke, shotLibrary,
     crewQuarters: () => targetProviders.crewQuarters?.() ?? null,
   };
 }
