@@ -9,6 +9,7 @@ import { createAssets } from "./core/assets";
 import { SkyController } from "./effects/sky";
 import { createStarfield } from "./world/space";
 import { createEarth, type Earth } from "./world/earth/earth";
+import type { MobileLauncher } from "./world/ksc/launcher";
 
 const canvas = document.getElementById("render-canvas") as HTMLCanvasElement;
 const fill = document.getElementById("loading-fill")!;
@@ -20,7 +21,7 @@ function setProgress(fraction: number, label: string): void {
 }
 const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => r()));
 
-interface World { tier: QualityTier; sky: SkyController; earth: Earth }
+interface World { tier: QualityTier; sky: SkyController; earth: Earth; ml: MobileLauncher }
 
 async function boot(): Promise<World> {
   setProgress(0.05, "Detecting graphics backend...");
@@ -58,6 +59,11 @@ async function boot(): Promise<World> {
   const { createVab, createFacilityCluster } = await import("./world/ksc/vab");
   createVab(scene, assets);
   createFacilityCluster(scene, assets);
+  const { createPad } = await import("./world/ksc/pad");
+  createPad(scene, assets);
+  const { createMobileLauncher, createCrawler } = await import("./world/ksc/launcher");
+  const ml = createMobileLauncher(scene, assets);
+  createCrawler(scene, assets);
 
   setProgress(0.8, "Configuring cinematic pipeline...");
   await nextFrame();
@@ -93,7 +99,7 @@ async function boot(): Promise<World> {
   setProgress(1, "MISSION SYSTEM READY");
   await new Promise((r) => setTimeout(r, 400));
   document.getElementById("loading-screen")!.classList.add("hidden");
-  return { tier, sky, earth };
+  return { tier, sky, earth, ml };
 }
 
 boot().catch((err: unknown) => {
