@@ -38,7 +38,7 @@ export function createTerrain(scene: Scene, assets: Assets): TransformNode {
     for (let y = 0; y < 1024; y += 4) {
       for (let x = 0; x < 1024; x += 4) {
         const wx = (x / 1024 - 0.5) * SIZE;
-        const wz = (y / 1024 - 0.5) * SIZE;
+        const wz = (0.5 - y / 1024) * SIZE;
         const n = fbm2(wx * 0.0002, wz * 0.0002, 3);
         if (n < -0.25) { ctx.fillStyle = "#46583f"; ctx.fillRect(x, y, 4, 4); }
         if (n < -0.42) { ctx.fillStyle = "#3f5a54"; ctx.fillRect(x, y, 4, 4); }
@@ -46,7 +46,7 @@ export function createTerrain(scene: Scene, assets: Assets): TransformNode {
         const t = (wx * -3200 + wz * -2800) / (3200 * 3200 + 2800 * 2800);
         const cx = -3200 * t, cz = -2800 * t;
         const dist = Math.hypot(wx - cx, wz - cz);
-        if (t >= 0 && t <= 1 && dist < 18) { ctx.fillStyle = "#3c3d3f"; ctx.fillRect(x, y, 4, 4); }
+        if (t >= 0 && t <= 1 && dist < 15) { ctx.fillStyle = "#3c3d3f"; ctx.fillRect(x, y, 4, 4); }
         // Beach + ocean floor east
         if (wx > 2400) { ctx.fillStyle = wx > 2600 ? "#1d3a4d" : "#c9bd9a"; ctx.fillRect(x, y, 4, 4); }
       }
@@ -59,7 +59,7 @@ export function createTerrain(scene: Scene, assets: Assets): TransformNode {
   ground.isPickable = false;
   ground.parent = root;
 
-  // Ocean plane with animated shimmer (vertex shader-free: animated bump via uOffset)
+  // Ocean plane with static procedural bump (init-only uOffset; no per-frame animation)
   const ocean = MeshBuilder.CreateGround("ocean", { width: SIZE, height: SIZE, subdivisions: 32 }, scene);
   ocean.position.x = SIZE / 2 + 2400;
   ocean.position.y = 0.15;
