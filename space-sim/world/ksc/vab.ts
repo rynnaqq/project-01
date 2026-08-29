@@ -70,7 +70,7 @@ export function createVab(scene: Scene, assets: Assets): TransformNode {
   // Ribbed vertical strip detail (east high-bay face): 4 bays separated by recessed columns
   for (let i = 0; i < 5; i++) {
     const col = MeshBuilder.CreateBox(`vabCol${i}`, { width: 14, height: 160, depth: 6 }, scene);
-    col.position.set(-109 + 27.25 + i * 54.5, 80, 79 + 3);
+    col.position.set(-109 + i * 54.5, 80, 76);
     col.material = assets.steelStructure();
     col.parent = root;
   }
