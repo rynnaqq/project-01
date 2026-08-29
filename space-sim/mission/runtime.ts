@@ -51,11 +51,12 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
   const APPROACH_WINDOW = STATE_DURATIONS.ISS_APPROACH + STATE_DURATIONS.DOCKING_SEQUENCE;
 
   // Re-parent Orion into the ISS frame on (or after) ISS_REVEAL entry; idempotent.
+  // setProgress(0) immediately places Orion at the corridor start — port local
+  // (0,-2.5,-11.4) + 200 m out along the -Z docking axis = (0,-2.5,-212.5).
   const startDocking = (): void => {
     if (dockingStarted) return;
     dockingStarted = true;
     deps.docking.node.setParent(deps.issRoot);
-    deps.docking.node.position.set(0, 2.5, 200);
     deps.docking.setProgress(0);
   };
   // State-entry variant: holds until ISS_REVEAL so natural play never attaches early.

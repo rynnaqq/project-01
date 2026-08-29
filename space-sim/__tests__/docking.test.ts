@@ -30,7 +30,9 @@ describe("dockingTelemetry", () => {
     expect(dockingTelemetry({ x: 0, y: 0, z: 0.2 }, { x: 0, y: 0, z: 0 }).phase).toBe("contact");
     expect(dockingTelemetry({ x: 0, y: 0, z: -0.3 }, { x: 0, y: 0, z: 0 }).phase).toBe("captured");
   });
-  it("phase reports hardDocked past the capture plane", () => {
+  it("phase reports captured inside and hardDocked past the capture envelope", () => {
+    expect(dockingTelemetry({ x: 0, y: 0, z: -0.2 }, { x: 0, y: 0, z: 0 }).phase).toBe("captured");
+    expect(dockingTelemetry({ x: 0, y: 0, z: -0.4 }, { x: 0, y: 0, z: 0 }).phase).toBe("hardDocked");
     expect(dockingTelemetry({ x: 0, y: 0, z: -0.6 }, { x: 0, y: 0, z: 0 }).phase).toBe("hardDocked");
   });
 });

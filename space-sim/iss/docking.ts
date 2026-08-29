@@ -21,8 +21,10 @@ export interface RelVec {
  * Relative-motion telemetry in the docking frame: origin at the contact plane,
  * +Z pointing back out along the approach corridor (toward the incoming vehicle).
  * Phase thresholds: approach < 30 m, contact < 0.6 m, captured < 0.45 m (only
- * once past the contact plane, z < 0), hardDocked when z < -0.5 m (range itself
- * is never negative, so penetration is measured on the signed axis).
+ * once past the contact plane, z < 0), hardDocked when z < -0.35 m — just past
+ * the terminal hard-dock pose (z = -0.4) so the scripted flow's end state
+ * reports hardDocked (range itself is never negative, so penetration is
+ * measured on the signed axis).
  */
 export function dockingTelemetry(relPos: RelVec, relVel: RelVec): DockingTelemetry {
   const range = Math.hypot(relPos.x, relPos.y, relPos.z);
@@ -30,7 +32,7 @@ export function dockingTelemetry(relPos: RelVec, relVel: RelVec): DockingTelemet
   const lateralOffset = Math.hypot(relPos.x, relPos.y);
   const alignErrorDeg = range > 1e-6 ? Math.atan2(lateralOffset, Math.abs(relPos.z)) * (180 / Math.PI) : 0;
   const phase: DockingPhase =
-    relPos.z < -0.5 ? "hardDocked"
+    relPos.z < -0.35 ? "hardDocked"
     : range < 0.45 && relPos.z < 0 ? "captured"
     : range < 0.6 ? "contact"
     : range < 30 ? "approach"

@@ -21,7 +21,6 @@ interface Rec {
   hud: number;
   states: MissionState[];
   parentedTo: unknown;
-  orionOffset: number[];
   progress: number[];
   dock: string[];
   telemetry: Array<{ range: number; phase: string }>;
@@ -32,7 +31,7 @@ function makeDeps() {
     ignite: [], smokeRamp: [], armK: [], liftoff: 0, liftoffAt: [], flightT: [], sepSrb: 0,
     sepCore: 0, orbit: 0, shots: [], cuts: [], fx: [], altitudes: [],
     comms: 0, hud: 0, states: [],
-    parentedTo: null, orionOffset: [], progress: [], dock: [], telemetry: [],
+    parentedTo: null, progress: [], dock: [], telemetry: [],
   };
   const marks = { liftoffFrame: -1 }; // index into flightT recorded on the liftoff frame
   let t0: number | null = null;
@@ -75,7 +74,6 @@ function makeDeps() {
     docking: {
       node: {
         setParent(p: unknown) { rec.parentedTo = p; },
-        position: { set: (x: number, y: number, z: number) => { rec.orionOffset = [x, y, z]; } },
       },
       setProgress: (k: number) => { rec.progress.push(k); },
       contact: () => { rec.dock.push("contact"); },
@@ -174,8 +172,8 @@ describe("mission runtime wiring", () => {
     runtime.skipTo("ORBIT");
     for (let i = 0; i < 1600; i++) runtime.update(0.05); // 80 s: ORBIT (75 s) rolls into ISS_REVEAL
     expect(rec.parentedTo).toBe(issRoot);
-    expect(rec.orionOffset).toEqual([0, 2.5, 200]);
-    expect(rec.progress[0]).toBe(0);
+    expect(rec.progress[0]).toBe(0); // setProgress(0) places Orion at the corridor start;
+    // the effective start pose (0,-2.5,-212.5) is asserted at sequence level in docking-sequence.test.ts
   });
 
   it("approach progress spans ISS_APPROACH + DOCKING_SEQUENCE from 0 to 1", () => {
