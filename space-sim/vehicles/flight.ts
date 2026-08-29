@@ -1,5 +1,5 @@
 // space-sim/vehicles/flight.ts
-import { Vector3, type TransformNode } from "@babylonjs/core";
+import { Axis, Quaternion, Vector3, type TransformNode } from "@babylonjs/core";
 
 export type FlightPhase = "pad" | "liftoff" | "ascent" | "orbit";
 
@@ -121,12 +121,19 @@ export class FlightModel {
     for (const [node, drift] of this.srbDrift) {
       node.position.addInPlace(drift.v.scale(dt));
       drift.v.y -= 9.8 * dt * 0.4;
-      node.rotation.z += drift.spin * dt;
+      // detach() bakes rotationQuaternion; Babylon ignores Euler writes while a
+      // quaternion is set, so tumble via incremental quaternion multiplies
+      node.rotationQuaternion = node.rotationQuaternion ?? Quaternion.Identity();
+      node.rotationQuaternion = Quaternion.RotationAxis(Axis.Z, drift.spin * dt)
+        .multiply(node.rotationQuaternion);
     }
     if (this.coreDrift) {
-      this.stack.coreNode.position.addInPlace(this.coreDrift.v.scale(dt));
+      const core = this.stack.coreNode;
+      core.position.addInPlace(this.coreDrift.v.scale(dt));
       this.coreDrift.v.y -= 9.8 * dt * 0.3;
-      this.stack.coreNode.rotation.x += 0.05 * dt;
+      core.rotationQuaternion = core.rotationQuaternion ?? Quaternion.Identity();
+      core.rotationQuaternion = Quaternion.RotationAxis(Axis.X, 0.05 * dt)
+        .multiply(core.rotationQuaternion);
     }
   }
 }

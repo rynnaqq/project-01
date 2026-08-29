@@ -22,6 +22,7 @@ function glowTex(scene: Scene): Texture {
 export class ExhaustSystem {
   plumeLight: PointLight;
   private systems: Array<ParticleSystem | GPUParticleSystem> = [];
+  private baseRates: number[] = [];
   private throttleValue = 0;
   private targetThrottle = 0;
 
@@ -52,13 +53,14 @@ export class ExhaustSystem {
       (sys as ParticleSystem).maxSize = size;
       (sys as ParticleSystem).minLifeTime = 0.25;
       (sys as ParticleSystem).maxLifeTime = 0.7;
-      (sys as ParticleSystem).emitRate = emitRate;
+      (sys as ParticleSystem).emitRate = 0; // ignition-gated: update() scales by throttle
       (sys as ParticleSystem).direction1 = new Vector3(-1.5, -60, -1.5);
       (sys as ParticleSystem).direction2 = new Vector3(1.5, -90, 1.5);
       (sys as ParticleSystem).gravity = new Vector3(0, -9.8, 0);
       (sys as ParticleSystem).blendMode = ParticleSystem.BLENDMODE_ADD;
       (sys as ParticleSystem).start();
       this.systems.push(sys);
+      this.baseRates.push(emitRate);
     };
     // Core 4-engine cluster (positions mirror SLS engine layout)
     makeOne(-4.5, -2.6, Math.floor(maxParticles * 0.4), 9, Math.floor(maxParticles * 0.35));
@@ -80,8 +82,10 @@ export class ExhaustSystem {
     this.plumeLight.intensity = 900 * this.throttleValue * flicker;
     // In vacuum: plumes widen (size growth stands in for lower ambient pressure)
     const widen = Math.min(1, altitude / 60000);
-    for (const sys of this.systems) {
-      (sys as ParticleSystem).maxSize = 9 + widen * 26;
+    for (let i = 0; i < this.systems.length; i++) {
+      const sys = this.systems[i] as ParticleSystem;
+      sys.maxSize = 9 + widen * 26;
+      sys.emitRate = this.baseRates[i] * this.throttleValue;
     }
   }
 }

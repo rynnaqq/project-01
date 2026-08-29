@@ -40,13 +40,12 @@ export class GroundSmoke {
     ps.maxSize = 60;
     ps.minLifeTime = 4;
     ps.maxLifeTime = 11;
-    ps.emitRate = 400;
+    ps.emitRate = 0;
     ps.direction1 = new Vector3(-24, 6, -24);
     ps.direction2 = new Vector3(24, 14, 24);
     ps.gravity = new Vector3(0, 0.35, 0);
     ps.blendMode = ParticleSystem.BLENDMODE_STANDARD;
     ps.start();
-    ps.manualEmitCount = 0;
   }
 
   ramp(v: number): void {
