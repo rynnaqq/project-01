@@ -67,7 +67,7 @@ interface World {
 async function boot(): Promise<World> {
   // Environment posture: touch devices run the low tier; reduced-motion users
   // get a steadier camera (no handheld wobble, no launch shake).
-  const coarsePointer = window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   setProgress(0.05, "Detecting graphics backend...");
