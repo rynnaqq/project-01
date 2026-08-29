@@ -145,7 +145,7 @@ async function boot(): Promise<World> {
 
   // --- Zero-G player (activated by the enablePlayer mission command) ---
   // Player state lives in ISS-local space — the same frame as interior.colliders.
-  // Space/Ctrl thrust stays world-vertical; WASD is camera-local, mapped through
+  // Space/C thrust stays world-vertical; WASD is camera-local, mapped through
   // the yaw/pitch basis (Babylon: rotation.x positive pitches DOWN, +yaw turns +Z->+X).
   const input = new InputManager(canvas);
   const player = new ZeroGState();

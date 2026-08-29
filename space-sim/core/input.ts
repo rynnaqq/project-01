@@ -11,7 +11,7 @@ export class InputManager {
     window.addEventListener("keydown", (e) => {
       if (e.code === "Escape") { this.escapeCbs.forEach((cb) => cb()); return; }
       if (e.code === "KeyE") { this.interactCbs.forEach((cb) => cb()); }
-      if (e.code === "Space" || e.code === "ControlLeft" || e.code === "ControlRight") e.preventDefault();
+      if (e.code === "Space") e.preventDefault();
       this.keys.add(e.code);
     });
     window.addEventListener("keyup", (e) => {
@@ -31,7 +31,7 @@ export class InputManager {
     const k = this.keys;
     return {
       x: (k.has("KeyD") ? 1 : 0) - (k.has("KeyA") ? 1 : 0),
-      y: (k.has("Space") ? 1 : 0) - (k.has("ControlLeft") || k.has("ControlRight") ? 1 : 0),
+      y: (k.has("Space") ? 1 : 0) - (k.has("KeyC") ? 1 : 0),
       z: (k.has("KeyW") ? 1 : 0) - (k.has("KeyS") ? 1 : 0),
     };
   }
