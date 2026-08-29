@@ -45,7 +45,8 @@ function place(node: TransformNode, pos: Vector3, rotX = 0): void {
 
 export function createIssExterior(scene: Scene, assets: Assets): IssExterior {
   const root = new TransformNode("issRoot", scene);
-  const ORBIT_Y = 6371000 + 400000;
+  // 400 km above Earth's surface; the surface sits at y=0 (Earth center at y=-6371000).
+  const ORBIT_Y = 400000;
   root.position.set(0, ORBIT_Y, 0);
 
   // --- ITS truss (109 m along X) ---

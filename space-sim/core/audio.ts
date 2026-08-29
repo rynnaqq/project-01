@@ -36,6 +36,7 @@ export class AudioBus {
   private rumbleGain: GainNode | null = null;
   private ventGain: GainNode | null = null;
   private muted = false;
+  private paused = false;
 
   /** Create/resume the AudioContext. Must be called from a user gesture. */
   async unlock(): Promise<void> {
@@ -114,6 +115,7 @@ export class AudioBus {
 
   /** Mute-while-paused: silence the master bus and cancel in-flight radio speech. */
   setPaused(p: boolean): void {
+    this.paused = p;
     this.duck(p ? 0 : 1);
     if (!p || typeof speechSynthesis === "undefined") return;
     try { speechSynthesis.cancel(); } catch { /* best effort */ }
@@ -166,7 +168,11 @@ export class AudioBus {
       const sg = ctx.createGain(); sg.gain.value = 0.12;
       squelch.connect(bp).connect(sg).connect(radio);
       squelch.start();
-      if (typeof speechSynthesis === "undefined" || typeof SpeechSynthesisUtterance === "undefined") return;
+      if (typeof speechSynthesis === "undefined" || typeof SpeechSynthesisUtterance === "undefined") {
+        // No speech engine: the duck would never lift, so restore after the squelch burst.
+        setTimeout(() => { if (!this.paused) this.duck(1); }, 250);
+        return;
+      }
       const profile = SPEAKER_PROFILES[c.speaker] ?? { rate: 1, pitch: 1 };
       const u = new SpeechSynthesisUtterance(c.text);
       u.rate = profile.rate; u.pitch = profile.pitch; u.volume = 0.9;
@@ -181,8 +187,14 @@ export class AudioBus {
       const stopBed = (): void => {
         try { bed.stop(); } catch { /* already stopped */ }
       };
-      u.onend = stopBed;
-      u.onerror = stopBed;
+      // The PA duck holds for the line, then restores the master bus. The paused
+      // guard keeps a cancelled utterance (pause during speech) from un-muting.
+      const unduck = (): void => {
+        stopBed();
+        if (!this.paused) this.duck(1);
+      };
+      u.onend = unduck;
+      u.onerror = unduck;
       speechSynthesis.speak(u);
     } catch {
       // SpeechSynthesis quirks must never break the mission.

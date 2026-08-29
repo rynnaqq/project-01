@@ -129,7 +129,8 @@ export class ShotLibrary {
   }
 
   private buildOrbit(): void {
-    const ORBIT_Y = 6371000 + 400000;
+    // Orbit altitude above the surface (y=0 datum); follow rigs override per frame.
+    const ORBIT_Y = 400000;
     const orbitRig = (id: string, kind: RigKind, dir: Vector3, dist: number, fov = 0.85, wobble = 0): void => {
       const cam = makeCam(this.ctx.scene, `cam_${id}`, dir.scale(dist).add(new Vector3(0, ORBIT_Y, 0)), fov);
       const get = this.target("orion");
@@ -160,7 +161,8 @@ export class ShotLibrary {
   }
 
   private buildIss(): void {
-    const ORBIT_Y = 6371000 + 400000;
+    // ISS altitude above the surface (y=0 datum); follow rigs override per frame.
+    const ORBIT_Y = 400000;
     const issRig = (id: string, kind: RigKind, offset: Vector3, fov = 0.75): void => {
       const cam = makeCam(this.ctx.scene, `cam_${id}`, offset.add(new Vector3(0, ORBIT_Y, 0)), fov);
       const get = this.target("iss");
@@ -186,7 +188,8 @@ export class ShotLibrary {
   }
 
   private buildInterior(): void {
-    const ORBIT_Y = 6371000 + 400000;
+    // ISS altitude above the surface (y=0 datum); follow rigs override per frame.
+    const ORBIT_Y = 400000;
     const intRig = (id: string, offset: Vector3, look: Vector3, fov = 0.9): void => {
       const cam = makeCam(this.ctx.scene, `cam_${id}`, offset.add(new Vector3(0, ORBIT_Y, 0)), fov);
       const get = this.target("issInterior");

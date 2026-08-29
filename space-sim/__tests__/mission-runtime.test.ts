@@ -166,6 +166,17 @@ describe("mission runtime wiring", () => {
     for (let i = 0; i < 1400; i++) runtime.update(0.05); // 70 s: SRB sep @32, core sep @65
     expect(rec.sepSrb).toBe(1);
     expect(rec.sepCore).toBe(1);
+    // core separation also kills the plume (the detached core must not keep burning)
+    expect(rec.ignite).toEqual([true, false]);
+  });
+
+  it("pad smoke ramps down exactly once, 30 s after liftoff", () => {
+    const { rec, runtime } = makeDeps();
+    runtime.skipTo("LIFTOFF");
+    runtime.update(0.05); // liftoff fires; smoke-down scheduled at t+30
+    for (let i = 0; i < 610; i++) runtime.update(0.05); // +30.5 s of mission time
+    expect(rec.smokeRamp[rec.smokeRamp.length - 1]).toBe(0);
+    expect(rec.smokeRamp.filter((v) => v === 0).length).toBe(1);
   });
 
   it("lastTelemetry is null before the ISS approach begins", () => {

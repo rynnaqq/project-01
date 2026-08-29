@@ -5,7 +5,8 @@ import {
 
 /** Realistic starfield: small varied points + Milky Way density band. */
 export function createStarfield(scene: Scene): void {
-  const RADIUS = 3.0e7;
+  // Radius 2e7 must stay under every camera's maxZ (2.5e7) or the stars are clipped away.
+  const RADIUS = 2e7;
   const COUNT = 6500;
   const pcs = new PointsCloudSystem("stars", 1.2, scene);
   pcs.addPoints(COUNT, (p: CloudPoint) => {

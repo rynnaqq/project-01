@@ -50,6 +50,7 @@ export interface MissionRuntime {
 
 export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
   let armRetract = -1; // seconds since ignition for the arm animation
+  let smokeDownAt = -1; // mission time to ramp pad smoke down; -1 = unscheduled
   let dockingStarted = false;
   let approachStart: number | null = null;
   let lastTelemetry: DockingTelemetry | null = null;
@@ -83,12 +84,14 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       case "liftoff":
         deps.flight.liftoff(t);
         deps.audio.rumble(1);
+        smokeDownAt = t + 30; // pad smoke clears 30 s into the climb
         break;
       case "separateSrb":
         deps.flight.separateSrb();
         break;
       case "separateCore":
         deps.flight.separateCore();
+        deps.exhaust.ignite(false); // the detached core must not keep a burning plume
         break;
       case "orbitInsertion":
         deps.flight.orbitInsertion();
@@ -153,6 +156,10 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
     deps.flight.update(tFlight, dt);
     deps.exhaust.update(dt, deps.flight.currentAltitude);
     deps.smoke.update(dt);
+    if (smokeDownAt >= 0 && engine.t >= smokeDownAt) {
+      deps.smoke.ramp(0);
+      smokeDownAt = -1;
+    }
     deps.sky.setAltitude(deps.flight.currentAltitude);
     if (armRetract >= 0) {
       armRetract += dt;

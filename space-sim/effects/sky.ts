@@ -1,7 +1,7 @@
 // space-sim/effects/sky.ts
 import {
   Color3, DirectionalLight, HemisphericLight, MeshBuilder, ShaderMaterial,
-  Vector3, type Scene,
+  Vector3, type Camera, type Scene,
 } from "@babylonjs/core";
 import type { QualityTier } from "../core/engine";
 
@@ -55,9 +55,11 @@ export class SkyController {
   private glare = 0.4;
   private altitude = 0;
   private mat: ShaderMaterial;
+  private shakeBase: { cam: Camera; fov: number } | null = null;
 
   constructor(private scene: Scene, tier: QualityTier, private reducedMotion = false) {
-    const dome = MeshBuilder.CreateSphere("skyDome", { diameter: 6.0e7, segments: 24 }, scene);
+    // Radius 2e7 must stay under every camera's maxZ (2.5e7) or the dome is clipped away.
+    const dome = MeshBuilder.CreateSphere("skyDome", { diameter: 4e7, segments: 24 }, scene);
     dome.isPickable = false;
     dome.infiniteDistance = true;
     this.mat = new ShaderMaterial("skyMat", scene, {
@@ -111,8 +113,20 @@ export class SkyController {
     const speed = 0.8;
     this.currentExposure += (this.exposureTarget - this.currentExposure) * Math.min(1, dt * speed);
     if (this.reducedMotion) return; // no shake decay, no fov wobble
-    if (this.shakeAmp > 0.001) this.shakeAmp = Math.max(0, this.shakeAmp - dt * 0.25);
+    if (this.shakeAmp > 0) this.shakeAmp = Math.max(0, this.shakeAmp - dt * 0.25);
     const cam = this.scene.activeCamera;
-    if (cam) cam.fov = 0.9 + Math.sin(performance.now() * 0.02) * 0.004 * this.shakeAmp * 10;
+    if (!cam) return;
+    if (this.shakeAmp > 0) {
+      // Cut mid-shake: restore the outgoing shot's fov, then re-base on the incoming one.
+      if (this.shakeBase && this.shakeBase.cam !== cam) {
+        this.shakeBase.cam.fov = this.shakeBase.fov;
+        this.shakeBase = null;
+      }
+      if (!this.shakeBase) this.shakeBase = { cam, fov: cam.fov };
+      cam.fov = this.shakeBase.fov + Math.sin(performance.now() * 0.02) * 0.04 * this.shakeAmp;
+    } else if (this.shakeBase) {
+      this.shakeBase.cam.fov = this.shakeBase.fov; // shake ended: exact pre-shake fov
+      this.shakeBase = null;
+    }
   }
 }

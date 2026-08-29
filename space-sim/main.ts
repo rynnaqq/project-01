@@ -466,6 +466,7 @@ async function boot(): Promise<World> {
   engine.runRenderLoop(() => {
     const dt = Math.min(0.05, engine.getDeltaTime() / 1000);
     sky.update(dt);
+    pipe.imageProcessing.exposure = sky.exposure; // altitude/fx ramp drives the grade
     earth.update(dt);
     if (started && !paused) {
       mission.update(dt);
