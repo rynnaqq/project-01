@@ -14,6 +14,10 @@ import type { FlightModel } from "./vehicles/flight";
 import type { ExhaustSystem } from "./effects/exhaust";
 import type { GroundSmoke } from "./effects/smoke";
 import { ShotLibrary } from "./cinema/shots";
+import { CinematicDirector } from "./cinema/director";
+import { TransitionLayer } from "./cinema/transitions";
+import { MISSION_STATES } from "./mission/types";
+import type { UiSinks } from "./mission/runtime";
 import type { SlsStack } from "./vehicles/sls";
 
 const canvas = document.getElementById("render-canvas") as HTMLCanvasElement;
@@ -124,11 +128,22 @@ async function boot(): Promise<World> {
 
   setProgress(0.95, "MISSION SYSTEM READY");
   await nextFrame();
+  const director = new CinematicDirector(shotLibrary, scene, new TransitionLayer(document.getElementById("ui-layer")!));
+  const { createMissionRuntime } = await import("./mission/runtime");
+  const uiNoop: UiSinks = { onComms: () => {}, onHud: () => {}, onState: () => {} };
+  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, ui: uiNoop });
+  if (import.meta.env.DEV) {
+    // Dev QA gate: ?skip=COUNTDOWN (or any MISSION_STATE) fast-forwards the mission.
+    const skip = new URLSearchParams(window.location.search).get("skip")?.toUpperCase();
+    const state = MISSION_STATES.find((s) => s === skip);
+    if (state) mission.skipTo(state);
+  }
+
   engine.runRenderLoop(() => {
     const dt = Math.min(0.05, engine.getDeltaTime() / 1000);
     sky.update(dt);
     earth.update(dt);
-    // Task 12: mission.update(dt) wires here
+    mission.update(dt);
     scene.render();
   });
   setProgress(1, "MISSION SYSTEM READY");
