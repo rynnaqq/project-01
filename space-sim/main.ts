@@ -97,6 +97,9 @@ async function boot(): Promise<World> {
   const { createIssExterior } = await import("./iss/exterior");
   const iss = createIssExterior(scene, assets);
   targetProviders.iss = () => iss.root;
+  const { createIssInterior } = await import("./iss/interior");
+  const interior = createIssInterior(scene, assets, iss);
+  targetProviders.issInterior = () => interior.spawn;
   // Docking rig: drives sls.orionNode down the ISS docking axis from ISS_REVEAL on.
   const { DockingSequence } = await import("./iss/docking");
   const docking = new DockingSequence(sls.orionNode, iss.dockingPort);
@@ -151,6 +154,11 @@ async function boot(): Promise<World> {
       const p = iss.root.getAbsolutePosition().clone();
       camera.position.copyFrom(p.add(new Vector3(350, 60, 350)));
       camera.setTarget(p);
+    }
+    if (params.get("view") === "interior") {
+      const p = interior.spawn.getAbsolutePosition().clone();
+      camera.position.copyFrom(p);
+      camera.setTarget(p.add(new Vector3(0, 0, -3)));
     }
   }
 
