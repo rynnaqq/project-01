@@ -18,8 +18,12 @@ import { ShotLibrary } from "./cinema/shots";
 import { CinematicDirector } from "./cinema/director";
 import { TransitionLayer } from "./cinema/transitions";
 import { MISSION_STATES, type MissionState } from "./mission/types";
+import { STATE_DURATIONS } from "./mission/script";
 import type { UiSinks } from "./mission/runtime";
 import { InputManager } from "./core/input";
+import { Hud } from "./ui/hud";
+import { Subtitles } from "./ui/subtitles";
+import { Menu } from "./ui/menu";
 import { ZeroGState } from "./player/controller";
 import { InteractionSystem } from "./player/interact";
 import type { SlsStack } from "./vehicles/sls";
@@ -154,6 +158,101 @@ async function boot(): Promise<World> {
   // every method no-ops until then and Web Audio/SpeechSynthesis failures are silent.
   const audio = new AudioBus();
   window.addEventListener("keydown", () => { void audio.unlock(); }, { once: true });
+
+  // --- DOM UI: HUD, subtitles, menu. The runtime's ui sinks feed the HUD and
+  // subtitles; menu actions and the global key surface drive pause/skip/restart.
+  const uiRoot = document.getElementById("ui-layer")!;
+  const hud = new Hud(uiRoot);
+  const subtitles = new Subtitles(uiRoot);
+  let started = false;
+  let paused = false;
+  // engine.t captured at the current state's entry — time base for the countdown MET.
+  let stateEnteredAt = 0;
+  let telemetryOn = false;
+  let muted = false;
+
+  const MAJOR_STATES: readonly MissionState[] = [
+    "LAUNCH_PREPARATION", "ENGINE_IGNITION", "ORBIT", "ISS_REVEAL",
+    "DOCKING_SEQUENCE", "ISS_INTERIOR_INTRO", "PLAYER_CONTROL_ENABLED",
+  ];
+  const nextMajorState = (cur: MissionState): MissionState | null => {
+    const majorIdx = MAJOR_STATES.indexOf(cur);
+    if (majorIdx >= 0) return MAJOR_STATES[majorIdx + 1] ?? null;
+    const curIdx = MISSION_STATES.indexOf(cur);
+    for (const m of MAJOR_STATES) {
+      if (MISSION_STATES.indexOf(m) > curIdx) return m;
+    }
+    return null;
+  };
+
+  const toggleFullscreen = (): void => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => { /* best effort */ });
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => { /* best effort */ });
+    }
+  };
+  const toggleMute = (): void => {
+    muted = !muted;
+    audio.setMuted(muted);
+  };
+  const pauseGame = (): void => {
+    if (!started || paused) return;
+    paused = true; // freezes mission.update/updatePlayer in the render loop
+    input.unlockPointer();
+    menu.showPause();
+  };
+  const resumeGame = (): void => {
+    if (!paused) return;
+    paused = false;
+    menu.hide();
+  };
+  const skipCinematic = (): void => {
+    const next = nextMajorState(mission.engine.current);
+    if (!next) return;
+    mission.skipTo(next);
+    resumeGame(); // continue playback at the new state when skipping from the pause menu
+  };
+  const startMission = (): void => {
+    void audio.unlock();
+    menu.hide();
+    started = true; // mission clock starts ticking on the next frame
+  };
+  const menu = new Menu(uiRoot, {
+    onStart: startMission,
+    onRestart: () => { window.location.reload(); },
+    onSkip: skipCinematic,
+    onExit: () => { window.location.href = "/"; },
+    onResume: resumeGame,
+    onFullscreen: toggleFullscreen,
+  });
+  input.onEscape(() => {
+    if (!started) return;
+    if (paused) resumeGame(); else pauseGame();
+  });
+  // Chrome consumes the Esc keydown that exits pointer lock — pause on lock loss too.
+  document.addEventListener("pointerlockchange", () => {
+    if (started && !paused && !document.pointerLockElement) pauseGame();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.repeat) return;
+    if (e.code === "KeyM") toggleMute();
+    if (e.code === "KeyF") toggleFullscreen();
+  });
+
+  const uiSinks: UiSinks = {
+    onComms: (c) => subtitles.show(c),
+    onHud: (h) => {
+      if (h.phase !== undefined) hud.setPhase(h.phase);
+      if (h.progressStage !== undefined) hud.setProgress(h.progressStage);
+      if (h.telemetry !== undefined) telemetryOn = h.telemetry === "docking";
+    },
+    onState: (s) => {
+      stateEnteredAt = mission.engine.t;
+      hud.setSkipHint(MISSION_STATES.indexOf(s) < MISSION_STATES.indexOf("PLAYER_CONTROL_ENABLED"));
+      if (s === "ENGINE_IGNITION") hud.setMet(0, false); // T+ counts from ignition
+    },
+  };
   const player = new ZeroGState();
   iss.root.computeWorldMatrix(true);
   interior.spawn.computeWorldMatrix(true);
@@ -280,8 +379,8 @@ async function boot(): Promise<World> {
   };
 
   const { createMissionRuntime } = await import("./mission/runtime");
-  const uiNoop: UiSinks = { onComms: () => {}, onHud: () => {}, onState: () => {} };
-  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, issRoot: iss.root, docking, audio, ui: uiNoop, onPlayerEnabled: enablePlayer });
+  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, issRoot: iss.root, docking, audio, ui: uiSinks, onPlayerEnabled: enablePlayer });
+  hud.setSkipHint(MISSION_STATES.indexOf(mission.engine.current) < MISSION_STATES.indexOf("PLAYER_CONTROL_ENABLED"));
   if (import.meta.env.DEV) {
     // Dev QA gates: ?skip=COUNTDOWN (or any MISSION_STATE) fast-forwards the mission;
     // ?skip=interior is shorthand for ?skip=PLAYER_CONTROL_ENABLED;
@@ -307,10 +406,24 @@ async function boot(): Promise<World> {
     const dt = Math.min(0.05, engine.getDeltaTime() / 1000);
     sky.update(dt);
     earth.update(dt);
-    mission.update(dt);
+    if (started && !paused) {
+      mission.update(dt);
+      if (mission.engine.current === "COUNTDOWN") {
+        // Fictional launch MET: the 80 s COUNTDOWN state maps onto T-600 → T-0
+        // (met = 600·(1 − stateLocal/80)); setMet drives it, update() does not accumulate.
+        const stateLocal = Math.max(0, mission.engine.t - stateEnteredAt);
+        hud.setMet(Math.max(0, 600 * (1 - stateLocal / STATE_DURATIONS.COUNTDOWN)), true);
+      }
+      hud.setTelemetry(telemetryOn ? mission.lastTelemetry : null);
+      if (!playerCam && input.consumeHoldSpace(dt)) skipCinematic();
+      hud.update(dt);
+      subtitles.update(dt);
+    }
     if (playerCam) {
-      updatePlayer(dt);
-      interactions?.update(); // after the controller writes the base camera position
+      if (!paused) {
+        updatePlayer(dt);
+        interactions?.update(); // after the controller writes the base camera position
+      }
       scene.activeCamera = playerCam; // hold the view against cinematic auto-cuts
     }
     scene.render();
@@ -318,6 +431,7 @@ async function boot(): Promise<World> {
   setProgress(1, "MISSION SYSTEM READY");
   await new Promise((r) => setTimeout(r, 400));
   document.getElementById("loading-screen")!.classList.add("hidden");
+  menu.showStart();
   return {
     tier, sky, earth, ml, sls, flight, exhaust, smoke, shotLibrary,
     crewQuarters: () => targetProviders.crewQuarters?.() ?? null,

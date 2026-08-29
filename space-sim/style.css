@@ -1,4 +1,4 @@
-/* space-sim/style.css — base, loading, error, cinematic fade. HUD/menus added in Task 14. */
+/* space-sim/style.css — base, loading, error, cinematic fade, interactions, HUD/subtitles/menu (Task 19). */
 :root {
   --hud-fg: #cfe3ee; --hud-dim: #6d8494; --hud-accent: #7fd0ff;
   --hud-bg: rgba(8, 12, 16, 0.55); --hud-line: rgba(160, 200, 220, 0.35);
@@ -27,3 +27,23 @@ body { font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, Menlo, mono
 .interact-caption { position: absolute; left: 50%; top: 64%; transform: translateX(-50%); background: var(--hud-bg);
   border: 1px solid var(--hud-line); padding: 5px 12px; font-size: 11px; letter-spacing: 0.12em; color: var(--hud-accent);
   z-index: 4; pointer-events: none; }
+
+/* --- HUD (Task 19) --- */
+.hud { position: absolute; inset: 0; pointer-events: none; z-index: 3; font-size: 11px; }
+.hud-phase { position: absolute; top: 28px; left: 32px; letter-spacing: 0.22em; color: var(--hud-fg); text-transform: uppercase; }
+.hud-met { position: absolute; top: 28px; right: 32px; letter-spacing: 0.22em; color: var(--hud-accent); }
+.hud-progress { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); display: flex; gap: 26px; }
+.hud-stage { color: var(--hud-dim); letter-spacing: 0.16em; }
+.hud-stage.active { color: var(--hud-accent); }
+.hud-stage.active::before { content: "▸ "; }
+.hud-telemetry { position: absolute; top: 96px; right: 32px; display: grid; grid-template-columns: auto auto; gap: 2px 14px;
+  background: var(--hud-bg); border: 1px solid var(--hud-line); padding: 10px 14px; letter-spacing: 0.14em; }
+.hud-skip { position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%); color: var(--hud-dim); letter-spacing: 0.18em; }
+.subtitles { position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%); max-width: 72ch; text-align: center;
+  background: var(--hud-bg); border-left: 2px solid var(--hud-accent); padding: 8px 18px; font-size: 13px; line-height: 1.5; letter-spacing: 0.04em; }
+.subtitles .speaker { color: var(--hud-accent); letter-spacing: 0.18em; margin-right: 10px; }
+.menu-card { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 40%, rgba(10, 18, 26, 0.88), rgba(2, 4, 6, 0.97)); z-index: 9; pointer-events: auto; }
+.menu-title { font-size: 30px; letter-spacing: 0.5em; color: var(--hud-fg); text-transform: uppercase; }
+.menu-sub { font-size: 11px; color: var(--hud-dim); letter-spacing: 0.3em; text-transform: uppercase; }
+.menu-error-text { font-size: 12px; color: var(--hud-dim); max-width: 60ch; text-align: center; line-height: 1.6; }
