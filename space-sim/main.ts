@@ -55,6 +55,9 @@ async function boot(): Promise<World> {
   await nextFrame();
   const { createTerrain } = await import("./world/ksc/terrain");
   createTerrain(scene, assets);
+  const { createVab, createFacilityCluster } = await import("./world/ksc/vab");
+  createVab(scene, assets);
+  createFacilityCluster(scene, assets);
 
   setProgress(0.8, "Configuring cinematic pipeline...");
   await nextFrame();
