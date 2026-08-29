@@ -18,3 +18,4 @@ dist-tsnode
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.superpowers/
