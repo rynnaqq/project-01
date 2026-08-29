@@ -6,6 +6,7 @@ import {
 import type { Engine, Mesh, PBRMaterial, PointLight, TransformNode } from "@babylonjs/core";
 import { capsForTier, createBestEngine, detectTier, gpuString, type QualityTier } from "./core/engine";
 import { createAssets } from "./core/assets";
+import { AudioBus } from "./core/audio";
 import { SkyController } from "./effects/sky";
 import { createStarfield } from "./world/space";
 import { createEarth, type Earth } from "./world/earth/earth";
@@ -149,6 +150,10 @@ async function boot(): Promise<World> {
   // Space/C thrust stays world-vertical; WASD is camera-local, mapped through
   // the yaw/pitch basis (Babylon: rotation.x positive pitches DOWN, +yaw turns +Z->+X).
   const input = new InputManager(canvas);
+  // Audio bus: unlocked on the first user gesture (canvas click or any keypress);
+  // every method no-ops until then and Web Audio/SpeechSynthesis failures are silent.
+  const audio = new AudioBus();
+  window.addEventListener("keydown", () => { void audio.unlock(); }, { once: true });
   const player = new ZeroGState();
   iss.root.computeWorldMatrix(true);
   interior.spawn.computeWorldMatrix(true);
@@ -182,6 +187,7 @@ async function boot(): Promise<World> {
     input.lockPointer();
   };
   canvas.addEventListener("click", () => {
+    void audio.unlock();
     if (playerCam && !input.locked) input.lockPointer();
   });
 
@@ -275,7 +281,7 @@ async function boot(): Promise<World> {
 
   const { createMissionRuntime } = await import("./mission/runtime");
   const uiNoop: UiSinks = { onComms: () => {}, onHud: () => {}, onState: () => {} };
-  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, issRoot: iss.root, docking, ui: uiNoop, onPlayerEnabled: enablePlayer });
+  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, issRoot: iss.root, docking, audio, ui: uiNoop, onPlayerEnabled: enablePlayer });
   if (import.meta.env.DEV) {
     // Dev QA gates: ?skip=COUNTDOWN (or any MISSION_STATE) fast-forwards the mission;
     // ?skip=interior is shorthand for ?skip=PLAYER_CONTROL_ENABLED;

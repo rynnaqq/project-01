@@ -85,6 +85,12 @@ function makeDeps() {
         return t;
       },
     } as unknown as RuntimeDeps["docking"],
+    // AudioBus is browser-only (Web Audio); the runtime wiring under test is a no-op here.
+    audio: {
+      unlock: () => Promise.resolve(),
+      engine: () => {}, engineLevel: () => {}, rumble: () => {}, vent: () => {},
+      beep: () => {}, clunk: () => {}, speak: () => {}, duck: () => {}, setMuted: () => {},
+    } as unknown as RuntimeDeps["audio"],
     ui: {
       onComms: () => { rec.comms++; },
       onHud: () => { rec.hud++; },

@@ -1,5 +1,6 @@
 // space-sim/mission/runtime.ts
 import type { Scene, TransformNode } from "@babylonjs/core";
+import type { AudioBus } from "../core/audio";
 import {
   MISSION_STATES,
   MissionEngine,
@@ -32,6 +33,8 @@ export interface RuntimeDeps {
   issRoot: TransformNode;
   /** Scripted approach driver: holds orionNode + the ISS docking port. */
   docking: DockingSequence;
+  /** Procedural audio bus (engine bed, rumble, radio comms); unlocked on first user gesture. */
+  audio: AudioBus;
   ui: UiSinks;
   /** Invoked when the mission script fires the enablePlayer command (zero-G rig takes over). */
   onPlayerEnabled?: () => void;
@@ -73,10 +76,13 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       case "ignite":
         deps.exhaust.ignite(true);
         deps.smoke.ramp(1);
+        deps.audio.engine(true);
+        deps.audio.rumble(0.8);
         armRetract = 0;
         break;
       case "liftoff":
         deps.flight.liftoff(t);
+        deps.audio.rumble(1);
         break;
       case "separateSrb":
         deps.flight.separateSrb();
@@ -86,30 +92,43 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         break;
       case "orbitInsertion":
         deps.flight.orbitInsertion();
+        deps.audio.engine(false);
+        deps.audio.rumble(0);
         break;
       case "dockContact":
         startDocking();
         deps.docking.contact();
+        deps.audio.clunk();
         break;
       case "dockCapture":
         startDocking();
         deps.docking.capture();
+        deps.audio.clunk();
         break;
       case "dockHard":
         startDocking();
         deps.docking.hardDock();
+        deps.audio.clunk();
+        break;
+      case "enterInterior":
+        deps.audio.vent(true);
         break;
       case "enablePlayer":
         deps.onPlayerEnabled?.();
         break;
-      default: // openHatch/enterInterior: interior is always live, no runtime side effects yet
+      default: // openHatch: interior is always live, no runtime side effects
         break;
     }
   };
 
   const engine = new MissionEngine(MISSION_SCRIPT, {
     onCommand: (c: Command, t: number) => handleCommand(c, t),
-    onComms: (c: CommsLine) => deps.ui.onComms(c),
+    onComms: (c: CommsLine) => {
+      deps.audio.beep("soft");
+      deps.audio.duck(c.style === "pa" ? 0.4 : 1); // duck the bed under PAO announcements
+      deps.audio.speak(c);
+      deps.ui.onComms(c);
+    },
     onHud: (h: HudChange) => deps.ui.onHud(h),
     onFx: (f: FxCommand) => {
       deps.sky.applyFx(f);
