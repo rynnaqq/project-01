@@ -3,7 +3,7 @@ import {
   DefaultRenderingPipeline, SSAO2RenderingPipeline, Scene, UniversalCamera, Vector3,
   WebGPUEngine,
 } from "@babylonjs/core";
-import type { Engine } from "@babylonjs/core";
+import type { Engine, TransformNode } from "@babylonjs/core";
 import { capsForTier, createBestEngine, detectTier, gpuString, type QualityTier } from "./core/engine";
 import { createAssets } from "./core/assets";
 import { SkyController } from "./effects/sky";
@@ -21,7 +21,10 @@ function setProgress(fraction: number, label: string): void {
 }
 const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => r()));
 
-interface World { tier: QualityTier; sky: SkyController; earth: Earth; ml: MobileLauncher }
+interface World {
+  tier: QualityTier; sky: SkyController; earth: Earth; ml: MobileLauncher;
+  crewQuarters: () => TransformNode | null;
+}
 
 async function boot(): Promise<World> {
   setProgress(0.05, "Detecting graphics backend...");
@@ -64,6 +67,8 @@ async function boot(): Promise<World> {
   const { createMobileLauncher, createCrawler } = await import("./world/ksc/launcher");
   const ml = createMobileLauncher(scene, assets);
   createCrawler(scene, assets);
+  const { createProps } = await import("./world/ksc/props");
+  createProps(scene, assets);
 
   setProgress(0.8, "Configuring cinematic pipeline...");
   await nextFrame();
@@ -99,7 +104,11 @@ async function boot(): Promise<World> {
   setProgress(1, "MISSION SYSTEM READY");
   await new Promise((r) => setTimeout(r, 400));
   document.getElementById("loading-screen")!.classList.add("hidden");
-  return { tier, sky, earth, ml };
+  return {
+    tier, sky, earth, ml,
+    // targetProviders wiring: Task 10
+    crewQuarters: () => scene.getTransformNodeByName("crewQuarters"),
+  };
 }
 
 boot().catch((err: unknown) => {
