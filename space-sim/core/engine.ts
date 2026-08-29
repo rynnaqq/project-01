@@ -1,51 +1,54 @@
-import { Engine } from '@babylonjs/core';
+// space-sim/core/engine.ts
+import { Engine, WebGPUEngine } from "@babylonjs/core";
 
-export interface EngineInitResult {
-  engine: Engine;
-  isWebGPU: boolean;
+export type QualityTier = "high" | "medium" | "low";
+
+export interface TierCaps {
+  ssao: boolean; dof: boolean; motionBlur: boolean; gpuParticles: boolean;
+  maxParticles: number; hardwareScaling: number;
 }
 
-export async function createBestEngine(canvas: HTMLCanvasElement): Promise<EngineInitResult> {
-  // WebGL2 Engine
-  const engine = new Engine(canvas, true, {
-    preserveDrawingBuffer: true,
-    stencil: true,
-    disableWebGL2Support: false,
-    powerPreference: 'high-performance',
-  });
+/** Pure tier logic — unit tested. */
+export function detectTier(info: { gpu: string | null; dpr: number; cores: number }): QualityTier {
+  const gpu = (info.gpu ?? "").toLowerCase();
+  const mobile = /mali|adreno|apple a\d|apple gpu|powervr|kirin|exynos/.test(gpu);
+  const integrated = /apple m\d|iris|uhd|radeon\(tm\)|vega|arc /.test(gpu);
+  if (mobile || info.gpu === null) return "low";
+  if (integrated || info.cores <= 4) return "medium";
+  if (info.dpr > 2.5) return "medium";
+  return "high";
+}
 
-  const caps = engine.getCaps();
-  if (!caps.maxTextureSize) {
-    throw new Error('3D WebGL context creation failed or unsupported');
+export function capsForTier(tier: QualityTier): TierCaps {
+  switch (tier) {
+    case "high":
+      return { ssao: true, dof: true, motionBlur: true, gpuParticles: true, maxParticles: 12000, hardwareScaling: 1 };
+    case "medium":
+      return { ssao: false, dof: true, motionBlur: false, gpuParticles: true, maxParticles: 5000, hardwareScaling: 1 };
+    case "low":
+      return { ssao: false, dof: false, motionBlur: false, gpuParticles: false, maxParticles: 1800, hardwareScaling: 1.25 };
   }
-
-  return { engine, isWebGPU: false };
 }
 
-export function setupContextLossRecovery(
-  engine: Engine,
-  onLost: () => void,
-  onRestored: () => void
-): () => void {
-  const canvas = engine.getRenderingCanvas();
-  if (!canvas) return () => {};
+export async function createBestEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEngine> {
+  try {
+    if (await WebGPUEngine.IsSupportedAsync) {
+      const gpu = new WebGPUEngine(canvas);
+      await gpu.initAsync();
+      return gpu;
+    }
+  } catch {
+    // fall through to WebGL2
+  }
+  return new Engine(canvas, true, { stencil: false, powerPreference: "high-performance" });
+}
 
-  const handleLost = (event: Event) => {
-    event.preventDefault();
-    console.warn('WebGL Context Lost');
-    onLost();
-  };
-
-  const handleRestored = () => {
-    console.log('WebGL Context Restored');
-    onRestored();
-  };
-
-  canvas.addEventListener('webglcontextlost', handleLost);
-  canvas.addEventListener('webglcontextrestored', handleRestored);
-
-  return () => {
-    canvas.removeEventListener('webglcontextlost', handleLost);
-    canvas.removeEventListener('webglcontextrestored', handleRestored);
-  };
+/** Read a GPU renderer string when available (tier detection input). */
+export function gpuString(engine: Engine | WebGPUEngine): string | null {
+  const gl = (engine as unknown as { _gl?: WebGL2RenderingContext })._gl;
+  if (gl) {
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    if (ext) return String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL));
+  }
+  return null;
 }
