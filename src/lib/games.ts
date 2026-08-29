@@ -57,11 +57,11 @@ export const GAMES: GameDefinition[] = [
     category: 'Simulation',
     modes: ['Solo'],
     mechanics: [
-      'Launch sequence with Web Audio-synthesized mission control.',
-      'Cinematic rocket ascent through atmosphere.',
-      '6-axis docking minigame with real alignment scoring.',
-      'Zero-G ISS interior exploration with flashlight and Cupola view.',
-      'Mobile-friendly virtual joysticks on touch devices.',
+      'Cinematic mission: KSC launch, ascent, orbit and automated ISS docking.',
+      'Directed NASA-style camera work with mission-control radio comms.',
+      'Zero-G first-person exploration inside the ISS after docking.',
+      'Cupola viewing moment with procedural Earth below.',
+      'Fully procedural — no downloads, works offline.',
     ],
   },
 ];

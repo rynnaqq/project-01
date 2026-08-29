@@ -6,6 +6,8 @@ export type RigKind = "static" | "crane" | "orbit" | "track" | "pov" | "drift";
 export interface RigContext {
   scene: Scene;
   targetProviders: Record<string, () => TransformNode | undefined>;
+  /** prefers-reduced-motion: handheld wobble/bob is scaled to zero. */
+  reducedMotion?: boolean;
 }
 
 export interface CameraRig {
@@ -47,14 +49,15 @@ export class ShotLibrary {
   private followRig(id: string, kind: RigKind, targetName: string, offset: Vector3, fov = 0.8, wobble = 0): void {
     const cam = makeCam(this.ctx.scene, `cam_${id}`, offset, fov);
     const get = this.target(targetName);
+    const wob = this.ctx.reducedMotion ? 0 : wobble;
     const apply = (t: number): void => {
       const node = get();
       if (!node) return;
       const p = node.getAbsolutePosition();
       cam.position.copyFrom(p.add(offset));
-      if (wobble > 0) {
-        cam.position.y += Math.sin(t * 0.7) * wobble;
-        cam.position.x += Math.cos(t * 0.5) * wobble * 0.6;
+      if (wob > 0) {
+        cam.position.y += Math.sin(t * 0.7) * wob;
+        cam.position.x += Math.cos(t * 0.5) * wob * 0.6;
       }
       lookAt(cam, p);
     };
@@ -130,14 +133,15 @@ export class ShotLibrary {
     const orbitRig = (id: string, kind: RigKind, dir: Vector3, dist: number, fov = 0.85, wobble = 0): void => {
       const cam = makeCam(this.ctx.scene, `cam_${id}`, dir.scale(dist).add(new Vector3(0, ORBIT_Y, 0)), fov);
       const get = this.target("orion");
+      const wob = this.ctx.reducedMotion ? 0 : wobble;
       const apply = (t: number): void => {
         const node = get();
         if (!node) return;
         const p = node.getAbsolutePosition();
         cam.position.copyFrom(p.add(dir.scale(dist)));
-        if (wobble > 0) {
-          cam.position.y += Math.sin(t * 0.6) * wobble;
-          cam.position.x += Math.cos(t * 0.4) * wobble * 0.7;
+        if (wob > 0) {
+          cam.position.y += Math.sin(t * 0.6) * wob;
+          cam.position.x += Math.cos(t * 0.4) * wob * 0.7;
         }
         lookAt(cam, p);
       };
@@ -165,7 +169,7 @@ export class ShotLibrary {
         if (!node) return;
         const p = node.getAbsolutePosition();
         cam.position.copyFrom(p.add(offset));
-        if (kind !== "static") {
+        if (kind !== "static" && !this.ctx.reducedMotion) {
           cam.position.y += Math.sin(t * 0.5) * 0.3;
         }
         lookAt(cam, p);

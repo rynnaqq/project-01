@@ -56,7 +56,7 @@ export class SkyController {
   private altitude = 0;
   private mat: ShaderMaterial;
 
-  constructor(private scene: Scene, tier: QualityTier) {
+  constructor(private scene: Scene, tier: QualityTier, private reducedMotion = false) {
     const dome = MeshBuilder.CreateSphere("skyDome", { diameter: 6.0e7, segments: 24 }, scene);
     dome.isPickable = false;
     dome.infiniteDistance = true;
@@ -101,7 +101,7 @@ export class SkyController {
   setSunGlare(v: number): void { this.glare = v; this.applyRamp(); }
   applyFx(fx: { exposure?: number; shake?: number; glare?: number }): void {
     if (fx.exposure !== undefined) this.exposureTarget = fx.exposure;
-    if (fx.shake !== undefined) this.shakeAmp = fx.shake;
+    if (fx.shake !== undefined && !this.reducedMotion) this.shakeAmp = fx.shake;
     if (fx.glare !== undefined) this.glare = fx.glare;
     this.applyRamp();
   }
@@ -110,6 +110,7 @@ export class SkyController {
   update(dt: number): void {
     const speed = 0.8;
     this.currentExposure += (this.exposureTarget - this.currentExposure) * Math.min(1, dt * speed);
+    if (this.reducedMotion) return; // no shake decay, no fov wobble
     if (this.shakeAmp > 0.001) this.shakeAmp = Math.max(0, this.shakeAmp - dt * 0.25);
     const cam = this.scene.activeCamera;
     if (cam) cam.fov = 0.9 + Math.sin(performance.now() * 0.02) * 0.004 * this.shakeAmp * 10;

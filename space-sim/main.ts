@@ -38,6 +38,25 @@ function setProgress(fraction: number, label: string): void {
 }
 const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => r()));
 
+// Static boot-fault screen (index.html) RETRY button — reload the page.
+document.getElementById("error-retry")?.addEventListener("click", () => { window.location.reload(); });
+
+// The Menu comes up early in boot so any fault can surface on its error card;
+// before it exists (or for module-load faults) the static #error-screen is used.
+let bootMenu: Menu | null = null;
+
+function showFault(msg: string, canContinue = false): void {
+  document.getElementById("loading-screen")?.classList.add("hidden");
+  if (bootMenu) {
+    bootMenu.hide(); // start/pause cards must not paint through the error card
+    bootMenu.showError(msg, canContinue);
+  } else {
+    document.getElementById("error-screen")?.classList.remove("hidden");
+    const text = document.getElementById("error-text");
+    if (text) text.textContent = msg;
+  }
+}
+
 interface World {
   tier: QualityTier; sky: SkyController; earth: Earth; ml: MobileLauncher;
   sls: SlsStack; flight: FlightModel; exhaust: ExhaustSystem; smoke: GroundSmoke;
@@ -46,13 +65,20 @@ interface World {
 }
 
 async function boot(): Promise<World> {
+  // Environment posture: touch devices run the low tier; reduced-motion users
+  // get a steadier camera (no handheld wobble, no launch shake).
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   setProgress(0.05, "Detecting graphics backend...");
   const engine: Engine | WebGPUEngine = await createBestEngine(canvas);
-  const tier = detectTier({
-    gpu: engine instanceof WebGPUEngine ? "WebGPU-capable" : gpuString(engine),
-    dpr: window.devicePixelRatio,
-    cores: navigator.hardwareConcurrency || 4,
-  });
+  const tier: QualityTier = coarsePointer
+    ? "low" // touch devices are always force-capped to the low tier
+    : detectTier({
+        gpu: engine instanceof WebGPUEngine ? "WebGPU-capable" : gpuString(engine),
+        dpr: window.devicePixelRatio,
+        cores: navigator.hardwareConcurrency || 4,
+      });
   engine.setHardwareScalingLevel(capsForTier(tier).hardwareScaling);
   const scene = new Scene(engine);
   scene.clearColor.set(0.002, 0.004, 0.01, 1);
@@ -61,13 +87,125 @@ async function boot(): Promise<World> {
   camera.setTarget(new Vector3(0, 40, 0));
   scene.activeCamera = camera;
 
+  // --- DOM UI comes up before the world so build faults can surface on the menu
+  // error card (with hide() first, per ledger, so no other card paints through) ---
+  const uiRoot = document.getElementById("ui-layer")!;
+  const hud = new Hud(uiRoot);
+  const subtitles = new Subtitles(uiRoot);
+  let started = false;
+  let paused = false;
+  // engine.t captured at the current state's entry — time base for the countdown MET.
+  let stateEnteredAt = 0;
+  let telemetryOn = false;
+  let muted = false;
+
+  const input = new InputManager(canvas);
+  // Audio bus: unlocked on the first user gesture (canvas click or any keypress);
+  // every method no-ops until then and Web Audio/SpeechSynthesis failures are silent.
+  const audio = new AudioBus();
+  window.addEventListener("keydown", () => { void audio.unlock(); }, { once: true });
+
+  const MAJOR_STATES: readonly MissionState[] = [
+    "LAUNCH_PREPARATION", "ENGINE_IGNITION", "ORBIT", "ISS_REVEAL",
+    "DOCKING_SEQUENCE", "ISS_INTERIOR_INTRO", "PLAYER_CONTROL_ENABLED",
+  ];
+  const nextMajorState = (cur: MissionState): MissionState | null => {
+    const majorIdx = MAJOR_STATES.indexOf(cur);
+    if (majorIdx >= 0) return MAJOR_STATES[majorIdx + 1] ?? null;
+    const curIdx = MISSION_STATES.indexOf(cur);
+    for (const m of MAJOR_STATES) {
+      if (MISSION_STATES.indexOf(m) > curIdx) return m;
+    }
+    return null;
+  };
+
+  const toggleFullscreen = (): void => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => { /* best effort */ });
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => { /* best effort */ });
+    }
+  };
+  const toggleMute = (): void => {
+    muted = !muted;
+    audio.setMuted(muted);
+  };
+  const pauseGame = (): void => {
+    if (!started || paused) return;
+    paused = true; // freezes mission.update/updatePlayer in the render loop
+    audio.setPaused(true); // mute-while-paused: bed silenced, radio speech cancelled
+    input.unlockPointer();
+    menu.showPause();
+  };
+  const resumeGame = (): void => {
+    if (!paused) return;
+    paused = false;
+    audio.setPaused(false);
+    menu.hide();
+  };
+  const skipCinematic = (): void => {
+    const next = nextMajorState(mission.engine.current);
+    if (!next) return;
+    mission.skipTo(next);
+    resumeGame(); // continue playback at the new state when skipping from the pause menu
+  };
+  const startMission = (): void => {
+    void audio.unlock();
+    audio.setPaused(false);
+    menu.hide();
+    started = true; // mission clock starts ticking on the next frame
+  };
+  // Callbacks are late-bound wrappers: the Menu is built before mission/audio
+  // bindings below finish initializing, and its cards are only shown afterwards.
+  const menu = new Menu(uiRoot, {
+    onStart: () => startMission(),
+    onRestart: () => { window.location.reload(); },
+    onSkip: () => skipCinematic(),
+    onExit: () => { window.location.href = "/"; },
+    onResume: () => resumeGame(),
+    onFullscreen: () => toggleFullscreen(),
+  });
+  bootMenu = menu;
+  if (coarsePointer) menu.setStartNote("Best experienced on desktop");
+
+  input.onEscape(() => {
+    if (!started) return;
+    if (paused) resumeGame(); else pauseGame();
+  });
+  // Chrome consumes the Esc keydown that exits pointer lock — pause on lock loss too.
+  document.addEventListener("pointerlockchange", () => {
+    if (started && !paused && !document.pointerLockElement) pauseGame();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.repeat) return;
+    if (e.code === "KeyM") toggleMute();
+    if (e.code === "KeyF") toggleFullscreen();
+  });
+
+  // WebGL/WebGPU context loss: graceful recovery message; hide it again on restore.
+  engine.onContextLostObservable.add(() => {
+    showFault("Graphics context was lost. Attempting recovery — if the view stays dark, press RETRY to reload.");
+  });
+  engine.onContextRestoredObservable.add(() => {
+    bootMenu?.hide();
+    document.getElementById("error-screen")?.classList.add("hidden");
+  });
+
+  // --- World build (dynamic imports): decorative subsystems degrade gracefully —
+  // a missing landmark must not black-screen the mission. Required systems
+  // (mobile launcher, vehicle, station, runtime) rethrow into showFault. ---
+  const buildFaults: string[] = [];
+  const buildStep = async (label: string, run: () => Promise<void>): Promise<void> => {
+    try { await run(); } catch { buildFaults.push(label); }
+  };
+
   setProgress(0.2, "Loading materials...");
   await nextFrame();
   const assets = createAssets(scene);
 
   setProgress(0.4, "Loading sky and starfield...");
   await nextFrame();
-  const sky = new SkyController(scene, tier);
+  const sky = new SkyController(scene, tier, reducedMotion);
   createStarfield(scene);
 
   setProgress(0.6, "Loading Earth...");
@@ -76,18 +214,26 @@ async function boot(): Promise<World> {
 
   setProgress(0.7, "Loading Kennedy Space Center...");
   await nextFrame();
-  const { createTerrain } = await import("./world/ksc/terrain");
-  createTerrain(scene, assets);
-  const { createVab, createFacilityCluster } = await import("./world/ksc/vab");
-  createVab(scene, assets);
-  createFacilityCluster(scene, assets);
-  const { createPad } = await import("./world/ksc/pad");
-  createPad(scene, assets);
+  await buildStep("KSC terrain", async () => {
+    const { createTerrain } = await import("./world/ksc/terrain");
+    createTerrain(scene, assets);
+  });
+  await buildStep("Vehicle Assembly Building", async () => {
+    const { createVab, createFacilityCluster } = await import("./world/ksc/vab");
+    createVab(scene, assets);
+    createFacilityCluster(scene, assets);
+  });
+  await buildStep("Launch Pad 39-A", async () => {
+    const { createPad } = await import("./world/ksc/pad");
+    createPad(scene, assets);
+  });
   const { createMobileLauncher, createCrawler } = await import("./world/ksc/launcher");
   const ml = createMobileLauncher(scene, assets);
   createCrawler(scene, assets);
-  const { createProps } = await import("./world/ksc/props");
-  createProps(scene, assets);
+  await buildStep("KSC site props", async () => {
+    const { createProps } = await import("./world/ksc/props");
+    createProps(scene, assets);
+  });
 
   setProgress(0.75, "Loading SLS + Orion stack...");
   await nextFrame();
@@ -111,7 +257,7 @@ async function boot(): Promise<World> {
   // Docking rig: drives sls.orionNode down the ISS docking axis from ISS_REVEAL on.
   const { DockingSequence } = await import("./iss/docking");
   const docking = new DockingSequence(sls.orionNode, iss.dockingPort);
-  const shotLibrary = new ShotLibrary({ scene, targetProviders });
+  const shotLibrary = new ShotLibrary({ scene, targetProviders, reducedMotion });
 
   setProgress(0.8, "Configuring cinematic pipeline...");
   await nextFrame();
@@ -147,98 +293,13 @@ async function boot(): Promise<World> {
 
   setProgress(0.95, "MISSION SYSTEM READY");
   await nextFrame();
-  const director = new CinematicDirector(shotLibrary, scene, new TransitionLayer(document.getElementById("ui-layer")!));
+  const director = new CinematicDirector(shotLibrary, scene, new TransitionLayer(uiRoot));
 
   // --- Zero-G player (activated by the enablePlayer mission command) ---
   // Player state lives in ISS-local space — the same frame as interior.colliders.
   // Space/C thrust stays world-vertical; WASD is camera-local, mapped through
   // the yaw/pitch basis (Babylon: rotation.x positive pitches DOWN, +yaw turns +Z->+X).
-  const input = new InputManager(canvas);
-  // Audio bus: unlocked on the first user gesture (canvas click or any keypress);
-  // every method no-ops until then and Web Audio/SpeechSynthesis failures are silent.
-  const audio = new AudioBus();
-  window.addEventListener("keydown", () => { void audio.unlock(); }, { once: true });
-
-  // --- DOM UI: HUD, subtitles, menu. The runtime's ui sinks feed the HUD and
-  // subtitles; menu actions and the global key surface drive pause/skip/restart.
-  const uiRoot = document.getElementById("ui-layer")!;
-  const hud = new Hud(uiRoot);
-  const subtitles = new Subtitles(uiRoot);
-  let started = false;
-  let paused = false;
-  // engine.t captured at the current state's entry — time base for the countdown MET.
-  let stateEnteredAt = 0;
-  let telemetryOn = false;
-  let muted = false;
-
-  const MAJOR_STATES: readonly MissionState[] = [
-    "LAUNCH_PREPARATION", "ENGINE_IGNITION", "ORBIT", "ISS_REVEAL",
-    "DOCKING_SEQUENCE", "ISS_INTERIOR_INTRO", "PLAYER_CONTROL_ENABLED",
-  ];
-  const nextMajorState = (cur: MissionState): MissionState | null => {
-    const majorIdx = MAJOR_STATES.indexOf(cur);
-    if (majorIdx >= 0) return MAJOR_STATES[majorIdx + 1] ?? null;
-    const curIdx = MISSION_STATES.indexOf(cur);
-    for (const m of MAJOR_STATES) {
-      if (MISSION_STATES.indexOf(m) > curIdx) return m;
-    }
-    return null;
-  };
-
-  const toggleFullscreen = (): void => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => { /* best effort */ });
-    } else {
-      void document.documentElement.requestFullscreen().catch(() => { /* best effort */ });
-    }
-  };
-  const toggleMute = (): void => {
-    muted = !muted;
-    audio.setMuted(muted);
-  };
-  const pauseGame = (): void => {
-    if (!started || paused) return;
-    paused = true; // freezes mission.update/updatePlayer in the render loop
-    input.unlockPointer();
-    menu.showPause();
-  };
-  const resumeGame = (): void => {
-    if (!paused) return;
-    paused = false;
-    menu.hide();
-  };
-  const skipCinematic = (): void => {
-    const next = nextMajorState(mission.engine.current);
-    if (!next) return;
-    mission.skipTo(next);
-    resumeGame(); // continue playback at the new state when skipping from the pause menu
-  };
-  const startMission = (): void => {
-    void audio.unlock();
-    menu.hide();
-    started = true; // mission clock starts ticking on the next frame
-  };
-  const menu = new Menu(uiRoot, {
-    onStart: startMission,
-    onRestart: () => { window.location.reload(); },
-    onSkip: skipCinematic,
-    onExit: () => { window.location.href = "/"; },
-    onResume: resumeGame,
-    onFullscreen: toggleFullscreen,
-  });
-  input.onEscape(() => {
-    if (!started) return;
-    if (paused) resumeGame(); else pauseGame();
-  });
-  // Chrome consumes the Esc keydown that exits pointer lock — pause on lock loss too.
-  document.addEventListener("pointerlockchange", () => {
-    if (started && !paused && !document.pointerLockElement) pauseGame();
-  });
-  window.addEventListener("keydown", (e) => {
-    if (e.repeat) return;
-    if (e.code === "KeyM") toggleMute();
-    if (e.code === "KeyF") toggleFullscreen();
-  });
+  let playerCam: UniversalCamera | null = null;
 
   const uiSinks: UiSinks = {
     onComms: (c) => subtitles.show(c),
@@ -249,7 +310,8 @@ async function boot(): Promise<World> {
     },
     onState: (s) => {
       stateEnteredAt = mission.engine.t;
-      hud.setSkipHint(MISSION_STATES.indexOf(s) < MISSION_STATES.indexOf("PLAYER_CONTROL_ENABLED"));
+      // Coarse-pointer devices have no keyboard: never show HOLD SPACE TO SKIP.
+      hud.setSkipHint(!coarsePointer && MISSION_STATES.indexOf(s) < MISSION_STATES.indexOf("PLAYER_CONTROL_ENABLED"));
       if (s === "ENGINE_IGNITION") hud.setMet(0, false); // T+ counts from ignition
     },
   };
@@ -266,7 +328,6 @@ async function boot(): Promise<World> {
 
   const LOCAL_FWD = new Vector3(0, 0, 1);
   const LOCAL_SIDE = new Vector3(1, 0, 0);
-  let playerCam: UniversalCamera | null = null;
 
   const enablePlayer = (): void => {
     if (playerCam) {
@@ -294,7 +355,7 @@ async function boot(): Promise<World> {
   // exposes root/spawn/colliders/cupolaLook, so props are addressed by their mesh names) ---
   let interactions: InteractionSystem | null = null;
   const setupInteractions = (cam: UniversalCamera): void => {
-    const sys = new InteractionSystem(scene, cam, document.getElementById("ui-layer")!);
+    const sys = new InteractionSystem(scene, cam, uiRoot);
     const findMesh = (name: string): Mesh | null => {
       const m = scene.getMeshByName(name);
       return m ? (m as Mesh) : null;
@@ -380,7 +441,7 @@ async function boot(): Promise<World> {
 
   const { createMissionRuntime } = await import("./mission/runtime");
   const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, issRoot: iss.root, docking, audio, ui: uiSinks, onPlayerEnabled: enablePlayer });
-  hud.setSkipHint(MISSION_STATES.indexOf(mission.engine.current) < MISSION_STATES.indexOf("PLAYER_CONTROL_ENABLED"));
+  hud.setSkipHint(!coarsePointer && MISSION_STATES.indexOf(mission.engine.current) < MISSION_STATES.indexOf("PLAYER_CONTROL_ENABLED"));
   if (import.meta.env.DEV) {
     // Dev QA gates: ?skip=COUNTDOWN (or any MISSION_STATE) fast-forwards the mission;
     // ?skip=interior is shorthand for ?skip=PLAYER_CONTROL_ENABLED;
@@ -432,6 +493,11 @@ async function boot(): Promise<World> {
   await new Promise((r) => setTimeout(r, 400));
   document.getElementById("loading-screen")!.classList.add("hidden");
   menu.showStart();
+  if (buildFaults.length > 0) {
+    // Recoverable: the mission can still run without the missing scenery.
+    menu.hide();
+    menu.showError(`Some scenery failed to load (${buildFaults.join("; ")}) — the mission can still run.`, true);
+  }
   return {
     tier, sky, earth, ml, sls, flight, exhaust, smoke, shotLibrary,
     crewQuarters: () => targetProviders.crewQuarters?.() ?? null,
@@ -439,7 +505,5 @@ async function boot(): Promise<World> {
 }
 
 boot().catch((err: unknown) => {
-  document.getElementById("loading-screen")!.classList.add("hidden");
-  document.getElementById("error-screen")!.classList.remove("hidden");
-  document.getElementById("error-text")!.textContent = `The simulator could not initialize graphics: ${String(err)}`;
+  showFault(`The simulator could not initialize: ${String(err)}`);
 });

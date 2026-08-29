@@ -112,6 +112,13 @@ export class AudioBus {
   duck(level: number): void { this.ramp(this.master?.gain, 0.9 * level, 0.2); }
   setMuted(m: boolean): void { this.muted = m; if (this.master && this.ctx) this.ramp(this.master.gain, m ? 0 : 0.9, 0.1); }
 
+  /** Mute-while-paused: silence the master bus and cancel in-flight radio speech. */
+  setPaused(p: boolean): void {
+    this.duck(p ? 0 : 1);
+    if (!p || typeof speechSynthesis === "undefined") return;
+    try { speechSynthesis.cancel(); } catch { /* best effort */ }
+  }
+
   beep(kind: "soft" | "alert"): void {
     if (!this.ctx || !this.sfx || this.muted) return;
     const ctx = this.ctx;

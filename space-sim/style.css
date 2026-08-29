@@ -46,4 +46,6 @@ body { font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, Menlo, mono
   background: radial-gradient(ellipse at 50% 40%, rgba(10, 18, 26, 0.88), rgba(2, 4, 6, 0.97)); z-index: 9; pointer-events: auto; }
 .menu-title { font-size: 30px; letter-spacing: 0.5em; color: var(--hud-fg); text-transform: uppercase; }
 .menu-sub { font-size: 11px; color: var(--hud-dim); letter-spacing: 0.3em; text-transform: uppercase; }
+.menu-note { font-size: 11px; color: var(--hud-dim); letter-spacing: 0.18em; text-transform: uppercase;
+  max-width: 60ch; text-align: center; line-height: 1.6; }
 .menu-error-text { font-size: 12px; color: var(--hud-dim); max-width: 60ch; text-align: center; line-height: 1.6; }

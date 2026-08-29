@@ -21,6 +21,8 @@ export class Menu {
   private pauseCard: HTMLDivElement;
   private errorCard: HTMLDivElement;
   private errorText: HTMLDivElement;
+  private continueBtn: HTMLButtonElement;
+  private noteEl: HTMLDivElement | null = null;
 
   constructor(root: HTMLElement, cb: MenuCallbacks) {
     this.startCard = document.createElement("div");
@@ -55,12 +57,27 @@ export class Menu {
     etitle.textContent = "MISSION FAULT";
     this.errorText = document.createElement("div");
     this.errorText.className = "menu-error-text";
+    // CONTINUE only appears for recoverable faults (missing scenery) where the
+    // mission can still run; fatal boot errors keep RETRY/EXIT only.
+    this.continueBtn = btn("CONTINUE MISSION", cb.onStart);
+    this.continueBtn.classList.add("hidden");
     this.errorCard.append(
       etitle, this.errorText,
+      this.continueBtn,
       btn("RETRY", cb.onRestart),
       btn("EXIT", cb.onExit),
     );
     root.append(this.startCard, this.pauseCard, this.errorCard);
+  }
+
+  /** Persistent note on the start card (e.g. touch-device quality notice). */
+  setStartNote(text: string): void {
+    if (!this.noteEl) {
+      this.noteEl = document.createElement("div");
+      this.noteEl.className = "menu-note";
+      this.startCard.insertBefore(this.noteEl, this.startCard.children[2] ?? null);
+    }
+    this.noteEl.textContent = text;
   }
 
   showStart(): void {
@@ -71,8 +88,9 @@ export class Menu {
     this.pauseCard.classList.remove("hidden");
   }
 
-  showError(msg: string): void {
+  showError(msg: string, canContinue = false): void {
     this.errorText.textContent = msg;
+    this.continueBtn.classList.toggle("hidden", !canContinue);
     this.errorCard.classList.remove("hidden");
   }
 

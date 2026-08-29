@@ -216,7 +216,7 @@ export default function HomePage() {
                 Space Simulator
               </h2>
               <p className="mt-1 max-w-md text-sm font-medium text-stone-300">
-                Earth to ISS Journey. Launch a rocket, navigate orbit, dock with the space station, and explore zero-G in first person.
+                Cinematic crewed mission. Watch the SLS leave Pad 39-A, ride to orbit, dock with the ISS — then float the station yourself.
               </p>
             </div>
             <span className="lift relative mt-auto inline-flex items-center gap-2 rounded-full border-[3px] border-arcade-ink bg-arcade-neon px-6 py-3 font-bold text-arcade-ink shadow-pop transition-colors group-hover:bg-[#34d399]">
