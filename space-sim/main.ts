@@ -41,7 +41,6 @@ async function boot(): Promise<World> {
   setProgress(0.2, "Loading materials...");
   await nextFrame();
   const assets = createAssets(scene);
-  void assets; // consumed by later tasks (terrain, vehicles)
 
   setProgress(0.4, "Loading sky and starfield...");
   await nextFrame();
@@ -51,6 +50,11 @@ async function boot(): Promise<World> {
   setProgress(0.6, "Loading Earth...");
   await nextFrame();
   const earth = createEarth(scene);
+
+  setProgress(0.7, "Loading Kennedy Space Center...");
+  await nextFrame();
+  const { createTerrain } = await import("./world/ksc/terrain");
+  createTerrain(scene, assets);
 
   setProgress(0.8, "Configuring cinematic pipeline...");
   await nextFrame();
