@@ -74,8 +74,9 @@ export class FlightModel {
     /* visual handled by ExhaustSystem; ML arms retract handled by UI sink */
   }
 
-  liftoff(): void {
-    this.t0 = 0;
+  /** atTime = engine (mission) time at which liftoff occurred. */
+  liftoff(atTime: number): void {
+    this.t0 = atTime;
   }
 
   separateSrb(): void {

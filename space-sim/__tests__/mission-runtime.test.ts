@@ -8,6 +8,7 @@ interface Rec {
   smokeRamp: number[];
   armK: number[];
   liftoff: number;
+  liftoffAt: number[];
   flightT: number[];
   sepSrb: number;
   sepCore: number;
@@ -23,10 +24,11 @@ interface Rec {
 
 function makeDeps() {
   const rec: Rec = {
-    ignite: [], smokeRamp: [], armK: [], liftoff: 0, flightT: [], sepSrb: 0,
+    ignite: [], smokeRamp: [], armK: [], liftoff: 0, liftoffAt: [], flightT: [], sepSrb: 0,
     sepCore: 0, orbit: 0, shots: [], cuts: [], fx: [], altitudes: [],
     comms: 0, hud: 0, states: [],
   };
+  const marks = { liftoffFrame: -1 }; // index into flightT recorded on the liftoff frame
   let t0: number | null = null;
   let altitude = 0;
   const deps: RuntimeDeps = {
@@ -46,7 +48,7 @@ function makeDeps() {
     flight: {
       get liftoffTime() { return t0 ?? -1; },
       get currentAltitude() { return altitude; },
-      liftoff() { t0 = 0; rec.liftoff++; },
+      liftoff(at: number) { t0 = at; rec.liftoff++; rec.liftoffAt.push(at); marks.liftoffFrame = rec.flightT.length; },
       update(t: number) { rec.flightT.push(t); altitude = Math.max(0, t) * 10; },
       separateSrb() { rec.sepSrb++; },
       separateCore() { rec.sepCore++; },
@@ -69,7 +71,7 @@ function makeDeps() {
       onState: (s: MissionState) => { rec.states.push(s); },
     },
   };
-  return { rec, runtime: createMissionRuntime(deps) };
+  return { rec, runtime: createMissionRuntime(deps), marks };
 }
 
 describe("mission runtime wiring", () => {
@@ -108,10 +110,27 @@ describe("mission runtime wiring", () => {
     runtime.skipTo("LIFTOFF");
     runtime.update(0.05);
     expect(rec.liftoff).toBe(1);
+    expect(rec.liftoffAt[0]).toBeLessThan(1); // skip leaves the mission clock near 0
     for (let i = 0; i < 40; i++) runtime.update(0.05);
     expect(rec.flightT.length).toBeGreaterThan(1);
     expect(rec.flightT.every((t) => t >= 0)).toBe(true);
     expect(rec.altitudes[rec.altitudes.length - 1]).toBeGreaterThan(0);
+  });
+
+  it("real playthrough: liftoff fires at engine.t ≈ 263 s with tFlight starting at 0", () => {
+    const { rec, runtime, marks } = makeDeps();
+    for (let i = 0; i < 5400; i++) runtime.update(0.05); // 270 s: full countdown + early ascent
+    expect(marks.liftoffFrame).toBeGreaterThanOrEqual(0);
+    expect(rec.liftoff).toBe(1);
+    // (a) the flight model received the liftoff engine-time, not a hardcoded 0
+    expect(rec.liftoffAt[0]).toBeCloseTo(263, 1);
+    // (b) on the liftoff frame the seconds-since-liftoff is ≈ 0 (stack must not jump to ~394 km)
+    expect(rec.flightT[marks.liftoffFrame]).toBeCloseTo(0, 1);
+    // ascent progresses from zero and grows monotonically afterwards
+    expect(rec.flightT[marks.liftoffFrame + 10]).toBeGreaterThan(0);
+    expect(rec.flightT[marks.liftoffFrame + 100]).toBeGreaterThan(rec.flightT[marks.liftoffFrame + 10]);
+    // pre-liftoff frames stayed negative (pad phase)
+    expect(rec.flightT[marks.liftoffFrame - 1]).toBe(-1);
   });
 
   it("staging commands reach the flight model during ascent", () => {

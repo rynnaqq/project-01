@@ -2,7 +2,7 @@
 import type { Scene } from "@babylonjs/core";
 import {
   MissionEngine,
-  type CommsLine, type FxCommand, type HudChange, type MissionState,
+  type Command, type CommsLine, type FxCommand, type HudChange, type MissionState,
 } from "./engine";
 import { MISSION_SCRIPT, STATE_DURATIONS } from "./script";
 import type { CinematicDirector } from "../cinema/director";
@@ -38,7 +38,7 @@ export interface MissionRuntime {
 export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
   let armRetract = -1; // seconds since ignition for the arm animation
 
-  const handleCommand = (c: { kind: string }): void => {
+  const handleCommand = (c: Command, t: number): void => {
     switch (c.kind) {
       case "ignite":
         deps.exhaust.ignite(true);
@@ -46,7 +46,7 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         armRetract = 0;
         break;
       case "liftoff":
-        deps.flight.liftoff();
+        deps.flight.liftoff(t);
         break;
       case "separateSrb":
         deps.flight.separateSrb();
@@ -63,7 +63,7 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
   };
 
   const engine = new MissionEngine(MISSION_SCRIPT, {
-    onCommand: (c) => handleCommand(c),
+    onCommand: (c: Command, t: number) => handleCommand(c, t),
     onComms: (c: CommsLine) => deps.ui.onComms(c),
     onHud: (h: HudChange) => deps.ui.onHud(h),
     onFx: (f: FxCommand) => {
