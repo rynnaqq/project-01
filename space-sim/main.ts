@@ -10,6 +10,8 @@ import { SkyController } from "./effects/sky";
 import { createStarfield } from "./world/space";
 import { createEarth, type Earth } from "./world/earth/earth";
 import type { MobileLauncher } from "./world/ksc/launcher";
+import { ShotLibrary } from "./cinema/shots";
+import type { SlsStack } from "./vehicles/sls";
 
 const canvas = document.getElementById("render-canvas") as HTMLCanvasElement;
 const fill = document.getElementById("loading-fill")!;
@@ -23,6 +25,7 @@ const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(
 
 interface World {
   tier: QualityTier; sky: SkyController; earth: Earth; ml: MobileLauncher;
+  sls: SlsStack; shotLibrary: ShotLibrary;
   crewQuarters: () => TransformNode | null;
 }
 
@@ -70,6 +73,19 @@ async function boot(): Promise<World> {
   const { createProps } = await import("./world/ksc/props");
   createProps(scene, assets);
 
+  setProgress(0.75, "Loading SLS + Orion stack...");
+  await nextFrame();
+  // ShotLibrary target providers (cinema/shots.ts contract) — populated as world
+  // objects come online, consumed lazily by active rigs.
+  const targetProviders: Record<string, () => TransformNode | undefined> = {};
+  targetProviders.crewQuarters = () => scene.getTransformNodeByName("crewQuarters") ?? undefined;
+  const { createSlsStack } = await import("./vehicles/sls");
+  const sls = createSlsStack(scene, assets);
+  targetProviders.stack = () => sls.root;
+  targetProviders.engines = () => sls.enginesNode;
+  targetProviders.orion = () => sls.orionNode;
+  const shotLibrary = new ShotLibrary({ scene, targetProviders });
+
   setProgress(0.8, "Configuring cinematic pipeline...");
   await nextFrame();
   const caps = capsForTier(tier);
@@ -105,9 +121,8 @@ async function boot(): Promise<World> {
   await new Promise((r) => setTimeout(r, 400));
   document.getElementById("loading-screen")!.classList.add("hidden");
   return {
-    tier, sky, earth, ml,
-    // targetProviders wiring: Task 10
-    crewQuarters: () => scene.getTransformNodeByName("crewQuarters"),
+    tier, sky, earth, ml, sls, shotLibrary,
+    crewQuarters: () => targetProviders.crewQuarters?.() ?? null,
   };
 }
 
