@@ -92,6 +92,11 @@ async function boot(): Promise<World> {
   targetProviders.stack = () => sls.root;
   targetProviders.engines = () => sls.enginesNode;
   targetProviders.orion = () => sls.orionNode;
+  setProgress(0.78, "Loading International Space Station...");
+  await nextFrame();
+  const { createIssExterior } = await import("./iss/exterior");
+  const iss = createIssExterior(scene, assets);
+  targetProviders.iss = () => iss.root;
   const shotLibrary = new ShotLibrary({ scene, targetProviders });
 
   setProgress(0.8, "Configuring cinematic pipeline...");
@@ -133,10 +138,17 @@ async function boot(): Promise<World> {
   const uiNoop: UiSinks = { onComms: () => {}, onHud: () => {}, onState: () => {} };
   const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, ui: uiNoop });
   if (import.meta.env.DEV) {
-    // Dev QA gate: ?skip=COUNTDOWN (or any MISSION_STATE) fast-forwards the mission.
-    const skip = new URLSearchParams(window.location.search).get("skip")?.toUpperCase();
+    // Dev QA gates: ?skip=COUNTDOWN (or any MISSION_STATE) fast-forwards the mission;
+    // ?view=iss aims the boot camera at the ISS for exterior visual checks.
+    const params = new URLSearchParams(window.location.search);
+    const skip = params.get("skip")?.toUpperCase();
     const state = MISSION_STATES.find((s) => s === skip);
     if (state) mission.skipTo(state);
+    if (params.get("view") === "iss") {
+      const p = iss.root.getAbsolutePosition().clone();
+      camera.position.copyFrom(p.add(new Vector3(350, 60, 350)));
+      camera.setTarget(p);
+    }
   }
 
   engine.runRenderLoop(() => {
