@@ -33,6 +33,8 @@ export interface RuntimeDeps {
   /** Scripted approach driver: holds orionNode + the ISS docking port. */
   docking: DockingSequence;
   ui: UiSinks;
+  /** Invoked when the mission script fires the enablePlayer command (zero-G rig takes over). */
+  onPlayerEnabled?: () => void;
 }
 
 export interface MissionRuntime {
@@ -97,7 +99,10 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         startDocking();
         deps.docking.hardDock();
         break;
-      default: // openHatch/enterInterior/enablePlayer wired in Tasks 15–16
+      case "enablePlayer":
+        deps.onPlayerEnabled?.();
+        break;
+      default: // openHatch/enterInterior: interior is always live, no runtime side effects yet
         break;
     }
   };

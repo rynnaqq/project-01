@@ -1,6 +1,6 @@
 // space-sim/main.ts
 import {
-  DefaultRenderingPipeline, SSAO2RenderingPipeline, Scene, UniversalCamera, Vector3,
+  DefaultRenderingPipeline, Matrix, SSAO2RenderingPipeline, Scene, UniversalCamera, Vector3,
   WebGPUEngine,
 } from "@babylonjs/core";
 import type { Engine, TransformNode } from "@babylonjs/core";
@@ -16,8 +16,10 @@ import type { GroundSmoke } from "./effects/smoke";
 import { ShotLibrary } from "./cinema/shots";
 import { CinematicDirector } from "./cinema/director";
 import { TransitionLayer } from "./cinema/transitions";
-import { MISSION_STATES } from "./mission/types";
+import { MISSION_STATES, type MissionState } from "./mission/types";
 import type { UiSinks } from "./mission/runtime";
+import { InputManager } from "./core/input";
+import { ZeroGState } from "./player/controller";
 import type { SlsStack } from "./vehicles/sls";
 
 const canvas = document.getElementById("render-canvas") as HTMLCanvasElement;
@@ -140,15 +142,82 @@ async function boot(): Promise<World> {
   setProgress(0.95, "MISSION SYSTEM READY");
   await nextFrame();
   const director = new CinematicDirector(shotLibrary, scene, new TransitionLayer(document.getElementById("ui-layer")!));
+
+  // --- Zero-G player (activated by the enablePlayer mission command) ---
+  // Player state lives in ISS-local space — the same frame as interior.colliders.
+  // Space/Ctrl thrust stays world-vertical; WASD is camera-local, mapped through
+  // the yaw/pitch basis (Babylon: rotation.x positive pitches DOWN, +yaw turns +Z->+X).
+  const input = new InputManager(canvas);
+  const player = new ZeroGState();
+  iss.root.computeWorldMatrix(true);
+  interior.spawn.computeWorldMatrix(true);
+  const issWorld = iss.root.getWorldMatrix();
+  const spawnLocal = Vector3.TransformCoordinates(
+    interior.spawn.getAbsolutePosition().clone(),
+    issWorld.clone().invert(),
+  );
+  player.pos = { x: spawnLocal.x, y: spawnLocal.y, z: spawnLocal.z };
+  player.yaw = Math.PI; // face aft down the Harmony -> Unity route (-Z)
+
+  const LOCAL_FWD = new Vector3(0, 0, 1);
+  const LOCAL_SIDE = new Vector3(1, 0, 0);
+  let playerCam: UniversalCamera | null = null;
+
+  const enablePlayer = (): void => {
+    if (playerCam) {
+      scene.activeCamera = playerCam;
+      return;
+    }
+    const p0 = Vector3.TransformCoordinates(
+      new Vector3(player.pos.x, player.pos.y, player.pos.z), issWorld,
+    );
+    playerCam = new UniversalCamera("playerCam", p0, scene);
+    playerCam.minZ = 0.1; playerCam.maxZ = 2.5e7;
+    playerCam.rotation.set(player.pitch, player.yaw, 0);
+    scene.activeCamera = playerCam;
+    pipe.addCamera(playerCam);
+    scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline("ssao", [playerCam]);
+    input.lockPointer();
+  };
+  canvas.addEventListener("click", () => {
+    if (playerCam && !input.locked) input.lockPointer();
+  });
+
+  const updatePlayer = (dt: number): void => {
+    if (!playerCam) return;
+    const md = input.mouseDelta();
+    const thrust = input.thrustVector();
+    const rot = Matrix.RotationYawPitchRoll(player.yaw, player.pitch, 0);
+    const fwd = Vector3.TransformCoordinates(LOCAL_FWD, rot);
+    const side = Vector3.TransformCoordinates(LOCAL_SIDE, rot);
+    const world = new Vector3(
+      thrust.x * side.x + thrust.z * fwd.x,
+      thrust.y + thrust.z * fwd.y,
+      thrust.x * side.z + thrust.z * fwd.z,
+    );
+    player.step(dt, {
+      thrust: { x: world.x, y: world.y, z: world.z },
+      yawDelta: md.dx * 0.0022,
+      pitchDelta: md.dy * 0.0022,
+      boost: input.boostHeld(),
+    }, interior.colliders);
+    playerCam.position.copyFrom(Vector3.TransformCoordinates(
+      new Vector3(player.pos.x, player.pos.y, player.pos.z), issWorld,
+    ));
+    playerCam.rotation.set(player.pitch, player.yaw, 0);
+  };
+
   const { createMissionRuntime } = await import("./mission/runtime");
   const uiNoop: UiSinks = { onComms: () => {}, onHud: () => {}, onState: () => {} };
-  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, issRoot: iss.root, docking, ui: uiNoop });
+  const mission = createMissionRuntime({ scene, director, sky, flight, exhaust, smoke, ml, issRoot: iss.root, docking, ui: uiNoop, onPlayerEnabled: enablePlayer });
   if (import.meta.env.DEV) {
     // Dev QA gates: ?skip=COUNTDOWN (or any MISSION_STATE) fast-forwards the mission;
+    // ?skip=interior is shorthand for ?skip=PLAYER_CONTROL_ENABLED;
     // ?view=iss aims the boot camera at the ISS for exterior visual checks.
     const params = new URLSearchParams(window.location.search);
+    const skipAliases: Partial<Record<string, MissionState>> = { INTERIOR: "PLAYER_CONTROL_ENABLED" };
     const skip = params.get("skip")?.toUpperCase();
-    const state = MISSION_STATES.find((s) => s === skip);
+    const state = MISSION_STATES.find((s) => s === skip) ?? (skip ? skipAliases[skip] : undefined);
     if (state) mission.skipTo(state);
     if (params.get("view") === "iss") {
       const p = iss.root.getAbsolutePosition().clone();
@@ -167,6 +236,10 @@ async function boot(): Promise<World> {
     sky.update(dt);
     earth.update(dt);
     mission.update(dt);
+    if (playerCam) {
+      updatePlayer(dt);
+      scene.activeCamera = playerCam; // hold the view against cinematic auto-cuts
+    }
     scene.render();
   });
   setProgress(1, "MISSION SYSTEM READY");
