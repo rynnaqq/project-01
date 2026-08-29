@@ -1,9 +1,9 @@
 // space-sim/main.ts
 import {
-  DefaultRenderingPipeline, Matrix, SSAO2RenderingPipeline, Scene, UniversalCamera, Vector3,
+  DefaultRenderingPipeline, Matrix, MeshBuilder, SSAO2RenderingPipeline, Scene, UniversalCamera, Vector3,
   WebGPUEngine,
 } from "@babylonjs/core";
-import type { Engine, TransformNode } from "@babylonjs/core";
+import type { Engine, Mesh, PBRMaterial, PointLight, TransformNode } from "@babylonjs/core";
 import { capsForTier, createBestEngine, detectTier, gpuString, type QualityTier } from "./core/engine";
 import { createAssets } from "./core/assets";
 import { SkyController } from "./effects/sky";
@@ -20,6 +20,7 @@ import { MISSION_STATES, type MissionState } from "./mission/types";
 import type { UiSinks } from "./mission/runtime";
 import { InputManager } from "./core/input";
 import { ZeroGState } from "./player/controller";
+import { InteractionSystem } from "./player/interact";
 import type { SlsStack } from "./vehicles/sls";
 
 const canvas = document.getElementById("render-canvas") as HTMLCanvasElement;
@@ -175,6 +176,7 @@ async function boot(): Promise<World> {
     playerCam.minZ = 0.1; playerCam.maxZ = 2.5e7;
     playerCam.rotation.set(player.pitch, player.yaw, 0);
     scene.activeCamera = playerCam;
+    if (!interactions) setupInteractions(playerCam);
     pipe.addCamera(playerCam);
     scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline("ssao", [playerCam]);
     input.lockPointer();
@@ -182,6 +184,70 @@ async function boot(): Promise<World> {
   canvas.addEventListener("click", () => {
     if (playerCam && !input.locked) input.lockPointer();
   });
+
+  // --- Interactions (built with the player rig; interior.ts is authoritative and only
+  // exposes root/spawn/colliders/cupolaLook, so props are addressed by their mesh names) ---
+  let interactions: InteractionSystem | null = null;
+  const setupInteractions = (cam: UniversalCamera): void => {
+    const sys = new InteractionSystem(scene, cam, document.getElementById("ui-layer")!);
+    const findMesh = (name: string): Mesh | null => {
+      const m = scene.getMeshByName(name);
+      return m ? (m as Mesh) : null;
+    };
+
+    // Destiny lab laptops: clone the shared asset material so each screen toggles alone
+    for (const name of ["destR_lap0", "destR_lap2", "destR_lap4"]) {
+      const laptop = findMesh(name);
+      if (!laptop) continue;
+      const mat = laptop.material ? (laptop.material.clone(`${name}_mat`) as PBRMaterial) : null;
+      let screenOn = true;
+      sys.register(laptop, "Laptop", () => {
+        screenOn = !screenOn;
+        if (mat) mat.emissiveIntensity = screenOn ? 0.7 : 0;
+        sys.showCaption("Experiment status reviewed");
+      });
+    }
+
+    // Destiny light switch: cycles the three route ceiling lights (intLight_-1.3_*)
+    // white -> warm -> off; berth/Cupola lights are unaffected
+    const routeLights = scene.lights.filter((l) => l.name.startsWith("intLight_-1.3_")) as PointLight[];
+    const lightSwitch = MeshBuilder.CreateBox("destinyLightSwitch", { width: 0.16, height: 0.26, depth: 0.06 }, scene);
+    lightSwitch.position.set(1.16, -2.0, -5.6); // Destiny starboard rack face, hand height
+    lightSwitch.rotation.y = -Math.PI / 2;
+    lightSwitch.material = assets.steelStructure();
+    lightSwitch.parent = interior.root;
+    let lightMode = 0; // 0 white, 1 warm, 2 off
+    sys.register(lightSwitch, "Destiny lights", () => {
+      lightMode = (lightMode + 1) % 3;
+      for (const l of routeLights) {
+        if (lightMode === 0) { l.diffuse.set(0.95, 0.97, 1.0); l.intensity = 7; }
+        else if (lightMode === 1) { l.diffuse.set(1.0, 0.88, 0.7); l.intensity = 7; }
+        else { l.intensity = 0; }
+      }
+      sys.showCaption(lightMode === 0 ? "Lighting: white" : lightMode === 1 ? "Lighting: warm" : "Lighting: off");
+    });
+
+    // Cupola windows: short eased camera push toward the aimed window, then return
+    for (const name of ["cupFrame0", "cupFrame1", "cupFrame2", "cupFrame3", "cupFrame4", "cupFrame5", "cupNadir"]) {
+      const win = findMesh(name);
+      if (!win) continue;
+      sys.register(win, "Cupola window", () => {
+        sys.pushToward(win.getAbsolutePosition().clone());
+      });
+    }
+
+    // Bulkhead hatch rings between the modules: sealed, caption only
+    for (const name of ["hatch-2.75", "hatch2.75"]) {
+      const hatch = findMesh(name);
+      if (!hatch) continue;
+      sys.register(hatch, "Hatch", () => {
+        sys.showCaption("Hatch is sealed — station keeping");
+      });
+    }
+
+    input.onInteract(() => sys.use());
+    interactions = sys;
+  };
 
   const updatePlayer = (dt: number): void => {
     if (!playerCam) return;
@@ -238,6 +304,7 @@ async function boot(): Promise<World> {
     mission.update(dt);
     if (playerCam) {
       updatePlayer(dt);
+      interactions?.update(); // after the controller writes the base camera position
       scene.activeCamera = playerCam; // hold the view against cinematic auto-cuts
     }
     scene.render();

@@ -10,7 +10,7 @@ export class InputManager {
   constructor(private canvas: HTMLCanvasElement) {
     window.addEventListener("keydown", (e) => {
       if (e.code === "Escape") { this.escapeCbs.forEach((cb) => cb()); return; }
-      if (e.code === "KeyE") { this.interactCbs.forEach((cb) => cb()); }
+      if (e.code === "KeyE" && !e.repeat) { this.interactCbs.forEach((cb) => cb()); }
       if (e.code === "Space") e.preventDefault();
       this.keys.add(e.code);
     });
