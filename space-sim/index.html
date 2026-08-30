@@ -2,13 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="description" content="Artemis Transit — a cinematic KSC launch, orbit, ISS docking and zero-G exploration experience, fully procedural in Babylon.js." />
     <meta name="theme-color" content="#020406" />
     <title>Artemis Transit — Space Simulator</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
+    <noscript>
+      <div style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#020406;color:#cfe3ee;font-family:ui-monospace,Menlo,monospace;padding:24px;text-align:center;gap:16px;">
+        <div style="font-size:14px;letter-spacing:0.2em;">JAVASCRIPT REQUIRED</div>
+        <div style="font-size:12px;color:#6d8494;max-width:60ch;line-height:1.6;">Artemis Transit needs JavaScript and WebGL2 (or WebGPU) to run. Enable JavaScript and reload.</div>
+        <a href="/" style="margin-top:8px;padding:10px 24px;border:1px solid rgba(160,200,220,0.35);color:#cfe3ee;text-decoration:none;font-size:12px;letter-spacing:0.18em;">EXIT TO HUB</a>
+      </div>
+    </noscript>
     <div id="sim-root">
       <canvas id="render-canvas" touch-action="none"></canvas>
       <div id="ui-layer">

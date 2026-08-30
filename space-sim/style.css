@@ -49,3 +49,36 @@ body { font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, Menlo, mono
 .menu-note { font-size: 11px; color: var(--hud-dim); letter-spacing: 0.18em; text-transform: uppercase;
   max-width: 60ch; text-align: center; line-height: 1.6; }
 .menu-error-text { font-size: 12px; color: var(--hud-dim); max-width: 60ch; text-align: center; line-height: 1.6; }
+
+/* --- Mobile / narrow viewport (≤720px) --- */
+/* dvh/svh handle iOS URL-bar collapse; 100vh fallback covers older browsers.
+   Safe-area-inset env() values resolve to 0 on devices without notches. */
+@media (max-width: 720px) {
+  html, body, #sim-root, #render-canvas { width: 100dvw; height: 100dvh; min-height: 100vh; }
+  .loading-title { font-size: 18px; }
+  .loading-bar { width: min(320px, 84vw); }
+  .menu-title { font-size: 22px; letter-spacing: 0.4em; }
+  .menu-sub { font-size: 10px; letter-spacing: 0.24em; }
+  .menu-btn { min-height: 44px; min-width: 140px; padding: 12px 28px; font-size: 12px; }
+  .menu-note { font-size: 10px; max-width: 88vw; line-height: 1.5; }
+
+  .hud-phase { top: max(12px, env(safe-area-inset-top, 12px) + 8px); left: 14px; font-size: 10px; letter-spacing: 0.16em; }
+  .hud-met { top: max(12px, env(safe-area-inset-top, 12px) + 8px); right: 14px; font-size: 10px; letter-spacing: 0.16em; }
+  .hud-progress { bottom: max(14px, env(safe-area-inset-bottom, 14px) + 8px); gap: 6px 12px; max-width: 92vw; flex-wrap: wrap; justify-content: center; }
+  .hud-stage { font-size: 9px; letter-spacing: 0.1em; }
+  .hud-telemetry { top: 56px; right: 12px; left: 12px; padding: 8px 10px; gap: 1px 10px; font-size: 10px; }
+  .hud-skip { bottom: max(72px, env(safe-area-inset-bottom, 72px) + 12px); font-size: 10px; letter-spacing: 0.14em; }
+
+  .subtitles { max-width: 90vw; font-size: 11px; bottom: max(110px, env(safe-area-inset-bottom, 110px) + 12px); padding: 6px 12px; }
+  .interact-prompt { top: auto; bottom: max(140px, env(safe-area-inset-bottom, 140px) + 12px); font-size: 11px; padding: 8px 14px; }
+  .interact-caption { top: auto; bottom: max(168px, env(safe-area-inset-bottom, 168px) + 12px); font-size: 10px; padding: 5px 10px; }
+}
+
+/* Landscape on phones: HUD elements compete for vertical space — keep progress strip in one row */
+@media (max-width: 920px) and (orientation: landscape) {
+  .hud-progress { flex-wrap: nowrap; overflow-x: auto; max-width: 80vw; padding-bottom: 2px; }
+  .hud-telemetry { top: 48px; font-size: 9px; }
+  .subtitles { bottom: max(72px, env(safe-area-inset-bottom, 72px) + 8px); }
+  .interact-prompt { bottom: max(96px, env(safe-area-inset-bottom, 96px) + 8px); }
+  .interact-caption { bottom: max(120px, env(safe-area-inset-bottom, 120px) + 8px); }
+}

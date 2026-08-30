@@ -47,6 +47,8 @@ let bootMenu: Menu | null = null;
 
 function showFault(msg: string, canContinue = false): void {
   document.getElementById("loading-screen")?.classList.add("hidden");
+  // ponytail: devtools mirror; the menu error card can be missed on a half-failed boot
+  console.error(`[space-sim] ${msg}`);
   if (bootMenu) {
     bootMenu.hide(); // start/pause cards must not paint through the error card
     bootMenu.showError(msg, canContinue);
@@ -72,6 +74,15 @@ async function boot(): Promise<World> {
 
   setProgress(0.05, "Detecting graphics backend...");
   const engine: Engine | WebGPUEngine = await createBestEngine(canvas);
+  // Early-probe: a no-context engine still exists (Babylon swallows the throw
+  // and falls back to a bare WebGL2 engine) and would silently render a black
+  // frame forever. Probe the canvas directly so the user gets a real error
+  // message instead of staring at the clearColor.
+  const hasContext = engine instanceof WebGPUEngine
+    || !!canvas.getContext("webgl2") || !!canvas.getContext("webgl");
+  if (!hasContext) {
+    throw new Error("Your browser does not support WebGL2 or WebGPU.");
+  }
   const tier: QualityTier = coarsePointer
     ? "low" // touch devices are always force-capped to the low tier
     : detectTier({
@@ -86,6 +97,14 @@ async function boot(): Promise<World> {
   camera.minZ = 0.1; camera.maxZ = 2.5e7;
   camera.setTarget(new Vector3(0, 40, 0));
   scene.activeCamera = camera;
+
+  // Resize: Babylon usually fits on its own, but orientation changes on mobile
+  // can land the backbuffer at the wrong aspect if the rotation animation hasn't
+  // settled. The 200 ms delay lets the browser finish before we re-fit.
+  window.addEventListener("resize", () => engine.resize());
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => engine.resize(), 200);
+  });
 
   // --- DOM UI comes up before the world so build faults can surface on the menu
   // error card (with hide() first, per ledger, so no other card paints through) ---
@@ -166,7 +185,7 @@ async function boot(): Promise<World> {
     onFullscreen: () => toggleFullscreen(),
   });
   bootMenu = menu;
-  if (coarsePointer) menu.setStartNote("Best experienced on desktop");
+  if (coarsePointer) menu.setStartNote("Touch and drag to look — tap [E] targets to interact.");
 
   input.onEscape(() => {
     if (!started) return;
@@ -196,7 +215,7 @@ async function boot(): Promise<World> {
   // (mobile launcher, vehicle, station, runtime) rethrow into showFault. ---
   const buildFaults: string[] = [];
   const buildStep = async (label: string, run: () => Promise<void>): Promise<void> => {
-    try { await run(); } catch { buildFaults.push(label); }
+    try { await run(); } catch (err) { buildFaults.push(label); console.warn(`[space-sim] scenery build failed: ${label}`, err); }
   };
 
   setProgress(0.2, "Loading materials...");
@@ -345,6 +364,10 @@ async function boot(): Promise<World> {
     pipe.addCamera(playerCam);
     scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline("ssao", [playerCam]);
     input.lockPointer();
+    // Enable touch look-around only while the player is live. The director still
+    // owns the cinematic camera and would fight any touch deltas, so we gate this
+    // on the player rig coming online (and on the touch listener having wired up).
+    input.touchLookActive = true;
   };
   canvas.addEventListener("click", () => {
     void audio.unlock();
