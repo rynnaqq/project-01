@@ -81,18 +81,22 @@ export class CinematicDirector {
   private seed = 1;
   private last: string | null = null;
   private holdUntil = 0;
+  /** Mission time until which a scripted shot is protected from auto-cut re-picking. */
+  private scriptedUntil = -1;
   constructor(
     private lib: { get(id: string): RigLike | null },
     private scene: Scene,
     private transitions: { cut(kind: "cut" | "dip" | "crossfade"): void },
   ) {}
 
-  playShot(id: string, _duration: number, t: number): void {
+  playShot(id: string, duration: number, t: number): void {
     const rig = this.lib.get(id);
     if (!rig) return;
     this.scene.activeCamera = rig.camera as Scene["activeCamera"];
     rig.activate(t);
     this.last = id;
+    // duration <= 0 (unscripted pick) → auto-cut timer owns the hold length.
+    this.scriptedUntil = duration > 0 ? t + duration : -1;
     this.seed = (this.seed * 31 + id.length * 101) | 0;
   }
 
@@ -106,7 +110,10 @@ export class CinematicDirector {
     const fb = STATE_CINEMA.fallbackFor[this.last ?? ""] ?? [];
     const pacing = STATE_CINEMA.pacing[state] ?? "dynamic";
     const currentDead = this.last !== null && this.lib.get(this.last) === null;
-    if (now >= this.holdUntil || this.last === null || currentDead) {
+    const scripted = t < this.scriptedUntil;
+    // A scripted shot must not be re-picked by the auto-cut timer mid-window —
+    // the two timers fighting produced double-cuts (camera "glitching").
+    if (!scripted && (now >= this.holdUntil || this.last === null || currentDead)) {
       const id = pickNextShot(pool, this.last, this.seed, fb);
       if (id) {
         if (id !== this.last) this.playShot(id, 0, t);

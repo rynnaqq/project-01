@@ -17,9 +17,11 @@ export interface CameraRig {
 
 type Target = () => TransformNode | undefined;
 
-function makeCam(scene: Scene, id: string, pos: Vector3, fov = 0.9): UniversalCamera {
+function makeCam(scene: Scene, id: string, pos: Vector3, fov = 0.9, minZ = 0.5): UniversalCamera {
   const cam = new UniversalCamera(id, pos, scene);
-  cam.minZ = 0.1;
+  // 0.5 near for exterior rigs: with maxZ 2.5e7 the 24-bit depth range
+  // otherwise z-fights coincident detail (ISS panel offsets) at 100-500 m.
+  cam.minZ = minZ;
   cam.maxZ = 2.5e7;
   cam.fov = fov;
   return cam;
@@ -116,13 +118,16 @@ export class ShotLibrary {
 
   private buildLaunch(): void {
     this.followRig("plume_ground", "track", "stack", new Vector3(-90, -2, 60), 0.8);
-    this.followRig("ignition_closeup", "track", "engines", new Vector3(-28, -2, 18), 0.6);
+    this.followRig("ignition_closeup", "track", "engines", new Vector3(-28, 2, 18), 0.6);
     this.followRig("rocket_side_track", "track", "stack", new Vector3(120, 20, 0), 0.7);
     this.followRig("rocket_distant_track", "track", "stack", new Vector3(600, 100, -200), 0.6);
     this.followRig("rocket_upward", "track", "stack", new Vector3(6, -120, 6), 1.1);
+    // Crew POV rides just above the Orion CM nose (orion node +8.5, x+2.8 clears
+    // the LAS tower) looking down the stack — a chase POV that never clips the
+    // capsule interior or sits in the plume like the old stack-root anchor did.
+    this.followRig("cockpit_orion", "pov", "orion", new Vector3(2.8, 8.5, 0), 0.55, 0.15);
     this.followRig("booster_cam", "track", "stack", new Vector3(9, -40, 0), 0.9, 0.4);
     this.followRig("horizon_ascent", "track", "stack", new Vector3(25, 60, 150), 1.0);
-    this.followRig("cockpit_orion", "pov", "stack", new Vector3(0, -2.2, -1.2), 0.85, 0.15);
     this.followRig("stage_sep_side", "track", "stack", new Vector3(18, -5, 0), 0.75);
     this.followRig("stage_sep_wide", "track", "stack", new Vector3(45, -25, 30), 0.9);
     this.followRig("icps_perspective", "track", "stack", new Vector3(8, 6, -14), 0.8);
@@ -163,9 +168,9 @@ export class ShotLibrary {
   private buildIss(): void {
     // ISS altitude above the surface (y=0 datum); follow rigs override per frame.
     const ORBIT_Y = 400000;
-    const issRig = (id: string, kind: RigKind, offset: Vector3, fov = 0.75): void => {
+    const issRig = (id: string, kind: RigKind, targetName: string, offset: Vector3, fov = 0.75): void => {
       const cam = makeCam(this.ctx.scene, `cam_${id}`, offset.add(new Vector3(0, ORBIT_Y, 0)), fov);
-      const get = this.target("iss");
+      const get = this.target(targetName);
       const apply = (t: number): void => {
         const node = get();
         if (!node) return;
@@ -178,13 +183,16 @@ export class ShotLibrary {
       };
       this.add({ id, kind, camera: cam, activate: apply, update: apply });
     };
-    issRig("iss_reveal_far", "orbit", new Vector3(350, 60, 350));
-    issRig("iss_reveal_close", "orbit", new Vector3(120, 20, 90));
-    issRig("iss_approach_track", "track", new Vector3(30, 6, 55));
-    issRig("docking_target_cam", "track", new Vector3(0, 0.4, 12), 0.5);
-    issRig("docking_side_cam", "track", new Vector3(9, 2, 8), 0.7);
-    issRig("docking_contact_ecl", "track", new Vector3(3.5, 0.8, 3), 0.45);
-    issRig("iss_earth_facing", "static", new Vector3(-60, -15, 0), 0.95);
+    issRig("iss_reveal_far", "orbit", "iss", new Vector3(350, 60, 350));
+    issRig("iss_reveal_close", "orbit", "iss", new Vector3(120, 20, 90));
+    issRig("iss_approach_track", "track", "iss", new Vector3(30, 6, 55));
+    // Docking cams anchor to the PORT (z=-11.4 on the -Z face), not the station
+    // center — Orion docks on the outboard face, so center-anchored shots stare
+    // at the opposite hull. target_cam trails Orion down the corridor.
+    issRig("docking_target_cam", "track", "orion", new Vector3(0, 0.4, 12), 0.5);
+    issRig("docking_side_cam", "track", "port", new Vector3(9, 2, 8), 0.7);
+    issRig("docking_contact_ecl", "track", "port", new Vector3(3.5, 0.8, 3), 0.45);
+    issRig("iss_earth_facing", "static", "iss", new Vector3(-60, -15, 0), 0.95);
   }
 
   private buildInterior(): void {
