@@ -50,20 +50,6 @@ export const GAMES: GameDefinition[] = [
       'Accuracy matters. Mistakes slow you down.',
     ],
   },
-  {
-    key: 'space-simulator',
-    title: 'Space Simulator',
-    tagline: 'Journey from Earth to the ISS in this interactive 3D experience.',
-    category: 'Simulation',
-    modes: ['Solo'],
-    mechanics: [
-      'Cinematic mission: KSC launch, ascent, orbit and automated ISS docking.',
-      'Directed NASA-style camera work with mission-control radio comms.',
-      'Zero-G first-person exploration inside the ISS after docking.',
-      'Cupola viewing moment with procedural Earth below.',
-      'Fully procedural — no downloads, works offline.',
-    ],
-  },
 ];
 
 /** Look up a game definition by key. */
