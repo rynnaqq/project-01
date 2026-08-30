@@ -111,7 +111,7 @@ export class ShotLibrary {
     const svc = makeCam(s, "cam_svc_vehicles", new Vector3(60, 4, -80), 0.85);
     this.add({ id: "svc_vehicles", kind: "static", camera: svc, activate: () => lookAt(svc, new Vector3(20, 2, -30)), update: () => {} });
     this.followRig("rocket_closeup", "track", "stack", new Vector3(25, 25, 25), 0.5);
-    this.followRig("rocket_ecl", "track", "stack", new Vector3(12, -30, 12), 0.35);
+    this.followRig("rocket_ecl", "track", "stack", new Vector3(12, -8, 12), 0.35); // offset keeps cam y≈16 — above pad deck (14); -30 was underground
   }
 
   private buildLaunch(): void {

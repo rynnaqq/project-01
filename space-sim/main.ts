@@ -73,7 +73,7 @@ async function boot(): Promise<World> {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   setProgress(0.05, "Detecting graphics backend...");
-  const engine: Engine | WebGPUEngine = await createBestEngine(canvas);
+  const engine: Engine | WebGPUEngine = await createBestEngine(canvas, { allowWebGPU: !coarsePointer });
   // Early-probe: a no-context engine still exists (Babylon swallows the throw
   // and falls back to a bare WebGL2 engine) and would silently render a black
   // frame forever. Probe the canvas directly so the user gets a real error

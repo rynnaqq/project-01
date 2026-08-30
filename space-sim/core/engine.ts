@@ -30,9 +30,14 @@ export function capsForTier(tier: QualityTier): TierCaps {
   }
 }
 
-export async function createBestEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEngine> {
+export async function createBestEngine(
+  canvas: HTMLCanvasElement,
+  opts?: { allowWebGPU?: boolean },
+): Promise<Engine | WebGPUEngine> {
   try {
-    if (await WebGPUEngine.IsSupportedAsync) {
+    // WebGPU on mobile (Adreno/Mali) is flaky in Babylon — silently renders black
+    // frames on some drivers. Touch devices go straight to battle-tested WebGL2.
+    if (opts?.allowWebGPU !== false && await WebGPUEngine.IsSupportedAsync) {
       const gpu = new WebGPUEngine(canvas);
       await gpu.initAsync();
       return gpu;
