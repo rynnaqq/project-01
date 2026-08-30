@@ -487,6 +487,15 @@ async function boot(): Promise<World> {
   }
 
   engine.runRenderLoop(() => {
+    try {
+      runFrame();
+    } catch (err) {
+      engine.stopRenderLoop();
+      showFault(`Runtime fault — the frame loop stopped: ${String(err)}`);
+    }
+  });
+
+  function runFrame(): void {
     const dt = Math.min(0.05, engine.getDeltaTime() / 1000);
     sky.update(dt);
     pipe.imageProcessing.exposure = sky.exposure; // altitude/fx ramp drives the grade
@@ -512,7 +521,7 @@ async function boot(): Promise<World> {
       scene.activeCamera = playerCam; // hold the view against cinematic auto-cuts
     }
     scene.render();
-  });
+  }
   setProgress(1, "MISSION SYSTEM READY");
   await new Promise((r) => setTimeout(r, 400));
   document.getElementById("loading-screen")!.classList.add("hidden");
