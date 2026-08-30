@@ -6,6 +6,8 @@ type Ctx = CanvasRenderingContext2D;
 
 function canvasTex(scene: Scene, name: string, w: number, h: number, draw: (ctx: Ctx) => void): DynamicTexture {
   const tex = new DynamicTexture(name, { width: w, height: h }, scene, true);
+  // Trilinear + anisotropy: default filtering muddies textures viewed at an angle
+  tex.anisotropicFilteringLevel = 16;
   const ctx = tex.getContext() as unknown as Ctx;
   draw(ctx);
   tex.update();

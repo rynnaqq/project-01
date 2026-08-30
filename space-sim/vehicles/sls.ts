@@ -8,20 +8,20 @@ const STACK_Y = 24; // pad deck 14 + ML base 7.6 + mount 2.4 = mount top exactly
 
 function wormMat(scene: Scene): StandardMaterial {
   const m = new StandardMaterial("coreWorm", scene);
-  m.diffuseTexture = new DynamicTexture("coreWormTex", { width: 1024, height: 512 }, scene, true);
+  m.diffuseTexture = new DynamicTexture("coreWormTex", { width: 2048, height: 1024 }, scene, true);
   const c = m.diffuseTexture as DynamicTexture;
   const ctx = c.getContext() as unknown as CanvasRenderingContext2D;
-  ctx.clearRect(0, 0, 1024, 512);
+  ctx.clearRect(0, 0, 2048, 1024);
   // USA block letters + worm logo, black on transparent (overlaid on foam via second mesh)
   ctx.fillStyle = "#0a0a0a";
-  ctx.font = "bold 120px monospace";
-  ctx.fillText("USA", 60, 200);
-  ctx.font = "bold 90px monospace";
-  ctx.fillText("SLS", 60, 320);
-  ctx.strokeStyle = "#0a0a0a"; ctx.lineWidth = 22; ctx.lineCap = "round";
+  ctx.font = "bold 240px monospace";
+  ctx.fillText("USA", 120, 400);
+  ctx.font = "bold 180px monospace";
+  ctx.fillText("SLS", 120, 640);
+  ctx.strokeStyle = "#0a0a0a"; ctx.lineWidth = 44; ctx.lineCap = "round";
   // worm: N-A-S-A curve approximation
-  ctx.beginPath(); ctx.moveTo(600, 260); ctx.quadraticCurveTo(650, 180, 700, 260);
-  ctx.quadraticCurveTo(750, 340, 800, 260); ctx.quadraticCurveTo(850, 180, 900, 260);
+  ctx.beginPath(); ctx.moveTo(1200, 520); ctx.quadraticCurveTo(1300, 360, 1400, 520);
+  ctx.quadraticCurveTo(1500, 680, 1600, 520); ctx.quadraticCurveTo(1700, 360, 1800, 520);
   ctx.stroke();
   c.hasAlpha = true;
   c.update();

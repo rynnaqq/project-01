@@ -9,18 +9,18 @@ const VAB_POS = new Vector3(-3200, 0, -2800);
 
 function ribbedWallMat(scene: Scene): StandardMaterial {
   const m = new StandardMaterial("vabWall", scene);
-  m.diffuseTexture = new DynamicTexture("vabWallTex", { width: 512, height: 512 }, scene, true);
+  m.diffuseTexture = new DynamicTexture("vabWallTex", { width: 1024, height: 1024 }, scene, true);
   const c = m.diffuseTexture as DynamicTexture;
   const ctx = c.getContext() as unknown as CanvasRenderingContext2D;
-  ctx.fillStyle = "#b9bcb9"; ctx.fillRect(0, 0, 512, 512);
-  for (let x = 0; x <= 512; x += 24) {
-    ctx.fillStyle = "rgba(140,145,142,0.85)"; ctx.fillRect(x, 0, 6, 512);
-    ctx.fillStyle = "rgba(220,224,220,0.5)"; ctx.fillRect(x + 6, 0, 3, 512);
+  ctx.fillStyle = "#b9bcb9"; ctx.fillRect(0, 0, 1024, 1024);
+  for (let x = 0; x <= 1024; x += 48) {
+    ctx.fillStyle = "rgba(140,145,142,0.85)"; ctx.fillRect(x, 0, 12, 1024);
+    ctx.fillStyle = "rgba(220,224,220,0.5)"; ctx.fillRect(x + 12, 0, 6, 1024);
   }
   // weather streaks
-  for (let i = 0; i < 140; i++) {
+  for (let i = 0; i < 280; i++) {
     ctx.fillStyle = `rgba(90,92,88,${Math.random() * 0.2})`;
-    ctx.fillRect(Math.random() * 512, Math.random() * 200, 1 + Math.random() * 2, 60 + Math.random() * 250);
+    ctx.fillRect(Math.random() * 1024, Math.random() * 400, 1 + Math.random() * 2, 120 + Math.random() * 500);
   }
   c.update();
   return m;

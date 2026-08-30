@@ -30,15 +30,15 @@ export function createTerrain(scene: Scene, assets: Assets): TransformNode {
   ground.createNormals(false);
   ground.material = ((): StandardMaterial => {
     const m = new StandardMaterial("terrainMat", scene);
-    const splat = new DynamicTexture("splat", { width: 1024, height: 1024 }, scene, true);
+    const splat = new DynamicTexture("splat", { width: 2048, height: 2048 }, scene, true);
     const ctx = splat.getContext() as unknown as CanvasRenderingContext2D;
     // Base grass
-    ctx.fillStyle = "#5a6b3a"; ctx.fillRect(0, 0, 1024, 1024);
+    ctx.fillStyle = "#5a6b3a"; ctx.fillRect(0, 0, 2048, 2048);
     // Marsh patches (low noise areas)
-    for (let y = 0; y < 1024; y += 4) {
-      for (let x = 0; x < 1024; x += 4) {
-        const wx = (x / 1024 - 0.5) * SIZE;
-        const wz = (0.5 - y / 1024) * SIZE;
+    for (let y = 0; y < 2048; y += 4) {
+      for (let x = 0; x < 2048; x += 4) {
+        const wx = (x / 2048 - 0.5) * SIZE;
+        const wz = (0.5 - y / 2048) * SIZE;
         const n = fbm2(wx * 0.0002, wz * 0.0002, 3);
         if (n < -0.25) { ctx.fillStyle = "#46583f"; ctx.fillRect(x, y, 4, 4); }
         if (n < -0.42) { ctx.fillStyle = "#3f5a54"; ctx.fillRect(x, y, 4, 4); }

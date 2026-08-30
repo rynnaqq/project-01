@@ -90,11 +90,9 @@ async function boot(): Promise<World> {
         dpr: window.devicePixelRatio,
         cores: navigator.hardwareConcurrency || 4,
       });
-  // Retina-native on high/medium (Babylon defaults to 1x → blurry); low tier keeps
-  // its perf downscale. Capped at 2x — 3x phones don't need 3x shading cost.
-  engine.setHardwareScalingLevel(
-    tier === "low" ? 1.25 : 1 / Math.min(window.devicePixelRatio, 2),
-  );
+  // Render at native device resolution (user brief: quality over perf). The old
+  // min(dpr,2) cap left hi-dpi screens at 1x = the top source of global blur.
+  engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
   const scene = new Scene(engine);
   scene.clearColor.set(0.002, 0.004, 0.01, 1);
   const camera = new UniversalCamera("bootCam", new Vector3(1400, 60, 900), scene);
@@ -298,11 +296,14 @@ async function boot(): Promise<World> {
   pipe.bloomWeight = 0.35;
   pipe.bloomKernel = 48;
   pipe.bloomScale = 0.5;
-  pipe.fxaaEnabled = true; // no MSAA: DefaultRenderingPipeline renders via effect layers
+  pipe.fxaaEnabled = false; // MSAA 8x below instead — FXAA blurs what MSAA keeps crisp
+  pipe.samples = 8; // hardware MSAA on every pipeline camera (WebGL2/WebGPU clamp to max)
   pipe.imageProcessingEnabled = true;
   pipe.imageProcessing.toneMappingEnabled = true;
   pipe.imageProcessing.contrast = 1.15;
   pipe.imageProcessing.exposure = 1.0;
+  pipe.sharpenEnabled = true; // counteract procedural-texture softness
+  pipe.sharpen.edgeAmount = 0.25;
   if (caps.ssao) {
     const ssao = new SSAO2RenderingPipeline("ssao", scene, 0.75, [camera]);
     ssao.totalStrength = 0.85;
