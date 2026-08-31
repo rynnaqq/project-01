@@ -9,39 +9,10 @@
    Tunables live in CONFIG below; see README.md for the parameter table.
    ========================================================================== */
 import * as THREE from 'three';
-import { createScenery } from './scenery';
-
-/* ------------------------------------------------------------------ config */
-const CONFIG = {
-  lanes: [-2.2, 0, 2.2],
-  laneStepTime: 0.17,        // fixed-duration lane change (cubic ease-out)
-  startBoostTime: 0.8,       // s of 72%->100% speed acceleration at run start
-  baseSpeed: 11,             // world units/s at start
-  speedRamp: 0.22,           // extra units/s per second survived
-  maxSpeed: 30,
-  gravity: 34,
-  jumpVelocity: 12.2,
-  highJumpMultiplier: 1.32,
-  slideDuration: 0.62,
-  playerHeight: 1.75,
-  playerSlideHeight: 0.85,
-  playerHalfWidth: 0.42,
-  magnetDuration: 8,
-  highJumpDuration: 8,
-  coinMagnetRadius: 4.5,
-  spawnAheadZ: -95,          // fixed z where most content appears
-  trainSpawnZ: -120,         // trains spawn deeper (they close faster)
-  despawnZ: 9,               // recycled once behind the camera
-  chunkGapMin: 9,            // distance gap between obstacle events
-  chunkGapMax: 17,
-  coinLineLength: 6,
-  scorePerUnit: 0.6,
-  coinScore: 10,
-  powerupChance: 0.16,
-  trainSpeedMult: 1.35,      // trains approach this much faster than the world
-  jumpBufferTime: 0.09,      // s — press jump slightly before landing still works
-  autoSlideAfterFastFall: 0.32, // s — roll after landing from a fast-fall
-};
+import { CONFIG } from './config';
+import { createTextures } from './textures';
+import { createAssets, GEO, TRAIN_PALETTES, matOf, mesh, shadows } from './assets';
+import { createWorld } from './world';
 
 /* ------------------------------------------------------------------ helpers */
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -55,15 +26,6 @@ function weightedPick<T extends { weight: number }>(entries: T[]): T {
   return entries.find((e) => (roll -= e.weight) <= 0) ?? entries[0];
 }
 
-const store = {
-  get(key: string): string | null {
-    try { return localStorage.getItem(key); } catch { return null; }
-  },
-  set(key: string, value: string) {
-    try { localStorage.setItem(key, value); } catch { /* private mode */ }
-  },
-};
-
 /* ponytail: throws instead of nullable so 200+ UI touches stay terse; the
    ids are static HTML, so a miss is a programming error worth crashing on. */
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
@@ -72,9 +34,7 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   return el as T;
 };
 /* Materials come back as `Material | Material[]` unions; pooled meshes here
-   always carry exactly one. */
-const matOf = (o: THREE.Object3D): THREE.MeshBasicMaterial =>
-  (o as THREE.Mesh).material as THREE.MeshBasicMaterial;
+   always carry exactly one — `matOf` lives in assets.ts. */
 /* Any boot-time crash must show up on the boot screen — never hang silently
    on "Loading track…". Runtime errors after start stay console-only.
    Handlers go up first so a missing-element typo in `ui` is surfaced too. */
@@ -156,7 +116,7 @@ class Sfx {
     const want = on && !this.muted;
     if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
     if (!want || !this.ctx) return;
-    const bass = [55, 55, 65.4, 49];
+    const bass = CONFIG.musicBass;
     let step = 0;
     const playStep = () => {
       if (!want || this.muted || !this.ctx) return;
@@ -165,7 +125,7 @@ class Sfx {
       step += 1;
     };
     playStep();
-    this.musicTimer = setInterval(playStep, 280);
+    this.musicTimer = setInterval(playStep, CONFIG.musicStepMs);
   }
 }
 const sfx = new Sfx();
@@ -218,8 +178,8 @@ window.addEventListener('keydown', (e) => {
    inherently full-length so they always jump high. */
 window.addEventListener('keyup', (e) => {
   if ((e.code === 'ArrowUp' || e.code === 'Space' || e.code === 'KeyW')
-    && !player.grounded && !player.jumpCutUsed && player.vy > 4) {
-    player.vy *= 0.55;
+    && !player.grounded && !player.jumpCutUsed && player.vy > CONFIG.shortHopThreshold) {
+    player.vy *= CONFIG.shortHopMultiplier;
     player.jumpCutUsed = true;
   }
 });
@@ -247,7 +207,7 @@ window.addEventListener('touchend', (e) => {
   else input[dy > 0 ? 'slide' : 'jump'] = true;
 }, { passive: true });
 
-/* ------------------------------------------------------------------ three.js */
+/* ------------------------------------------- boot: textures, assets, world */
 const canvas = $<HTMLCanvasElement>('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(clamp(window.devicePixelRatio, 1, 2));
@@ -258,13 +218,17 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
-// Fog matches the sky dome's horizon band (#f2a45c): fully fogged ground
+// Fog matches the sky dome's horizon band: fully fogged ground
 // melts into the sky instead of ending in a visible world-edge line.
-scene.fog = new THREE.Fog(0xf2a45c, 28, 105);
+scene.fog = new THREE.Fog(CONFIG.fogColor, CONFIG.fogNear, CONFIG.fogFar);
 
-let baseFov = 66;
+let baseFov = CONFIG.cameraFovStart;
 const camera = new THREE.PerspectiveCamera(baseFov, window.innerWidth / window.innerHeight, 0.1, 900);
-camera.position.set(0, 4.9, 8.0); // high chase overview — updateCamera steers x/y
+camera.position.set(0, CONFIG.camY, CONFIG.camZ); // high chase overview — updateCamera steers x/y
+
+const textures = createTextures(renderer.capabilities.getMaxAnisotropy());
+const assets = createAssets(textures);
+const world = createWorld(scene, assets);
 
 scene.add(new THREE.HemisphereLight(0xffb08a, 0x4a3550, 1.35));
 const sunLight = new THREE.DirectionalLight(0xffb36b, 2.5);
@@ -282,686 +246,11 @@ sunLight.shadow.normalBias = 0.02;
 sunLight.target.position.set(0, 0, -14);
 scene.add(sunLight, sunLight.target);
 
-/* ------------------------------------------------- procedural textures */
-function canvasTexture(
-  w: number,
-  h: number,
-  draw: (g: CanvasRenderingContext2D, w: number, h: number) => void,
-) {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  draw(c.getContext('2d') as CanvasRenderingContext2D, w, h);
-  const tx = new THREE.CanvasTexture(c);
-  tx.colorSpace = THREE.SRGBColorSpace;
-  tx.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  return tx;
-}
-/* Draw `draw` nine times offset by one canvas — every layer painted through
-   this joins seamlessly when tiled. */
-function wrapped(g: CanvasRenderingContext2D, w: number, h: number, draw: () => void) {
-  for (const ox of [0, -w]) {
-    for (const oy of [0, -h]) {
-      g.save();
-      g.translate(ox, oy);
-      draw();
-      g.restore();
-    }
-  }
-}
-
-/* Multi-scale procedural terrain: large soft tone blobs + mid mottling +
-   fine grain (kept for the water-tower rust). */
-function terrainTexture(base: string, spots: string[], density: number) {
-  return canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = base;
-    g.fillRect(0, 0, w, h);
-    // Macro: big soft radial tone blobs give regions their own character.
-    for (let i = 0; i < 60; i += 1) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      const r = 40 + Math.random() * 90;
-      const col = spots[randInt(spots.length)];
-      const a = 0.18 + Math.random() * 0.24;
-      const gr = g.createRadialGradient(x, y, r * 0.15, x, y, r);
-      gr.addColorStop(0, col);
-      gr.addColorStop(1, 'rgba(0,0,0,0)');
-      wrapped(g, w, h, () => {
-        g.globalAlpha = a;
-        g.fillStyle = gr;
-        g.beginPath();
-        g.arc(x, y, r, 0, Math.PI * 2);
-        g.fill();
-      });
-    }
-    // Mid: mottled ellipses break up flatness organically.
-    for (let i = 0; i < 250; i += 1) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      const rw = 4 + Math.random() * 18;
-      const rh = 3 + Math.random() * 12;
-      const rot = Math.random() * Math.PI;
-      const col = spots[randInt(spots.length)];
-      const a = 0.08 + Math.random() * 0.12;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = a;
-        g.fillStyle = col;
-        g.beginPath();
-        g.ellipse(x, y, rw, rh, rot, 0, Math.PI * 2);
-        g.fill();
-      });
-    }
-    // Fine: grain on top for close-up detail.
-    for (let i = 0; i < density; i += 1) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      const rw = 1 + Math.random() * 2;
-      const rh = 1 + Math.random() * 2;
-      const col = spots[randInt(spots.length)];
-      const a = 0.15 + Math.random() * 0.17;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = a;
-        g.fillStyle = col;
-        g.fillRect(x, y, rw, rh);
-      });
-    }
-    g.globalAlpha = 1;
-  });
-}
-
-/* Art-directed dusk ground: angular tone zones, wind ripples, gravel
-   clusters with sun-side highlights, and branching cracks. */
-function artGroundTexture() {
-  const spots = ['#6b5882', '#322844', '#4e3f63', '#66506b'];
-  return canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = '#54406b';
-    g.fillRect(0, 0, w, h);
-
-    // Macro zones: irregular soft-edged polygons — terrain regions, not bubbles.
-    for (let i = 0; i < 15; i += 1) {
-      const cx = Math.random() * w;
-      const cy = Math.random() * h;
-      const n = 7 + randInt(4);
-      const rBase = 60 + Math.random() * 110;
-      const pts: number[][] = [];
-      for (let k = 0; k < n; k += 1) {
-        const ang = (k / n) * Math.PI * 2;
-        const rr = rBase * (0.55 + Math.random() * 0.7);
-        pts.push([cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr]);
-      }
-      const col = pick(spots);
-      const a = 0.14 + Math.random() * 0.16;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = a;
-        g.fillStyle = col;
-        g.beginPath();
-        g.moveTo(pts[0][0], pts[0][1]);
-        for (let k = 1; k < n; k += 1) g.lineTo(pts[k][0], pts[k][1]);
-        g.closePath();
-        g.fill();
-      });
-    }
-
-    // Wind ripples: long wavy strokes drifting at a slight diagonal.
-    g.filter = 'blur(1.5px)';
-    for (let i = 0; i < 38; i += 1) {
-      const col = Math.random() < 0.5 ? '#6b5882' : '#322844';
-      const a = 0.08 + Math.random() * 0.12;
-      const lw = 2 + Math.random() * 4;
-      const y0 = Math.random() * h;
-      const drift = (Math.random() - 0.3) * 90;
-      const amp = 4 + Math.random() * 10;
-      const span = w + 20;
-      const segs = 8;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = a;
-        g.strokeStyle = col;
-        g.lineWidth = lw;
-        g.lineCap = 'round';
-        g.beginPath();
-        g.moveTo(-10, y0);
-        let py = y0;
-        for (let s = 1; s <= segs; s += 1) {
-          const x = -10 + (span / segs) * s;
-          const yy = y0 + (drift * s) / segs + (s % 2 ? amp : -amp) * 0.9;
-          g.quadraticCurveTo(x - span / segs / 2, py + (s % 2 ? -amp : amp), x, yy);
-          py = yy;
-        }
-        g.stroke();
-      });
-    }
-    g.filter = 'none';
-
-    // Gravel clusters: pebbles with a sun-side highlight.
-    for (let c = 0; c < 60; c += 1) {
-      const cx = Math.random() * w;
-      const cy = Math.random() * h;
-      const count = 4 + randInt(6);
-      for (let k = 0; k < count; k += 1) {
-        const x = cx + (Math.random() - 0.5) * 46;
-        const y = cy + (Math.random() - 0.5) * 30;
-        const r = 1 + Math.random() * 2.2;
-        const base = pick(spots);
-        wrapped(g, w, h, () => {
-          g.globalAlpha = 0.5;
-          g.fillStyle = base;
-          g.beginPath();
-          g.arc(x, y, r, 0, Math.PI * 2);
-          g.fill();
-          g.globalAlpha = 0.45;
-          g.fillStyle = '#8a76a0';
-          g.beginPath();
-          g.arc(x - r * 0.35, y - r * 0.35, r * 0.45, 0, Math.PI * 2);
-          g.fill();
-        });
-      }
-    }
-
-    // Cracks: branching random walks, cracked-earth hint.
-    for (let i = 0; i < 10; i += 1) {
-      let x = Math.random() * w;
-      let y = Math.random() * h;
-      let ang = Math.random() * Math.PI * 2;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = 0.25;
-        g.strokeStyle = '#2e2440';
-        g.lineWidth = 1.4;
-        g.lineCap = 'round';
-        g.beginPath();
-        g.moveTo(x, y);
-        for (let s = 0; s < 9; s += 1) {
-          ang += (Math.random() - 0.5) * 0.9;
-          x += Math.cos(ang) * (6 + Math.random() * 12);
-          y += Math.sin(ang) * (6 + Math.random() * 12);
-          g.lineTo(x, y);
-          if (Math.random() < 0.25) {
-            g.moveTo(x, y);
-            const fa = ang + (Math.random() - 0.5) * 1.6;
-            g.lineTo(x + Math.cos(fa) * 10, y + Math.sin(fa) * 10);
-            g.moveTo(x, y);
-          }
-        }
-        g.stroke();
-      });
-    }
-
-    // Light grain so close-ups stay lively under the structure.
-    for (let i = 0; i < 1200; i += 1) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = 0.12 + Math.random() * 0.14;
-        g.fillStyle = pick(spots);
-        g.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2);
-      });
-    }
-    g.globalAlpha = 1;
-  });
-}
-
-/* Art-directed ballast: worn longitudinal bands plus real rounded stones —
-   each pebble gets a lit edge toward the sun and a shade edge away from it,
-   which is what makes gravel read as gravel instead of noise. */
-function artBallastTexture() {
-  const stoneCols = ['#6a625c', '#463f3d', '#5d5854', '#6e6659', '#524b47'];
-  return canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = '#55504e';
-    g.fillRect(0, 0, w, h);
-
-    // Longitudinal wear bands along the travel axis.
-    for (let i = 0; i < 6; i += 1) {
-      const bx = Math.random() * w;
-      const bw = 30 + Math.random() * 70;
-      const col = Math.random() < 0.5 ? '#494542' : '#5f5955';
-      const a = 0.12 + Math.random() * 0.08;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = a;
-        g.fillStyle = col;
-        g.fillRect(bx, 0, bw, h);
-      });
-    }
-
-    const pebble = (x: number, y: number, r: number, rot: number) => {
-      // Interior stones skip the wrap copies — keeps boot cost low.
-      if (x > 8 && x < w - 8 && y > 8 && y < h - 8) {
-        drawPebble(g, x, y, r, rot, stoneCols);
-      } else {
-        wrapped(g, w, h, () => drawPebble(g, x, y, r, rot, stoneCols));
-      }
-    };
-    for (let i = 0; i < 900; i += 1) {
-      pebble(Math.random() * w, Math.random() * h, 1 + Math.random() * 1.8, Math.random() * Math.PI);
-    }
-    for (let i = 0; i < 30; i += 1) {
-      pebble(Math.random() * w, Math.random() * h, 3 + Math.random() * 1.6, Math.random() * Math.PI);
-    }
-
-    // Sparse grain between stones.
-    for (let i = 0; i < 600; i += 1) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      wrapped(g, w, h, () => {
-        g.globalAlpha = 0.1 + Math.random() * 0.12;
-        g.fillStyle = pick(stoneCols);
-        g.fillRect(x, y, 1 + Math.random(), 1 + Math.random());
-      });
-    }
-    g.globalAlpha = 1;
-  });
-}
-
-function drawPebble(g: CanvasRenderingContext2D, x: number, y: number, r: number, rot: number, stoneCols: string[]) {
-  g.save();
-  g.translate(x, y);
-  g.rotate(rot);
-  g.globalAlpha = 0.9;
-  g.fillStyle = stoneCols[randInt(stoneCols.length)];
-  g.beginPath();
-  g.ellipse(0, 0, r, r * 0.72, 0, 0, Math.PI * 2);
-  g.fill();
-  g.globalAlpha = 0.5;
-  g.strokeStyle = '#7d756e'; // lit edge
-  g.lineWidth = Math.max(0.8, r * 0.28);
-  g.beginPath();
-  g.arc(0, 0, r * 0.82, Math.PI * 0.9, Math.PI * 1.75);
-  g.stroke();
-  g.strokeStyle = '#332f2c'; // shade edge
-  g.beginPath();
-  g.arc(0, 0, r * 0.82, Math.PI * -0.05, Math.PI * 0.7);
-  g.stroke();
-  g.restore();
-}
-
-const hazardTexture = canvasTexture(128, 128, (g, w, h) => {
-  g.fillStyle = '#fff3dc';
-  g.fillRect(0, 0, w, h);
-  g.fillStyle = '#ff8a3d';
-  for (let x = -h; x < w + h; x += 32) {
-    g.beginPath();
-    g.moveTo(x, 0); g.lineTo(x + 16, 0); g.lineTo(x + 16 - h, h); g.lineTo(x - h, h);
-    g.closePath(); g.fill();
-  }
-});
-const glowTexture = canvasTexture(64, 64, (g, w, h) => {
-  const gr = g.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w / 2);
-  gr.addColorStop(0, 'rgba(255,226,170,1)');
-  gr.addColorStop(0.4, 'rgba(255,190,110,0.45)');
-  gr.addColorStop(1, 'rgba(255,190,110,0)');
-  g.fillStyle = gr;
-  g.fillRect(0, 0, w, h);
-});
-const cloudShadowTexture = canvasTexture(128, 128, (g, w, h) => {
-  const gr = g.createRadialGradient(w / 2, h / 2, 8, w / 2, h / 2, w / 2);
-  gr.addColorStop(0, 'rgba(22,13,36,0.55)');
-  gr.addColorStop(0.6, 'rgba(22,13,36,0.24)');
-  gr.addColorStop(1, 'rgba(22,13,36,0)');
-  g.fillStyle = gr;
-  g.fillRect(0, 0, w, h);
-});
-
-/* ------------------------------------------------------- sky dome & sun disc */
-const tmpStarDir = new THREE.Vector3();
-{
-  const skyTex = canvasTexture(64, 256, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, 0, h);
-    gr.addColorStop(0, '#241b4d');
-    gr.addColorStop(0.42, '#6a3d6e');
-    gr.addColorStop(0.68, '#c96a4e');
-    gr.addColorStop(0.84, '#f2a45c');
-    gr.addColorStop(1, '#ffd08a');
-    g.fillStyle = gr;
-    g.fillRect(0, 0, w, h);
-  });
-  const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(480, 24, 14),
-    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false }),
-  );
-  sky.renderOrder = -3;
-  scene.add(sky);
-
-  const sun = new THREE.Mesh(
-    new THREE.CircleGeometry(26, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffe6ae, fog: false, depthWrite: false }),
-  );
-  sun.position.set(70, 52, -430);
-  sun.lookAt(0, 0, 0);
-  sun.renderOrder = -2;
-  scene.add(sun);
-
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowTexture, color: 0xffcf8a, transparent: true, opacity: 0.85, fog: false, depthWrite: false,
-  }));
-  halo.position.copy(sun.position);
-  halo.scale.setScalar(150);
-  halo.renderOrder = -2;
-  scene.add(halo);
-
-  // Faint stars in the upper dome — dusk deepening overhead.
-  const STAR_COUNT = 130;
-  const starPos = new Float32Array(STAR_COUNT * 3);
-  for (let i = 0; i < STAR_COUNT; i += 1) {
-    tmpStarDir.set(Math.random() - 0.5, 0.35 + Math.random() * 0.6, Math.random() - 0.5)
-      .normalize()
-      .multiplyScalar(440);
-    starPos[i * 3] = tmpStarDir.x;
-    starPos[i * 3 + 1] = tmpStarDir.y;
-    starPos[i * 3 + 2] = tmpStarDir.z;
-  }
-  const starGeo = new THREE.BufferGeometry();
-  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-  const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
-    color: 0xffe9cf, size: 2, sizeAttenuation: false,
-    transparent: true, opacity: 0.65, fog: false, depthWrite: false,
-  }));
-  stars.renderOrder = -2;
-  scene.add(stars);
-}
-
-/* Shared geometry & materials (draw-call budget stays low). */
-const groundTex = artGroundTexture();
-const ballastTex = artBallastTexture();
-const rustTex = terrainTexture('#7a4a3a', ['#5e362c', '#8f5a46', '#4a2b24'], 1600);
-const MAT = {
-  rail: new THREE.MeshPhongMaterial({ color: 0xb8a68e, shininess: 90, specular: 0xffd9a0 }),
-  sleeper: new THREE.MeshLambertMaterial({ color: 0x4a3626 }),
-  ground: new THREE.MeshLambertMaterial({
-    map: groundTex,
-  }),
-  ballast: new THREE.MeshLambertMaterial({
-    map: ballastTex,
-  }),
-  hazard: new THREE.MeshLambertMaterial({ map: hazardTexture }),
-  steel: new THREE.MeshLambertMaterial({ color: 0x39415a }),
-  pole: new THREE.MeshLambertMaterial({ color: 0x3a2c33 }),
-  darkMetal: new THREE.MeshLambertMaterial({ color: 0x23252d }),
-  glass: new THREE.MeshLambertMaterial({ color: 0x1b2130 }),
-  crateWood: new THREE.MeshLambertMaterial({ color: 0x8a5f33 }),
-  crateFrame: new THREE.MeshLambertMaterial({ color: 0x6b4726 }),
-  barrierLowLeg: new THREE.MeshLambertMaterial({ color: 0x2c2f3a }),
-  cactus: new THREE.MeshLambertMaterial({ color: 0x4a7a5a }),
-  patch: [
-    new THREE.MeshLambertMaterial({ color: 0x3f3050 }),
-    new THREE.MeshLambertMaterial({ color: 0x473659 }),
-    new THREE.MeshLambertMaterial({ color: 0x38304a }),
-  ],
-  cloudShadow: new THREE.MeshBasicMaterial({
-    map: cloudShadowTexture, transparent: true, depthWrite: false,
-  }),
-  shrub: [new THREE.MeshLambertMaterial({ color: 0x8a744a }), new THREE.MeshLambertMaterial({ color: 0x77643f })],
-  rust: new THREE.MeshLambertMaterial({
-    map: rustTex,
-  }),
-  tunnelLiner: new THREE.MeshLambertMaterial({ color: 0x574e63 }),
-  tunnelRib: new THREE.MeshLambertMaterial({ color: 0x3e3749 }),
-  tunnelSkirt: new THREE.MeshLambertMaterial({ color: 0x463f52 }),
-  cloud: new THREE.MeshLambertMaterial({ color: 0xffc9d6, emissive: 0x55283c }),
-  coin: new THREE.MeshPhongMaterial({ color: 0xffce5c, emissive: 0x8a5a00, shininess: 80, specular: 0xfff2c0 }),
-  magnet: new THREE.MeshPhongMaterial({ color: 0xff71ce, emissive: 0x5e1747, shininess: 60 }),
-  shoes: new THREE.MeshPhongMaterial({ color: 0x43d9ff, emissive: 0x0b4c66, shininess: 70 }),
-  halo: new THREE.MeshBasicMaterial({ color: 0xfff1c9, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }), // shared: all power-up rings pulse together
-  body: new THREE.MeshLambertMaterial({ color: 0xe8927c }),   // runner shirt
-  head: new THREE.MeshLambertMaterial({ color: 0xf3b58f }),   // skin, dusk-lit
-  legs: new THREE.MeshLambertMaterial({ color: 0x33303e }),
-  arms: new THREE.MeshLambertMaterial({ color: 0xd97f66 }),
-  cap: new THREE.MeshLambertMaterial({ color: 0x86ccca }),
-  pack: new THREE.MeshLambertMaterial({ color: 0xc9566b }),
-  scarf: new THREE.MeshBasicMaterial({ color: 0xff71ce, side: THREE.DoubleSide }),
-  ring: new THREE.MeshBasicMaterial({
-    color: 0xffdf9e, transparent: true, opacity: 0.95,
-    blending: THREE.AdditiveBlending, depthWrite: false,
-  }),
-  lightCone: new THREE.MeshBasicMaterial({
-    map: glowTexture, color: 0xffbf80, transparent: true, opacity: 0.5,
-    blending: THREE.AdditiveBlending, depthWrite: false,
-  }),
-  tumbleweed: new THREE.MeshLambertMaterial({ color: 0x9a7f52, wireframe: true }),
-  particle: new THREE.MeshBasicMaterial({ color: 0xffce5c }),
-  streak: new THREE.MeshBasicMaterial({
-    color: 0xffd9a0, transparent: true, opacity: 0,
-    blending: THREE.AdditiveBlending, depthWrite: false,
-  }),
-};
-groundTex.repeat.set(29, 62);
-ballastTex.repeat.set(2, 36);
-rustTex.repeat.set(3, 1.5);
-[groundTex, ballastTex, rustTex].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
-
-/* Train liveries — body/accent materials are cloned per train so each spawn
-   can be repainted. */
-const TRAIN_PALETTES = [
-  { body: 0xb5484d, accent: 0xf6e7cf }, // oxide red
-  { body: 0x3f6bb5, accent: 0xf2d8a7 }, // dusk blue
-  { body: 0xc98a3d, accent: 0x4a2c33 }, // sand
-  { body: 0x5aa17a, accent: 0xf6e7cf }, // faded green
-  { body: 0x8a5aa0, accent: 0xffd9a0 }, // violet freight
-];
-
-const GEO = {
-  box: new THREE.BoxGeometry(1, 1, 1),
-  coin: new THREE.CylinderGeometry(0.36, 0.36, 0.09, 18),
-  torus: new THREE.TorusGeometry(0.42, 0.15, 10, 20),
-  octa: new THREE.OctahedronGeometry(0.46),
-  cone: new THREE.ConeGeometry(1, 1, 5),
-  wheel: new THREE.CylinderGeometry(1, 1, 1, 12),
-  puff: new THREE.SphereGeometry(1, 7, 5),
-  circle: new THREE.CircleGeometry(0.5, 16),
-  ring: new THREE.TorusGeometry(0.34, 0.05, 8, 26),
-};
-
-function mesh(geo: THREE.BufferGeometry, mat: THREE.Material | THREE.Material[], sx: number, sy: number, sz: number): THREE.Mesh {
-  const m = new THREE.Mesh(geo, mat);
-  m.scale.set(sx, sy, sz);
-  return m;
-}
-function shadows(root: THREE.Object3D, on = true) {
-  root.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = on; });
-}
-
-/* ------------------------------------------------------- static environment */
-{
-  // Huge so no edge ever enters even ultrawide FOVs (fog ends at ~105 but
-  // sky-colored void beyond a ground edge would read as "the world pans").
-  const ground = mesh(GEO.box, MAT.ground, 520, 1, 800);
-  ground.position.set(0, -0.51, -230);
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  const bed = mesh(GEO.box, MAT.ballast, 8.6, 0.24, 320);
-  bed.position.set(0, 0.02, -135);
-  bed.receiveShadow = true;
-  scene.add(bed);
-
-  for (const lx of CONFIG.lanes) {
-    for (const rx of [-0.72, 0.72]) {
-      const rail = mesh(GEO.box, MAT.rail, 0.14, 0.14, 320);
-      rail.position.set(lx + rx, 0.2, -135);
-      scene.add(rail);
-    }
-  }
-}
-
-/* Scrolling scenery treadmill: fixed spacing, wraps behind the camera.
-   Every layer scrolls at its own fraction of world speed for parallax. */
-function makeTreadmill(
-  count: number,
-  spacing: number,
-  speedFactor: number,
-  factory: (i: number) => THREE.Object3D,
-  jitterZ = 0,
-) {
-  const items: THREE.Object3D[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const obj = factory(i);
-    obj.position.z = CONFIG.despawnZ - i * spacing - Math.random() * jitterZ;
-    scene.add(obj);
-    items.push(obj);
-  }
-  return {
-    items,
-    advance(dz: number) {
-      const span = count * spacing;
-      for (const o of items) {
-        o.position.z += dz * speedFactor;
-        if (o.position.z > CONFIG.despawnZ + 6) {
-          o.position.z -= span;
-          if (o.userData.respin) o.userData.respin(o);
-        }
-      }
-    },
-  };
-}
-
-/* Drifting dusk clouds. */
-const clouds = makeTreadmill(7, 34, 0.06, () => {
-  const g = new THREE.Group();
-  const puffs = [[0, 0, 0, 2.6, 1.1, 1.5], [1.8, -0.2, 0.4, 1.7, 0.85, 1.1], [-1.9, -0.25, -0.3, 1.5, 0.8, 1]];
-  for (const [x, y, z, sx, sy, sz] of puffs) {
-    const p = mesh(GEO.puff, MAT.cloud, sx, sy, sz);
-    p.position.set(x, y, z);
-    g.add(p);
-  }
-  g.position.set((Math.random() - 0.5) * 90, 22 + Math.random() * 14, 0);
-  g.userData.drift = (Math.random() - 0.5) * 0.6;
-  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() - 0.5) * 90; };
-  return g;
-}, 12);
-
-/* Trackside dressing: cacti, rocks, telegraph poles, catenary gantries. */
-const cacti = makeTreadmill(10, 19, 1, () => {
-  const g = new THREE.Group();
-  const h = 1.6 + Math.random() * 1.1;
-  const trunk = mesh(GEO.box, MAT.cactus, 0.28, h, 0.28);
-  trunk.position.y = h / 2;
-  g.add(trunk);
-  if (Math.random() < 0.75) {
-    const armY = h * (0.45 + Math.random() * 0.25);
-    const side = Math.random() < 0.5 ? -1 : 1;
-    const elbow = mesh(GEO.box, MAT.cactus, 0.5, 0.22, 0.22);
-    elbow.position.set(side * 0.36, armY, 0);
-    const up = mesh(GEO.box, MAT.cactus, 0.22, 0.6, 0.22);
-    up.position.set(side * 0.55, armY + 0.3, 0);
-    g.add(elbow, up);
-  }
-  g.userData.respin = (o: THREE.Object3D) => {
-    o.position.x = (Math.random() < 0.5 ? -1 : 1) * (7 + Math.random() * 7);
-    o.rotation.y = Math.random() * Math.PI * 2;
-  };
-  g.userData.respin(g);
-  shadows(g);
-  return g;
-}, 8);
-
-const shrubs = makeTreadmill(14, 13, 1, () => {
-  const s = 0.7 + Math.random() * 0.6;
-  const bush = mesh(GEO.cone, pick(MAT.shrub), s * 0.8, s * 0.5, s * 0.8);
-  bush.position.y = s * 0.25;
-  const g = new THREE.Group();
-  g.add(bush);
-  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (5.1 + Math.random() * 1.5); };
-  g.userData.respin(g);
-  return g;
-}, 9);
-
-/* Dark dirt patches on the open ground flanks — scrolling reference points
-   that sell world motion against the locked camera. */
-const dirtPatches = makeTreadmill(18, 24, 1, () => {
-  const r = 2 + Math.random() * 6;
-  const p = mesh(GEO.circle, pick(MAT.patch), r, r * (0.6 + Math.random() * 0.5), 1);
-  p.rotation.x = -Math.PI / 2;
-  p.rotation.z = Math.random() * Math.PI * 2;
-  p.position.y = 0.012; // just above the ground top to avoid z-fighting
-  const g = new THREE.Group();
-  g.add(p);
-  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 16); };
-  g.userData.respin(g);
-  return g;
-}, 14);
-
-/* Soft cloud shadows drifting over the terrain — slow parallax layer. */
-const cloudShadows = makeTreadmill(3, 90, 0.25, () => {
-  const q = new THREE.Mesh(new THREE.PlaneGeometry(46, 30), MAT.cloudShadow);
-  q.rotation.x = -Math.PI / 2;
-  q.rotation.z = Math.random() * Math.PI;
-  q.position.y = 0.04;
-  const g = new THREE.Group();
-  g.add(q);
-  g.userData.respin = (o: THREE.Object3D) => { o.position.x = (Math.random() - 0.5) * 40; };
-  g.userData.respin(g);
-  return g;
-});
-
-const poles = makeTreadmill(12, 17, 1, (i) => {
-  const g = new THREE.Group();
-  const post = mesh(GEO.box, MAT.pole, 0.16, 4.4, 0.16);
-  post.position.y = 2.2;
-  const cross = mesh(GEO.box, MAT.pole, 1.15, 0.1, 0.1);
-  cross.position.y = 4.15;
-  g.add(post, cross);
-  g.position.x = (i % 2 === 0 ? -1 : 1) * 6.9;
-  return g;
-});
-
-const gantries = makeTreadmill(5, 46, 1, () => {
-  const g = new THREE.Group();
-  for (const px of [-5.5, 5.5]) {
-    const post = mesh(GEO.box, MAT.steel, 0.26, 5.1, 0.26);
-    post.position.set(px, 2.55, 0);
-    g.add(post);
-    const foot = mesh(GEO.box, MAT.darkMetal, 0.6, 0.2, 0.6);
-    foot.position.set(px, 0.1, 0);
-    g.add(foot);
-  }
-  const beam = mesh(GEO.box, MAT.steel, 11.4, 0.3, 0.3);
-  beam.position.y = 5.1;
-  g.add(beam);
-  for (const lx of CONFIG.lanes) {
-    const drop = mesh(GEO.box, MAT.darkMetal, 0.07, 0.65, 0.07);
-    drop.position.set(lx, 4.62, 0);
-    g.add(drop);
-  }
-  shadows(g);
-  return g;
-});
-
-/* Procedural trackside buildings — houses/ruko near, tower silhouettes far.
-   Own module; recycled treadmill rows like every other scenery here. */
-const scenery = createScenery(scene);
-
-/* Wind streaks near the camera — fade in with speed. */
-const STREAK_COUNT = 22;
-const streaks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.04, 0.04, 2.6), MAT.streak, STREAK_COUNT);
-streaks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-streaks.frustumCulled = false;
-streaks.renderOrder = 5;
-scene.add(streaks);
-const streakSeeds = Array.from({ length: STREAK_COUNT }, () => ({
-  x: (Math.random() < 0.5 ? -1 : 1) * (4.5 + Math.random() * 4),
-  y: 0.8 + Math.random() * 4.5,
-  z: Math.random() * 80 - 70,
-}));
-const streakMatrix = new THREE.Matrix4();
-
-/* Per-lane sleepers sell the speed (single instanced draw call). */
-const SLEEPER_ROWS = 44;
-const SLEEPER_GAP = 2.2;
-const sleepers = new THREE.InstancedMesh(GEO.box, MAT.sleeper, SLEEPER_ROWS * 3);
-sleepers.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-sleepers.receiveShadow = true;
-scene.add(sleepers);
-const sleeperMatrix = new THREE.Matrix4();
-let sleeperOffset = 0;
-{
-  // Per-sleeper tint variation — breaks up the perfect repetition.
-  const c = new THREE.Color();
-  for (let i = 0; i < SLEEPER_ROWS * 3; i += 1) {
-    sleepers.setColorAt(i, c.setHex(0x4a3626).offsetHSL(0, (Math.random() - 0.5) * 0.06, (Math.random() - 0.5) * 0.09));
-  }
-  if (sleepers.instanceColor) sleepers.instanceColor.needsUpdate = true;
-}
-
 /* ------------------------------------------------------------------- player */
 const ROLL_PIVOT_Y = 1.05; // roll center: max tucked body radius (1.03) stays above 0
 
 // Rig is built before the state literal so every part keeps a concrete type.
+const MAT = assets.MAT;
 const torso = mesh(GEO.box, MAT.body, 0.62, 0.78, 0.4);
 torso.position.y = 1.05;
 
@@ -1078,7 +367,7 @@ function makeTrain() {
   );
   light.position.set(0, 1.55, 4.32);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowTexture, color: 0xffd28a, transparent: true, opacity: 0.9, depthWrite: false,
+    map: assets.textures.glow, color: 0xffd28a, transparent: true, opacity: 0.9, depthWrite: false,
   }));
   glow.scale.setScalar(1.7);
   glow.position.set(0, 1.55, 4.5);
@@ -1190,7 +479,7 @@ const SPAWN_Z = new Map<AnyPool, number>([
 ]);
 
 /* Coins: instanced — one draw call for all gold. Coins face the camera; no spin. */
-const COIN_COUNT = 64;
+const COIN_COUNT = CONFIG.coinCapacity;
 const coinMesh = new THREE.InstancedMesh(GEO.coin, MAT.coin, COIN_COUNT);
 coinMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 coinMesh.frustumCulled = false;
@@ -1204,7 +493,7 @@ const coinScale = new THREE.Vector3();
 const HIDDEN_POS = new THREE.Vector3(0, -50, 0);
 
 /* Power-ups. */
-const powerups = new Pool(3, () => {
+const powerups = new Pool(CONFIG.powerupCapacity, () => {
   const holder = new THREE.Group();
   const magnet = mesh(GEO.torus, MAT.magnet, 1, 1, 1);
   magnet.rotation.x = Math.PI / 2;
@@ -1230,7 +519,7 @@ const powerups = new Pool(3, () => {
 });
 
 /* Particles: tiny pooled boxes with velocity + life. */
-const particles = new Pool(110, () => {
+const particles = new Pool(CONFIG.particleCapacity, () => {
   const p = mesh(GEO.box, MAT.particle.clone(), 0.14, 0.14, 0.14);
   p.userData.vel = new THREE.Vector3();
   p.userData.life = 0;
@@ -1275,7 +564,7 @@ function smokePuff(x: number, y: number, z: number) {
 }
 
 /* Expanding pickup rings for coins (per-instance material for the fade). */
-const rings = new Pool(8, () => {
+const rings = new Pool(CONFIG.ringCapacity, () => {
   const r = new THREE.Mesh(GEO.ring, MAT.ring.clone());
   r.userData.life = 0;
   return r;
@@ -1301,15 +590,15 @@ function updateRings(dt: number) {
 }
 
 /* Tumbleweeds cross far off-lane now and then; purely decorative. */
-const tumbleweeds = new Pool(2, () => {
+const tumbleweeds = new Pool(CONFIG.tumbleweedCapacity, () => {
   const t = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), MAT.tumbleweed);
   t.userData.vx = 0;
   return t;
 });
-let tumbleweedTimer = 9;
+let tumbleweedTimer = CONFIG.tumbleweedStart.timer;
 
 /* ------------------------------------------------------- set-pieces */
-const TUNNEL_LEN = 50;
+const TUNNEL_LEN = CONFIG.tunnelLength;
 
 function makeTower() {
   const g = new THREE.Group();
@@ -1338,7 +627,7 @@ function makeTower() {
   shadows(g);
   return g;
 }
-const towers = new Pool(3, makeTower);
+const towers = new Pool(CONFIG.towerPool, makeTower);
 
 /* Arched stone tunnel: one continuous half-barrel vault (no see-through
    slots between stacked rings), walls meeting the vault legs, chunky
@@ -1386,7 +675,7 @@ function makeTunnel() {
     g.add(lamp);
   }
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowTexture, color: 0xffb070, transparent: true, opacity: 0.8, depthWrite: false,
+    map: assets.textures.glow, color: 0xffb070, transparent: true, opacity: 0.8, depthWrite: false,
   }));
   glow.scale.setScalar(2.4);
   glow.position.set(0, 3.55, 0.55);
@@ -1395,7 +684,7 @@ function makeTunnel() {
   g.userData.len = TUNNEL_LEN;
   return g;
 }
-const tunnels = new Pool(2, makeTunnel);
+const tunnels = new Pool(CONFIG.tunnelPool, makeTunnel);
 
 /* Distance-based scheduler, same pattern as spawner but for scenery pieces. */
 const setPieces = {
@@ -1406,8 +695,8 @@ const setPieces = {
   fpZone: false, // tunnel near/ahead — camera should be first-person
 
   reset() {
-    this.nextTunnelAt = 320;
-    this.nextTowerAt = 170;
+    this.nextTunnelAt = CONFIG.setPieceStart.tunnel;
+    this.nextTowerAt = CONFIG.setPieceStart.tower;
     this.towerSide = 1;
     this.wasInsideTunnel = false;
     this.fpZone = false;
@@ -1420,7 +709,7 @@ const setPieces = {
         t.position.set(0, 0, -150);
         t.visible = true;
         t.userData.active = true;
-        this.nextTunnelAt = travel + 420 + Math.random() * 260;
+        this.nextTunnelAt = travel + CONFIG.setPieceGap.tunnel[0] + Math.random() * CONFIG.setPieceGap.tunnel[1];
       } else {
         this.nextTunnelAt = travel + 60; // both busy — retry soon
       }
@@ -1433,7 +722,7 @@ const setPieces = {
         w.rotation.y = Math.random() * Math.PI * 2;
         w.visible = true;
         w.userData.active = true;
-        this.nextTowerAt = travel + 240 + Math.random() * 260;
+        this.nextTowerAt = travel + CONFIG.setPieceGap.tower[0] + Math.random() * CONFIG.setPieceGap.tower[1];
       } else {
         this.nextTowerAt = travel + 60;
       }
@@ -1476,7 +765,7 @@ const spawner = {
       if (avail.length > 0) {
         const freeLane = avail[randInt(avail.length)];
         const candidates = avail.filter((l) => l !== freeLane);
-        const blockedCount = Math.min(candidates.length, Math.random() < 0.42 ? 2 : 1);
+        const blockedCount = Math.min(candidates.length, Math.random() < CONFIG.doubleBlockChance ? 2 : 1);
         const blocked = candidates.sort(() => Math.random() - 0.5).slice(0, blockedCount);
 
         for (const lane of blocked) {
@@ -1497,7 +786,7 @@ const spawner = {
 
         // Occasional power-up right after (closer than) the obstacle wall.
         if (Math.random() < CONFIG.powerupChance) {
-          const pu = this.place(powerups, freeLane, CONFIG.spawnAheadZ + 6);
+          const pu = this.place(powerups, freeLane, CONFIG.spawnAheadZ + CONFIG.powerupSpawnOffset);
           if (pu) pu.userData.setKind(Math.random() < 0.5 ? 'magnet' : 'shoes');
         }
       }
@@ -1509,8 +798,15 @@ const spawner = {
 };
 
 /* --------------------------------------------------------------------- game */
-const BEST_KEY = 'railrush.best';
-const BUILD_TAG = 'scenery-6'; // shown on the boot screen to verify live code
+const BEST_KEY = CONFIG.bestScoreKey;
+const BUILD_TAG = CONFIG.buildTag; // shown on the boot screen to verify live code
+
+const readBest = (): number => {
+  try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; }
+};
+const writeBest = (v: number) => {
+  try { localStorage.setItem(BEST_KEY, String(v)); } catch { /* private mode */ }
+};
 
 const game = {
   state: 'loading' as 'loading' | 'ready' | 'running' | 'paused' | 'over',
@@ -1523,7 +819,7 @@ const game = {
   jumpBoostT: 0,
   shakeT: 0,
   lastDz: 0,
-  best: Number(store.get(BEST_KEY) ?? 0),
+  best: readBest(),
   lastT: 0,
 
   startRun() {
@@ -1621,7 +917,7 @@ const game = {
       player.sliding = CONFIG.slideDuration;
       player.slideTotal = CONFIG.slideDuration;
     } else {
-      player.vy = Math.min(player.vy, -16); // fast-fall into a landing roll
+      player.vy = Math.min(player.vy, CONFIG.fastFallVelocity); // fast-fall into a landing roll
       player.fastFall = true;
     }
   },
@@ -1630,7 +926,7 @@ const game = {
     this.state = 'over';
     sfx.crash();
     sfx.syncMusic(false);
-    this.shakeT = REDUCED_MOTION ? 0 : 0.5;
+    this.shakeT = REDUCED_MOTION ? 0 : CONFIG.crashShakeTime;
     // Normalize an in-roll crash so the wreck topples from a clean pose.
     player.sliding = 0;
     player.scarf.visible = true;
@@ -1642,18 +938,18 @@ const game = {
 
     if (!REDUCED_MOTION && ui.flash) {
       ui.flash.style.transition = 'none';
-      ui.flash.style.opacity = '0.75';
+      ui.flash.style.opacity = String(CONFIG.flashOpacity);
       setTimeout(() => {
         ui.flash.style.transition = 'opacity .4s ease-out';
         ui.flash.style.opacity = '0';
-      }, 30);
+      }, CONFIG.flashDelayMs);
     }
 
     const finalScore = Math.floor(this.score);
     const isBest = finalScore > this.best;
     if (isBest) {
       this.best = finalScore;
-      store.set(BEST_KEY, String(this.best));
+      writeBest(this.best);
     }
     ui.overScore.textContent = String(finalScore);
     ui.overCoins.textContent = String(this.coins);
@@ -1670,7 +966,7 @@ const game = {
 
 function loopOver(now: number) {
   if (game.state !== 'over') return;
-  const dt = Math.min(0.05, (now - game.lastT) / 1000 || 0.016);
+  const dt = Math.min(CONFIG.maxFrameDelta, (now - game.lastT) / 1000 || 0.016);
   game.lastT = now;
 
   try {
@@ -1737,28 +1033,8 @@ function scrollWorld(dt: number) {
   game.score += dz * CONFIG.scorePerUnit;
   game.lastDz = dz;
 
-  // Sleepers wrap within their gap for a seamless treadmill.
-  sleeperOffset = (sleeperOffset + dz) % SLEEPER_GAP;
-  let idx = 0;
-  for (let row = 0; row < SLEEPER_ROWS; row += 1) {
-    for (const lx of CONFIG.lanes) {
-      sleeperMatrix.makeScale(1.7, 0.1, 0.55);
-      sleeperMatrix.setPosition(lx, 0.14, CONFIG.despawnZ - row * SLEEPER_GAP + sleeperOffset);
-      sleepers.setMatrixAt(idx, sleeperMatrix);
-      idx += 1;
-    }
-  }
-  sleepers.instanceMatrix.needsUpdate = true;
-
-  clouds.advance(dz);
-  clouds.items.forEach((c) => { c.position.x += c.userData.drift * dt; });
-  cacti.advance(dz);
-  shrubs.advance(dz);
-  dirtPatches.advance(dz);
-  cloudShadows.advance(dz);
-  poles.advance(dz);
-  gantries.advance(dz);
-  scenery.advance(dz);
+  world.updateSleepers(dz);
+  world.advanceScenery(dz, dt);
 
   const advance = (pool: AnyPool) => pool.forEachActive((o) => {
     o.position.z += dz;
@@ -1775,13 +1051,13 @@ function scrollWorld(dt: number) {
   });
 
   // Gantry beams would clip through the vault — hide them inside tunnels.
-  for (const gt of gantries.items) {
+  world.setGantryVisibility((gz) => {
     let hide = false;
     tunnels.forEachActive((tn) => {
-      if (gt.position.z < tn.position.z + 2 && gt.position.z > tn.position.z - TUNNEL_LEN - 2) hide = true;
+      if (gz < tn.position.z + 2 && gz > tn.position.z - TUNNEL_LEN - 2) hide = true;
     });
-    gt.visible = !hide;
-  }
+    return hide;
+  });
 
   // Tunnel-entry whoosh.
   let insideTunnel = false;
@@ -1803,7 +1079,7 @@ function scrollWorld(dt: number) {
   // Tumbleweeds: world-scrolled drift with a lateral push and a roll.
   tumbleweedTimer -= dt;
   if (tumbleweedTimer <= 0) {
-    tumbleweedTimer = 12 + Math.random() * 10;
+    tumbleweedTimer = CONFIG.tumbleweedStart.respawn[0] + Math.random() * CONFIG.tumbleweedStart.respawn[1];
     const tw = tumbleweeds.get();
     if (tw) {
       const side = Math.random() < 0.5 ? -1 : 1;
@@ -1846,20 +1122,7 @@ function scrollWorld(dt: number) {
 }
 
 function updateStreaks(dt: number) {
-  const ratio = clamp((game.speed - 18) / (CONFIG.maxSpeed - 18), 0, 1);
-  const targetOpacity = ratio * 0.5;
-  MAT.streak.opacity = damp(MAT.streak.opacity, targetOpacity, 6, dt);
-  if (MAT.streak.opacity < 0.01) return;
-  const boost = 1 + ratio * 0.8;
-  for (let i = 0; i < STREAK_COUNT; i += 1) {
-    const s = streakSeeds[i];
-    s.z += game.speed * boost * dt;
-    if (s.z > 14) s.z -= 84;
-    streakMatrix.makeScale(1, 1, 1 + ratio * 1.6);
-    streakMatrix.setPosition(s.x, s.y, s.z);
-    streaks.setMatrixAt(i, streakMatrix);
-  }
-  streaks.instanceMatrix.needsUpdate = true;
+  world.updateStreaks(dt, game.speed);
 }
 
 function drawCoins(spinAngle: number, timeSec: number) {
@@ -1886,7 +1149,7 @@ function playerAABB(sweep: number) {
   return {
     x: player.x, hw: CONFIG.playerHalfWidth,
     y0: player.y, y1: player.y + h,
-    hd: 0.38 + sweep, // swept along z so thin obstacles can't tunnel at low fps
+    hd: CONFIG.playerBaseHalfDepth + sweep, // swept along z so thin obstacles can't tunnel at low fps
   };
 }
 
@@ -2085,16 +1348,16 @@ function updateCamera(dt: number, speedRatio = 0) {
   const shake = game.shakeT > 0 && !REDUCED_MOTION ? (Math.random() - 0.5) * game.shakeT * 2.2 : 0;
   // First person: just over the runner's cap, seeing what they see — the
   // chase cam sits above the tunnel vault and cannot read obstacles inside.
-  camFP.t = damp(camFP.t, setPieces.fpZone ? 1 : 0, 3.4, dt);
+  camFP.t = damp(camFP.t, setPieces.fpZone ? 1 : 0, CONFIG.fpBlendRate, dt);
   const f = camFP.t * camFP.t * (3 - 2 * camFP.t); // smoothstep ease
 
   const tpX = 0;
-  const tpY = 4.9 + Math.sin(game.distance * 1.4) * 0.04 + shake;
+  const tpY = CONFIG.camY + Math.sin(game.distance * 1.4) * 0.04 + shake;
   const fpX = clamp(player.x * 0.92, -2.0, 2.0);
-  const fpY = player.y + 2.02 + shake * 0.4;
+  const fpY = player.y + CONFIG.fpCamY + shake * 0.4;
   camera.position.x = tpX + (fpX - tpX) * f;
   camera.position.y = tpY + (fpY - tpY) * f;
-  camera.position.z = 8 + (1.45 - 8) * f;
+  camera.position.z = CONFIG.camZ + (CONFIG.fpCamZ - CONFIG.camZ) * f;
 
   tmpV3.set(
     0 + (fpX - 0) * f,
@@ -2104,15 +1367,15 @@ function updateCamera(dt: number, speedRatio = 0) {
   camera.lookAt(tmpV3);
 
   // FOV kick sells acceleration; first person adds a touch of claustrophobia.
-  const targetFov = baseFov + speedRatio * 7 + f * 4;
+  const targetFov = baseFov + speedRatio * CONFIG.cameraKickFov + f * CONFIG.cameraKickFovFP;
   if (Math.abs(camera.fov - targetFov) > 0.01) {
     camera.fov = damp(camera.fov, targetFov, 4, dt);
     camera.updateProjectionMatrix();
   }
   // Body fades out only once the camera is essentially at the head —
   // otherwise the cap/backpack fills the frame mid-transition.
-  player.body.visible = camFP.t < 0.85;
-  if (game.shakeT > 0) game.shakeT = Math.max(0, game.shakeT - dt * 2.4);
+  player.body.visible = camFP.t < CONFIG.fpHideBodyAt;
+  if (game.shakeT > 0) game.shakeT = Math.max(0, game.shakeT - dt * CONFIG.camShakeDamp);
 }
 
 function updateParticles(dt: number) {
@@ -2143,14 +1406,14 @@ function haltWithError(err: unknown) {
 
 function loop(now: number) {
   if (game.state !== 'running') return;
-  const dt = Math.min(0.05, (now - game.lastT) / 1000 || 0.016);
+  const dt = Math.min(CONFIG.maxFrameDelta, (now - game.lastT) / 1000 || 0.016);
   game.lastT = now;
 
   try {
     game.runTime += dt;
     // Brief acceleration burst at the start of each run.
     game.speed = Math.min(CONFIG.maxSpeed, (CONFIG.baseSpeed + game.runTime * CONFIG.speedRamp)
-      * clamp(game.runTime / CONFIG.startBoostTime, 0.72, 1));
+      * clamp(game.runTime / CONFIG.startBoostTime, CONFIG.startBoostFloor, 1));
 
     scrollWorld(dt);
     spawner.update(game.distance);
@@ -2177,7 +1440,7 @@ function loop(now: number) {
 function onResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   const portrait = window.innerHeight > window.innerWidth;
-  baseFov = portrait ? 76 : 64;
+  baseFov = portrait ? CONFIG.cameraFovPortrait : CONFIG.cameraFovLandscape;
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.fov = baseFov;
   camera.updateProjectionMatrix();

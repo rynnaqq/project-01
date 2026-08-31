@@ -54,7 +54,8 @@ loop. Music starts off.
 
 ## Tuning
 
-Every gameplay number sits in the `CONFIG` object at the top of `game.ts`:
+Every gameplay number sits in the `CONFIG` object in `config.ts` (camera,
+scenery scheduling, streaks, and pool sizes are there too):
 
 | Key | Default | Effect |
 |---|---|---|
@@ -79,8 +80,13 @@ Edit, save — Vite HMR reloads instantly in dev.
 
 ## Architecture notes
 
-- Single TypeScript module (`game.ts`, strict-checked by `tsc -b`);
-  Three.js imported statically from npm and bundled with the game
+- Five TypeScript modules, strict-checked by `tsc -b`: `config.ts` (every
+  tunable — gameplay, visuals, camera, audio, persistence), `textures.ts`
+  (procedural canvas painters), `assets.ts` (shared geometry/materials),
+  `world.ts` (sky, static track, treadmill scenery, sleepers, streaks), and
+  `game.ts` (player, pools, spawning, collisions, audio, loop — the
+  composition root). `scenery.ts` (buildings) unchanged
+- Three.js imported statically from npm and bundled with the game
 - Fixed object pools for trains/barriers/crates/power-ups/particles;
   coins and sleepers are `InstancedMesh` (one draw call each); wind streaks
   too. Scenery (mountains ×2 parallax layers, clouds, cacti, poles, catenary
